@@ -1,0 +1,102 @@
+{
+  "type": "object",
+  "description": "Natural-language visit evaluation parsed into a reviewable Visit draft.",
+  "properties": {
+    "area": {
+      "description": "A uniquely identified Area from the supplied area list, or null when missing or ambiguous.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "visitDate": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "description": "Visit date in yyyy-MM-dd format, or null when missing or ambiguous."
+    },
+    "atmosphereScore": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 10
+    },
+    "infraScore": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 10
+    },
+    "cleanScore": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 10
+    },
+    "sizeScore": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 10
+    },
+    "accessScore": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 10
+    },
+    "memo": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "area",
+    "visitDate",
+    "atmosphereScore",
+    "infraScore",
+    "cleanScore",
+    "sizeScore",
+    "accessScore",
+    "memo",
+    "warnings"
+  ],
+  "additionalProperties": false
+}

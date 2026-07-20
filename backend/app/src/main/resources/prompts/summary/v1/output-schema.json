@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "description": "A short AI comment for a backend-generated statistical summary report.",
+  "properties": {
+    "comment": {
+      "type": "string",
+      "description": "Korean analysis based only on the supplied statistics. Target 200-400 characters and never exceed 500 characters."
+    }
+  },
+  "required": [
+    "comment"
+  ],
+  "additionalProperties": false
+}

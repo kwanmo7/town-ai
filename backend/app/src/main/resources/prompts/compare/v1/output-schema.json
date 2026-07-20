@@ -1,0 +1,90 @@
+{
+  "type": "object",
+  "description": "Structured comparison analysis that the backend converts into Markdown.",
+  "properties": {
+    "criteria": {
+      "type": "object",
+      "properties": {
+        "atmosphere": {
+          "type": "string"
+        },
+        "infra": {
+          "type": "string"
+        },
+        "clean": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string"
+        },
+        "access": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "atmosphere",
+        "infra",
+        "clean",
+        "size",
+        "access"
+      ],
+      "additionalProperties": false
+    },
+    "areaAssessments": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "properties": {
+          "areaId": {
+            "type": "integer"
+          },
+          "areaName": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "areaId",
+          "areaName",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "verificationChecklist": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "overall": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "criteria",
+    "areaAssessments",
+    "verificationChecklist",
+    "overall"
+  ],
+  "additionalProperties": false
+}
