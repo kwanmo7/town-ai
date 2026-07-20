@@ -14,6 +14,18 @@ gradle-app.setting
 # Cache of project
 .gradletasknamecache
 
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Local environment and secret files
+.env
+.env.*
+!.env.example
+
 # Eclipse Gradle plugin generated files
 # Eclipse Core
 .project
