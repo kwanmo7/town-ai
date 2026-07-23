@@ -2,7 +2,6 @@ package com.townai.report.generation;
 
 import com.townai.common.error.ApiException;
 import com.townai.common.error.ErrorCode;
-import com.townai.report.entity.ReportType;
 import com.townai.report.generation.ReportDataAssembler.AllInput;
 import com.townai.report.generation.ReportDataAssembler.AreaInput;
 import com.townai.report.generation.ReportDataAssembler.CompareAreaInput;
