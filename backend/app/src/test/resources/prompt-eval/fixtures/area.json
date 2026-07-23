@@ -1,0 +1,48 @@
+{
+  "area": {
+    "id": 1,
+    "name": "센터미나미",
+    "prefecture": "가나가와현",
+    "city": "요코하마시",
+    "station": "센터미나미역"
+  },
+  "statistics": {
+    "visitCount": 3,
+    "averageScores": {
+      "atmosphere": 8.0,
+      "infra": 8.3,
+      "clean": 8.3,
+      "size": 7.3,
+      "access": 7.0
+    }
+  },
+  "visits": [
+    {
+      "visitDate": "2026-05-10",
+      "atmosphereScore": 8,
+      "infraScore": 8,
+      "cleanScore": 9,
+      "sizeScore": 7,
+      "accessScore": 8,
+      "memo": "주말 낮에 방문했다. 보행 공간이 여유롭게 느껴졌고 역 주변에서 필요한 일을 한 번에 처리하기 편해 보였다. 주택가 쪽은 직접 본 매물 수가 적어 집 크기는 판단하기 어려웠다."
+    },
+    {
+      "visitDate": "2026-06-18",
+      "atmosphereScore": 9,
+      "infraScore": 8,
+      "cleanScore": 8,
+      "sizeScore": 8,
+      "accessScore": 7,
+      "memo": "평일 저녁에도 전반적인 분위기는 안정적으로 느껴졌다. 첫 방문보다 생활 동선은 더 좋아 보였지만, 이동 중 환승 대기 시간이 생각보다 길게 체감됐다."
+    },
+    {
+      "visitDate": "2026-07-12",
+      "atmosphereScore": 7,
+      "infraScore": 9,
+      "cleanScore": 8,
+      "sizeScore": 7,
+      "accessScore": 6,
+      "memo": "비 오는 날 방문했다. 역 주변 실내 동선과 상점 이용은 편했지만 평일 저녁 혼잡 시간대라 접근성 점수를 낮췄다. 이전보다 소음이 크게 느껴져 시간대를 바꿔 다시 확인하고 싶다."
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "areaCount": 6,
+  "visitCount": 14,
+  "averageScores": {
+    "atmosphere": 7.8,
+    "infra": 7.7,
+    "clean": 8.0,
+    "size": 7.2,
+    "access": 7.4
+  },
+  "top5": {
+    "atmosphere": [
+      {
+        "areaId": 2,
+        "areaName": "타마플라자",
+        "score": 8.5
+      },
+      {
+        "areaId": 1,
+        "areaName": "센터미나미",
+        "score": 8.0
+      },
+      {
+        "areaId": 3,
+        "areaName": "무사시코스기",
+        "score": 7.8
+      },
+      {
+        "areaId": 4,
+        "areaName": "카이세이",
+        "score": 7.5
+      },
+      {
+        "areaId": 5,
+        "areaName": "노보리토",
+        "score": 7.0
+      }
+    ],
+    "infra": [
+      {
+        "areaId": 3,
+        "areaName": "무사시코스기",
+        "score": 9.0
+      },
+      {
+        "areaId": 1,
+        "areaName": "센터미나미",
+        "score": 8.3
+      },
+      {
+        "areaId": 2,
+        "areaName": "타마플라자",
+        "score": 8.0
+      },
+      {
+        "areaId": 5,
+        "areaName": "노보리토",
+        "score": 8.0
+      },
+      {
+        "areaId": 6,
+        "areaName": "히요시",
+        "score": 7.5
+      }
+    ],
+    "clean": [
+      {
+        "areaId": 4,
+        "areaName": "카이세이",
+        "score": 8.5
+      },
+      {
+        "areaId": 1,
+        "areaName": "센터미나미",
+        "score": 8.3
+      },
+      {
+        "areaId": 2,
+        "areaName": "타마플라자",
+        "score": 8.0
+      },
+      {
+        "areaId": 6,
+        "areaName": "히요시",
+        "score": 7.8
+      },
+      {
+        "areaId": 3,
+        "areaName": "무사시코스기",
+        "score": 7.5
+      }
+    ],
+    "size": [
+      {
+        "areaId": 4,
+        "areaName": "카이세이",
+        "score": 9.0
+      },
+      {
+        "areaId": 1,
+        "areaName": "센터미나미",
+        "score": 7.3
+      },
+      {
+        "areaId": 5,
+        "areaName": "노보리토",
+        "score": 7.0
+      },
+      {
+        "areaId": 6,
+        "areaName": "히요시",
+        "score": 6.8
+      },
+      {
+        "areaId": 2,
+        "areaName": "타마플라자",
+        "score": 6.5
+      }
+    ],
+    "access": [
+      {
+        "areaId": 3,
+        "areaName": "무사시코스기",
+        "score": 9.0
+      },
+      {
+        "areaId": 2,
+        "areaName": "타마플라자",
+        "score": 8.5
+      },
+      {
+        "areaId": 5,
+        "areaName": "노보리토",
+        "score": 8.0
+      },
+      {
+        "areaId": 6,
+        "areaName": "히요시",
+        "score": 7.5
+      },
+      {
+        "areaId": 1,
+        "areaName": "센터미나미",
+        "score": 7.0
+      }
+    ]
+  }
+}

@@ -10,8 +10,14 @@
 2. [O] Prompt 설계 완료
 3. [O] 배포 설계 완료
 4. [ ] Backend 구현
-   - REST API와 Report 생성 흐름 구현
-   - LINE Webhook 서명 검증, Cloud Tasks 전달, Visit Draft 확인·취소 및 Visit 저장 구현
+   - [O] Area REST API
+   - [O] Visit REST API
+   - [O] Report REST API와 Local Report 생성·저장 흐름
+   - [O] Statistics API와 SUMMARY 공통 집계 흐름
+   - [O] 자연어 Visit Parser API
+   - [ ] LINE Webhook 서명 검증, Cloud Tasks 전달, Visit Draft 확인·취소 및 Visit 저장
+   - [ ] Production용 GCS Report Storage
+   - [ ] Local MySQL 기반 전체 API 통합 검증
 5. [ ] ERD PNG/XLSX 최종 동기화
 
 - ERD의 기준 스키마는 개발 중 `ERD/town-ai-v1.sql`로 관리한다.
@@ -87,17 +93,27 @@
 
 ## V1 미결 사항
 
-- [ ] Local MySQL 8.4 환경 전환
-  - 현재 PC에서 실행 중인 `MySQL83` Service는 MySQL 8.3을 사용 중
-  - 기존 Database 백업 및 호환성 확인 후 MySQL 8.4로 전환
-  - 사용하지 않는 MySQL 8.1 및 8.3 Service 정리는 데이터 보존 여부를 확인한 후 수행
-  - 반영 대상: Local 개발 환경
+- [O] Local MySQL 8.4 환경 전환
+  - MySQL 8.4.10과 Local `town_ai` Database 사용
+  - Flyway V1, Hibernate Schema 검증 및 Health Check 기동 확인 완료
+  - 실행 절차 및 결과 문서: `007-local-database.md`
 - [O] Cloud Storage 디렉터리 및 파일명 정책 확정
   - 객체 경로: `reports/v1/{reportType-lowercase}/{filename}_{yyyy-MM-dd}_{reportId}.md`
   - AREA와 COMPARE의 `filename`에는 대상 지역명을 사용
   - SUMMARY와 ALL은 별도 파일명 없이 날짜와 Report ID를 사용
   - Bucket 이름은 `town-ai-reports-{uniqueSuffix}` 형식으로 생성하고 `GCS_BUCKET_NAME`으로 전달
   - 반영 문서: `003-erd.md`, `006-deployment.md`
+- [ ] Production용 `GcsReportStorage` 구현
+  - `ReportStorage`를 구현해 Markdown 객체 저장, UTF-8 조회 및 멱등 삭제를 지원
+  - `REPORT_STORAGE_TYPE=gcs`일 때만 활성화하고 `GCS_BUCKET_NAME`을 필수로 검증
+  - Google Cloud Storage Client 의존성과 `Storage` Bean 구성 추가
+  - Cloud Run에서는 Service Account와 Application Default Credentials를 사용하고 JSON Key를 저장하지 않음
+  - Bucket은 애플리케이션이 생성하지 않고 배포 단계에서 `asia-northeast1`에 비공개로 생성
+  - 저장 시 `Content-Type: text/markdown; charset=UTF-8` 적용
+  - 객체가 이미 없으면 삭제 성공으로 처리하고 그 외 GCS 오류는 `ReportStorageException`으로 변환
+  - Mock 기반 단위 Test와 실제 GCP 환경의 저장·조회·삭제 통합 검증 추가
+  - 구현 대상: `backend/app/build.gradle`, `backend/app/src/main/java/com/townai/report/storage/GcsReportStorage.java`, GCP Storage 설정 Class 및 Test
+  - 확인 및 반영 문서: `006-deployment.md`
 - [O] Production GCP Region은 `asia-northeast1`(Tokyo)로 통일
   - 적용 대상: Cloud Run, Cloud SQL, Cloud Storage, Artifact Registry
   - 반영 문서: `006-deployment.md`
@@ -110,6 +126,13 @@
   - Storage 저장 직후 Process가 종료되면 보상 삭제가 실행되지 않을 수 있음
   - Production 운영 전 수동 점검 절차 또는 정리 Job 중 하나를 결정
   - 결정 후 수정할 문서: `004-api.md`, `006-deployment.md`
+- [ ] 실제 OpenAI API를 사용한 Report Prompt 품질 평가
+  - `backend`에서 `.\gradlew.bat :app:promptEval` 실행
+  - SUMMARY, AREA, COMPARE, ALL 결과의 사실성, 균형성, 실용성 및 가독성을 평가
+  - 동일 Fixture를 최소 3회 실행해 모델 응답 편차 확인
+  - Report별 평균 4.0 이상, 입력에 없는 사실 단정 0건을 합격 기준으로 사용
+  - 결과 위치: `backend/app/build/prompt-eval/`
+  - 실행 및 평가 기준 문서: `008-report-quality-evaluation.md`
 - [O] 초기 GCP 월 Budget과 알림 기준 확정
   - 월 Budget: `¥1,000`
   - 알림: 실제 사용액 `50%`, `80%`, `100%`, 예상 월말 사용액 `80%`

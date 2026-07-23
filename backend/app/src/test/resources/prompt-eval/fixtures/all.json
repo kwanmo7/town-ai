@@ -1,0 +1,148 @@
+{
+  "areas": [
+    {
+      "displayOrder": 1,
+      "id": 1,
+      "name": "센터미나미",
+      "prefecture": "가나가와현",
+      "city": "요코하마시",
+      "station": "센터미나미역",
+      "visitCount": 3,
+      "averageScores": {
+        "atmosphere": 8.0,
+        "infra": 8.3,
+        "clean": 8.3,
+        "size": 7.3,
+        "access": 7.0
+      },
+      "visits": [
+        {
+          "visitDate": "2026-05-10",
+          "atmosphereScore": 8,
+          "infraScore": 8,
+          "cleanScore": 9,
+          "sizeScore": 7,
+          "accessScore": 8,
+          "memo": "주말 낮에는 보행 공간과 생활 동선이 편하게 느껴졌다."
+        },
+        {
+          "visitDate": "2026-06-18",
+          "atmosphereScore": 9,
+          "infraScore": 8,
+          "cleanScore": 8,
+          "sizeScore": 8,
+          "accessScore": 7,
+          "memo": "평일 저녁 분위기는 좋았지만 환승 대기 시간이 길게 체감됐다."
+        },
+        {
+          "visitDate": "2026-07-12",
+          "atmosphereScore": 7,
+          "infraScore": 9,
+          "cleanScore": 8,
+          "sizeScore": 7,
+          "accessScore": 6,
+          "memo": "비 오는 평일 저녁 혼잡 시간대에는 혼잡과 소음이 크게 느껴졌다."
+        }
+      ]
+    },
+    {
+      "displayOrder": 2,
+      "id": 2,
+      "name": "타마플라자",
+      "prefecture": "가나가와현",
+      "city": "요코하마시",
+      "station": "타마플라자역",
+      "visitCount": 2,
+      "averageScores": {
+        "atmosphere": 8.5,
+        "infra": 8.0,
+        "clean": 8.0,
+        "size": 6.5,
+        "access": 8.5
+      },
+      "visits": [
+        {
+          "visitDate": "2026-05-24",
+          "atmosphereScore": 9,
+          "infraScore": 8,
+          "cleanScore": 8,
+          "sizeScore": 6,
+          "accessScore": 9,
+          "memo": "역 주변 분위기와 이동 편의는 좋게 느껴졌지만 확인한 매물은 기대보다 작았다."
+        },
+        {
+          "visitDate": "2026-07-05",
+          "atmosphereScore": 8,
+          "infraScore": 8,
+          "cleanScore": 8,
+          "sizeScore": 7,
+          "accessScore": 8,
+          "memo": "주말에는 사람이 많았으나 이동 자체는 편했다. 실제 매물 조건은 더 비교해야 한다."
+        }
+      ]
+    },
+    {
+      "displayOrder": 3,
+      "id": 4,
+      "name": "카이세이",
+      "prefecture": "가나가와현",
+      "city": "아시가라카미군",
+      "station": "카이세이역",
+      "visitCount": 2,
+      "averageScores": {
+        "atmosphere": 7.5,
+        "infra": 6.5,
+        "clean": 8.5,
+        "size": 9.0,
+        "access": 5.5
+      },
+      "visits": [
+        {
+          "visitDate": "2026-06-07",
+          "atmosphereScore": 7,
+          "infraScore": 7,
+          "cleanScore": 9,
+          "sizeScore": 9,
+          "accessScore": 6,
+          "memo": "조용하고 공간 여유는 좋아 보였지만 이동 시간이 부담스럽게 느껴졌다."
+        },
+        {
+          "visitDate": "2026-07-19",
+          "atmosphereScore": 8,
+          "infraScore": 6,
+          "cleanScore": 8,
+          "sizeScore": 9,
+          "accessScore": 5,
+          "memo": "청결한 인상과 공간 여유는 유지됐다. 늦은 시간 생활 편의는 다시 확인할 필요가 있다."
+        }
+      ]
+    },
+    {
+      "displayOrder": 4,
+      "id": 5,
+      "name": "노보리토",
+      "prefecture": "가나가와현",
+      "city": "가와사키시",
+      "station": "노보리토역",
+      "visitCount": 1,
+      "averageScores": {
+        "atmosphere": 7.0,
+        "infra": 8.0,
+        "clean": 7.0,
+        "size": 7.0,
+        "access": 8.0
+      },
+      "visits": [
+        {
+          "visitDate": "2026-07-20",
+          "atmosphereScore": 7,
+          "infraScore": 8,
+          "cleanScore": 7,
+          "sizeScore": 7,
+          "accessScore": 8,
+          "memo": "첫 방문에서는 이동과 생활 동선이 무난하게 느껴졌다. 한 번만 방문해 시간대별 차이는 아직 판단하기 어렵다."
+        }
+      ]
+    }
+  ]
+}

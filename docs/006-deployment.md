@@ -147,6 +147,13 @@ spring:
       hibernate.jdbc.time_zone: UTC
 
 town-ai:
+  user-time-zone: ${USER_TIME_ZONE:Asia/Tokyo}
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    report-model: ${OPENAI_REPORT_MODEL:gpt-5.4-mini}
+    connect-timeout: ${OPENAI_CONNECT_TIMEOUT:5s}
+    read-timeout: ${OPENAI_READ_TIMEOUT:120s}
   report-storage:
     type: ${REPORT_STORAGE_TYPE:local}
     local-directory: ${REPORT_LOCAL_DIRECTORY:./data/reports}
@@ -168,6 +175,11 @@ DB_HOST
 DB_PORT
 DB_NAME
 DB_USERNAME
+USER_TIME_ZONE
+OPENAI_BASE_URL
+OPENAI_REPORT_MODEL
+OPENAI_CONNECT_TIMEOUT
+OPENAI_READ_TIMEOUT
 REPORT_STORAGE_TYPE
 REPORT_LOCAL_DIRECTORY
 GCP_PROJECT_ID
@@ -418,6 +430,7 @@ Cloud Run Instance 시작
 - Migration 실패 시 애플리케이션 시작과 새 Revision 배포를 실패 처리한다.
 - 다중 Instance가 필요해지면 Migration을 별도의 Cloud Run Job 또는 배포 단계로 분리한다.
 - 이미 실행된 Migration 파일은 수정하지 않고 새로운 Version의 Migration 파일을 추가한다.
+- Local Database 생성, 초기화 및 Migration 실행 절차는 `007-local-database.md`를 따른다.
 
 ## Image Version
 

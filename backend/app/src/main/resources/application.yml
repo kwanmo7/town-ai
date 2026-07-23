@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: town-ai
+  datasource:
+    url: "jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:town_ai}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true"
+    username: ${DB_USERNAME:town_ai}
+    password: ${DB_PASSWORD}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db
+
+town-ai:
+  user-time-zone: ${USER_TIME_ZONE:Asia/Tokyo}
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    report-model: ${OPENAI_REPORT_MODEL:gpt-5.4-mini}
+    connect-timeout: ${OPENAI_CONNECT_TIMEOUT:5s}
+    read-timeout: ${OPENAI_READ_TIMEOUT:120s}
+  report-storage:
+    type: ${REPORT_STORAGE_TYPE:local}
+    local-directory: ${REPORT_LOCAL_DIRECTORY:./data/reports}
+    bucket-name: ${GCS_BUCKET_NAME:}
+  line:
+    event-dispatcher: ${LINE_EVENT_DISPATCHER:local}
+    cloud-tasks-queue: ${LINE_CLOUD_TASKS_QUEUE:line-events}
+    cloud-tasks-target-url: ${LINE_CLOUD_TASKS_TARGET_URL:}
+    cloud-tasks-oidc-audience: ${LINE_CLOUD_TASKS_OIDC_AUDIENCE:}
+    cloud-tasks-service-account: ${LINE_CLOUD_TASKS_SERVICE_ACCOUNT:}
