@@ -1,6 +1,7 @@
 package com.townai.report.generation;
 
 import com.townai.common.openai.OpenAiResponsesClient;
+import com.townai.common.openai.OpenAiProperties;
 import com.townai.report.entity.ReportType;
 import com.townai.report.generation.ReportDataAssembler.AllInput;
 import com.townai.report.generation.ReportDataAssembler.AreaInput;
@@ -66,17 +67,26 @@ class OpenAiPromptEvaluationTest {
         OpenAiResponsesClient responsesClient = new OpenAiResponsesClient(
                 RestClient.builder(),
                 objectMapper,
-                environmentOrDefault("OPENAI_BASE_URL", DEFAULT_BASE_URL),
-                apiKey,
-                model,
-                Duration.ofSeconds(5),
-                Duration.ofSeconds(180)
+                new OpenAiProperties(
+                        apiKey,
+                        environmentOrDefault(
+                                "OPENAI_BASE_URL",
+                                DEFAULT_BASE_URL
+                        ),
+                        model,
+                        Duration.ofSeconds(5),
+                        Duration.ofSeconds(180)
+                )
         );
         OpenAiReportClient aiClient = new OpenAiReportClient(
                 responsesClient,
                 objectMapper
         );
-        contentGenerator = new ReportContentGenerator(aiClient, objectMapper);
+        contentGenerator = new ReportContentGenerator(
+                aiClient,
+                objectMapper,
+                new ReportMarkdownValidator()
+        );
 
         outputDirectory = Path.of(
                 System.getProperty(

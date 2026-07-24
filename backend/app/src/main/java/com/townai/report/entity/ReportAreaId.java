@@ -2,11 +2,8 @@ package com.townai.report.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
@@ -19,8 +16,6 @@ import java.io.Serializable;
 @Embeddable
 @Getter
 @EqualsAndHashCode
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
 public class ReportAreaId implements Serializable {
 
     /** 연결된 Report의 식별자이다. */
@@ -30,4 +25,21 @@ public class ReportAreaId implements Serializable {
     /** 연결된 Area의 식별자이다. */
     @Column(name = "area_id")
     private Long areaId;
+
+    /**
+     * JPA가 복합 키를 복원할 때 사용할 빈 식별자를 생성한다.
+     */
+    protected ReportAreaId() {
+    }
+
+    /**
+     * Report와 Area 식별자로 복합 키를 생성한다.
+     *
+     * @param reportId 연결할 Report ID
+     * @param areaId 연결할 Area ID
+     */
+    public ReportAreaId(Long reportId, Long areaId) {
+        this.reportId = reportId;
+        this.areaId = areaId;
+    }
 }

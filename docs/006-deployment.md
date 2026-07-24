@@ -123,6 +123,7 @@ Java        : 25 LTS
 Spring Boot : 4.1.x (초기 고정 Version 4.1.0)
 Gradle      : 9.6.1
 MySQL       : 8.4 LTS
+Google Cloud Java Libraries BOM : 26.83.0
 ```
 
 - Spring Boot Patch Version은 `4.1.x` 범위에서 Test 후 올린다.
@@ -158,10 +159,16 @@ town-ai:
     type: ${REPORT_STORAGE_TYPE:local}
     local-directory: ${REPORT_LOCAL_DIRECTORY:./data/reports}
     bucket-name: ${GCS_BUCKET_NAME:}
-  line:
-    event-dispatcher: ${LINE_EVENT_DISPATCHER:local}
-    cloud-tasks-queue: ${LINE_CLOUD_TASKS_QUEUE:line-events}
-    cloud-tasks-target-url: ${LINE_CLOUD_TASKS_TARGET_URL:}
+    line:
+      event-dispatcher: ${LINE_EVENT_DISPATCHER:local}
+      messaging-api-base-url: ${LINE_MESSAGING_API_BASE_URL:https://api.line.me}
+      messaging-api-connect-timeout: ${LINE_MESSAGING_API_CONNECT_TIMEOUT:5s}
+      messaging-api-read-timeout: ${LINE_MESSAGING_API_READ_TIMEOUT:15s}
+      local-task-target-url: ${LINE_LOCAL_TASK_TARGET_URL:http://localhost:8080/internal/tasks/line-events}
+      cloud-tasks-project-id: ${GCP_PROJECT_ID:}
+      cloud-tasks-location: ${GCP_REGION:asia-northeast1}
+      cloud-tasks-queue: ${LINE_CLOUD_TASKS_QUEUE:line-events}
+      cloud-tasks-target-url: ${LINE_CLOUD_TASKS_TARGET_URL:}
     cloud-tasks-oidc-audience: ${LINE_CLOUD_TASKS_OIDC_AUDIENCE:}
     cloud-tasks-service-account: ${LINE_CLOUD_TASKS_SERVICE_ACCOUNT:}
 ```
@@ -186,6 +193,10 @@ GCP_PROJECT_ID
 GCP_REGION
 GCS_BUCKET_NAME
 LINE_EVENT_DISPATCHER
+LINE_MESSAGING_API_BASE_URL
+LINE_MESSAGING_API_CONNECT_TIMEOUT
+LINE_MESSAGING_API_READ_TIMEOUT
+LINE_LOCAL_TASK_TARGET_URL
 LINE_CLOUD_TASKS_QUEUE
 LINE_CLOUD_TASKS_TARGET_URL
 LINE_CLOUD_TASKS_OIDC_AUDIENCE
@@ -257,9 +268,11 @@ LINE Webhook
 - Cloud Run 서비스는 LINE Webhook 수신을 위해 공개되어 있으므로, 내부 Endpoint는 애플리케이션에서 OIDC Token의 서명, Issuer, Audience 및 Service Account를 모두 검증한다.
 - `X-CloudTasks-*` Header는 재시도 횟수와 관측 정보로만 사용하고 인증 수단으로 사용하지 않는다.
 - 다섯 번째 애플리케이션 처리 시도에서도 실패하면 이벤트를 `FAILED`로 기록하고 `2xx`로 종료한다.
+- 이벤트를 `FAILED`로 확정한 뒤 내부 오류를 포함하지 않은 재입력 안내를 Best-effort Push한다. 안내 Push 실패는 종료된 이벤트의 재시도 여부에 영향을 주지 않으며 로그로만 남긴다.
 - Cloud Tasks가 Endpoint에 도달하지 못한 채 최종 실패한 Task와 DB에 남은 `RECEIVED` 또는 Lease 만료 `PROCESSING` 이벤트를 Logging 및 운영 점검 대상에 포함한다.
 - LINE Push Message는 최초 전송부터 결정적 `X-Line-Retry-Key`를 사용하며, `409 Conflict`는 이전 요청이 수락된 성공 상태로 처리한다.
 - Draft 또는 Visit 처리 결과를 DB에 저장하고 LINE Push 요청이 `2xx` 또는 이미 수락된 Request ID가 포함된 `409 Conflict`로 확인된 후에만 이벤트를 `COMPLETED`로 전환한다.
+- 지원 이벤트가 포함된 새 Webhook 수신 시 30일 경과 Draft를 먼저 삭제한 뒤, 참조가 없는 `COMPLETED`·`FAILED` 이벤트를 기회적으로 삭제한다. 정리 실패는 현재 Webhook 처리를 막지 않으며 `RECEIVED`·`PROCESSING` 이벤트와 Visit은 자동 삭제하지 않는다.
 
 ### Local
 
@@ -295,6 +308,13 @@ Local 개발에서 Cloud Storage 없이 Report 생성·조회·다운로드·삭
 
 Production에서 Google Cloud Storage에 Markdown Report를 저장한다.
 
+- `REPORT_STORAGE_TYPE=gcs`일 때만 `GcsReportStorage`와 `Storage` Client를 생성한다.
+- `GCS_BUCKET_NAME`이 비어 있으면 애플리케이션 시작 단계에서 실패시킨다.
+- Google Cloud Java Libraries BOM으로 Cloud Tasks, Cloud Storage 및 Google Auth의 호환 Version을 함께 관리한다.
+- Cloud Run에 연결된 Service Account의 Application Default Credentials를 사용하며 JSON Key를 배포하거나 Image에 포함하지 않는다.
+- 저장 시 `Content-Type: text/markdown; charset=UTF-8`을 객체 Metadata에 기록한다.
+- 조회 결과는 UTF-8 Markdown으로 변환하고, 이미 없는 객체의 삭제는 성공으로 처리한다.
+- Google Cloud Storage API 오류는 `ReportStorageException`으로 변환한다.
 - DB에는 Storage 내부 경로만 저장한다.
 - Bucket 이름은 전역 고유해야 하므로 `town-ai-reports-{uniqueSuffix}` 형식을 사용하고 실제 이름은 `GCS_BUCKET_NAME`으로 전달한다.
 - Bucket의 기본 경로 Prefix는 `reports`를 사용한다.
@@ -611,6 +631,9 @@ Cloud SQL의 공유 Core Instance는 저비용 Test·개발 용도이며 SLA 대
 - [Cloud SQL free trial instance](https://docs.cloud.google.com/sql/docs/mysql/free-trial-instance)
 - [Cloud SQL MySQL versions](https://docs.cloud.google.com/sql/docs/mysql/db-versions)
 - [Cloud Tasks HTTP target](https://docs.cloud.google.com/tasks/docs/creating-http-target-tasks)
+- [Google Cloud Java Libraries BOM](https://docs.cloud.google.com/java/docs/bom)
+- [Cloud Storage upload from memory](https://docs.cloud.google.com/storage/docs/uploading-objects-from-memory)
+- [Application Default Credentials](https://docs.cloud.google.com/docs/authentication/provide-credentials-adc)
 - [Google Cloud Free Tier](https://docs.cloud.google.com/free/docs/free-cloud-features)
 - [Firebase pricing](https://firebase.google.com/pricing)
 - [Cloud Billing budgets](https://docs.cloud.google.com/billing/docs/how-to/budgets)

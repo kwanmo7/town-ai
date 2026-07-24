@@ -66,7 +66,8 @@ public class ReportDataAssembler {
      *
      * @param request Report 생성 요청
      * @return 검증된 유형, 대상 Area와 유형별 Prompt 입력
-     * @throws ApiException 유형·대상 조합이 잘못됐거나 Area가 없거나 삭제된 경우
+     * @throws ApiException 유형·대상 조합이 잘못됐거나, Area가 없거나 삭제됐거나,
+     *                      대상 Area에 Visit이 없는 경우
      */
     public ReportGenerationData prepare(ReportCreateRequest request) {
         ReportType type = ReportType.from(request.getReportType());
@@ -102,6 +103,7 @@ public class ReportDataAssembler {
     private ReportGenerationData prepareArea(Long areaId) {
         AreaEntity area = findActiveArea(areaId);
         List<VisitEntity> visits = visitRepository.findAllByAreaIdsForReport(List.of(areaId));
+        requireVisits(visits);
         AreaInput input = new AreaInput(
                 areaInfo(area),
                 new AreaStatistics(visits.size(), averageScores(visits)),
@@ -119,6 +121,7 @@ public class ReportDataAssembler {
         for (int index = 0; index < areas.size(); index++) {
             AreaEntity area = areas.get(index);
             List<VisitEntity> visits = visitsByArea.getOrDefault(area.getId(), List.of());
+            requireVisits(visits);
             areaInputs.add(new CompareAreaInput(
                     index + 1,
                     area.getId(),
@@ -147,6 +150,7 @@ public class ReportDataAssembler {
         for (int index = 0; index < areas.size(); index++) {
             AreaEntity area = areas.get(index);
             List<VisitEntity> visits = visitsByArea.getOrDefault(area.getId(), List.of());
+            requireVisits(visits);
             areaInputs.add(new AllAreaInput(
                     index + 1,
                     area.getId(),
@@ -204,6 +208,12 @@ public class ReportDataAssembler {
                     .add(visit);
         }
         return result;
+    }
+
+    private void requireVisits(List<VisitEntity> visits) {
+        if (visits.isEmpty()) {
+            throw new ApiException(ErrorCode.AREA_HAS_NO_VISITS);
+        }
     }
 
     private List<VisitInput> visitInputs(List<VisitEntity> visits) {

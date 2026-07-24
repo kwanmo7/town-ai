@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -44,6 +45,7 @@ public class ReportServiceImpl implements ReportService {
     private final ReportRepository reportRepository;
     private final ReportAreaRepository reportAreaRepository;
     private final ReportStorage reportStorage;
+    private final Clock clock;
 
     /**
      * Report Use Case 조정 Service를 생성한다.
@@ -54,6 +56,7 @@ public class ReportServiceImpl implements ReportService {
      * @param reportRepository Report 메타데이터 Repository
      * @param reportAreaRepository 생성 대상 Area 연결 Repository
      * @param reportStorage Markdown 본문 저장소
+     * @param clock 생성 소요 시간 측정에 사용할 공통 시계
      */
     public ReportServiceImpl(
             ReportDataAssembler dataAssembler,
@@ -61,7 +64,8 @@ public class ReportServiceImpl implements ReportService {
             ReportPersistenceService persistenceService,
             ReportRepository reportRepository,
             ReportAreaRepository reportAreaRepository,
-            ReportStorage reportStorage
+            ReportStorage reportStorage,
+            Clock clock
     ) {
         this.dataAssembler = dataAssembler;
         this.contentGenerator = contentGenerator;
@@ -69,11 +73,12 @@ public class ReportServiceImpl implements ReportService {
         this.reportRepository = reportRepository;
         this.reportAreaRepository = reportAreaRepository;
         this.reportStorage = reportStorage;
+        this.clock = clock;
     }
 
     @Override
     public ReportResponse create(ReportCreateRequest request) {
-        Instant startedAt = Instant.now();
+        Instant startedAt = clock.instant();
         ReportGenerationData data = dataAssembler.prepare(request);
         try {
             GeneratedReportContent content = contentGenerator.generate(data);
@@ -88,14 +93,14 @@ public class ReportServiceImpl implements ReportService {
                     "Report generation succeeded. reportId={}, type={}, durationMs={}",
                     report.getId(),
                     report.getReportType(),
-                    Duration.between(startedAt, Instant.now()).toMillis()
+                    elapsedMillis(startedAt)
             );
             return ReportResponse.from(report);
         } catch (RuntimeException exception) {
             log.error(
                     "Report generation failed. type={}, durationMs={}",
                     data.reportType(),
-                    Duration.between(startedAt, Instant.now()).toMillis(),
+                    elapsedMillis(startedAt),
                     exception
             );
             throw exception;
@@ -173,5 +178,9 @@ public class ReportServiceImpl implements ReportService {
     private ReportEntity findReport(Long reportId) {
         return reportRepository.findById(reportId)
                 .orElseThrow(() -> new ApiException(ErrorCode.REPORT_NOT_FOUND));
+    }
+
+    private long elapsedMillis(Instant startedAt) {
+        return Duration.between(startedAt, clock.instant()).toMillis();
     }
 }

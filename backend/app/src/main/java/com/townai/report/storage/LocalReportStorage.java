@@ -25,8 +25,6 @@ import java.nio.file.Path;
 )
 public class LocalReportStorage implements ReportStorage {
 
-    private static final String REPORTS_PREFIX = "reports/";
-
     private final Path rootDirectory;
 
     /**
@@ -38,11 +36,17 @@ public class LocalReportStorage implements ReportStorage {
             @Value("${town-ai.report-storage.local-directory:./data/reports}")
             String localDirectory
     ) {
+        if (localDirectory == null || localDirectory.isBlank()) {
+            throw new IllegalStateException(
+                    "Local Report directory must be configured."
+            );
+        }
         this.rootDirectory = Path.of(localDirectory).toAbsolutePath().normalize();
     }
 
     @Override
     public void write(String storagePath, String content) {
+        ReportStoragePathValidator.requireContent(content);
         Path target = resolve(storagePath);
         try {
             Files.createDirectories(target.getParent());
@@ -74,17 +78,10 @@ public class LocalReportStorage implements ReportStorage {
      * 논리 Storage 경로를 안전한 로컬 절대 경로로 변환한다.
      */
     private Path resolve(String storagePath) {
-        if (storagePath == null || storagePath.isBlank()) {
-            throw new ReportStorageException(
-                    "Report storage path is empty.",
-                    new IllegalArgumentException("storagePath")
-            );
-        }
-
-        String relativePath = storagePath.replace('\\', '/');
-        if (relativePath.startsWith(REPORTS_PREFIX)) {
-            relativePath = relativePath.substring(REPORTS_PREFIX.length());
-        }
+        String objectName = ReportStoragePathValidator.validate(storagePath);
+        String relativePath = objectName.substring(
+                ReportStoragePathValidator.REPORTS_PREFIX.length()
+        );
 
         Path target = rootDirectory.resolve(relativePath).normalize();
         if (!target.startsWith(rootDirectory)) {

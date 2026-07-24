@@ -28,7 +28,11 @@ class ReportContentGeneratorTest {
                 {"comment":"청결도 강점과 접근성의 상대적인 약점을 함께 확인할 필요가 있습니다."}
                 """);
         ReportContentGenerator generator =
-                new ReportContentGenerator(aiClient, new ObjectMapper());
+                new ReportContentGenerator(
+                        aiClient,
+                        new ObjectMapper(),
+                        new ReportMarkdownValidator()
+                );
         SummaryInput input = new SummaryInput(
                 2,
                 3,
@@ -55,7 +59,11 @@ class ReportContentGeneratorTest {
                 compareJson(1L, "A", 2L, "B")
         );
         ReportContentGenerator generator =
-                new ReportContentGenerator(aiClient, new ObjectMapper());
+                new ReportContentGenerator(
+                        aiClient,
+                        new ObjectMapper(),
+                        new ReportMarkdownValidator()
+                );
         CompareInput input = new CompareInput(List.of(
                 compareArea(1, 1L, "A"),
                 compareArea(2, 2L, "B")
@@ -82,7 +90,11 @@ class ReportContentGeneratorTest {
                 """
         );
         ReportContentGenerator generator =
-                new ReportContentGenerator(aiClient, new ObjectMapper());
+                new ReportContentGenerator(
+                        aiClient,
+                        new ObjectMapper(),
+                        new ReportMarkdownValidator()
+                );
         SummaryInput input = new SummaryInput(
                 1,
                 1,
@@ -110,7 +122,11 @@ class ReportContentGeneratorTest {
                 validOutput
         );
         ReportContentGenerator generator =
-                new ReportContentGenerator(aiClient, new ObjectMapper());
+                new ReportContentGenerator(
+                        aiClient,
+                        new ObjectMapper(),
+                        new ReportMarkdownValidator()
+                );
         CompareInput input = new CompareInput(List.of(
                 compareArea(1, 1L, "A"),
                 compareArea(2, 2L, "B")

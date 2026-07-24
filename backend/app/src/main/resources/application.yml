@@ -49,7 +49,16 @@ town-ai:
     local-directory: ${REPORT_LOCAL_DIRECTORY:./data/reports}
     bucket-name: ${GCS_BUCKET_NAME:}
   line:
+    channel-secret: ${LINE_CHANNEL_SECRET:}
+    channel-access-token: ${LINE_CHANNEL_ACCESS_TOKEN:}
+    allowed-user-id: ${LINE_ALLOWED_USER_ID:}
+    messaging-api-base-url: ${LINE_MESSAGING_API_BASE_URL:https://api.line.me}
+    messaging-api-connect-timeout: ${LINE_MESSAGING_API_CONNECT_TIMEOUT:5s}
+    messaging-api-read-timeout: ${LINE_MESSAGING_API_READ_TIMEOUT:15s}
     event-dispatcher: ${LINE_EVENT_DISPATCHER:local}
+    local-task-target-url: ${LINE_LOCAL_TASK_TARGET_URL:http://localhost:8080/internal/tasks/line-events}
+    cloud-tasks-project-id: ${GCP_PROJECT_ID:}
+    cloud-tasks-location: ${GCP_REGION:asia-northeast1}
     cloud-tasks-queue: ${LINE_CLOUD_TASKS_QUEUE:line-events}
     cloud-tasks-target-url: ${LINE_CLOUD_TASKS_TARGET_URL:}
     cloud-tasks-oidc-audience: ${LINE_CLOUD_TASKS_OIDC_AUDIENCE:}

@@ -17,8 +17,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -36,40 +34,25 @@ public class ReportContentGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(ReportContentGenerator.class);
 
-    // 사용자용 Report에 Backend 내부 필드명이 그대로 노출되는 것을 차단한다.
-    private static final Pattern INTERNAL_SCORE_FIELD_PATTERN = Pattern.compile(
-            "(?i)(?<![a-z0-9_])"
-                    + "(atmosphere(?:Score)?|infra(?:Score)?|clean(?:Score)?"
-                    + "|size(?:Score)?|access(?:Score)?)"
-                    + "(?![a-z0-9_])"
-    );
-
-    // 거의 전면 재택근무인 사용자의 기본 전제와 맞지 않는 통근 중심 문구를 탐지한다.
-    private static final Pattern DAILY_COMMUTE_PATTERN = Pattern.compile(
-            "(?:출|퇴)\\s*근|통근"
-    );
-
-    // 사용자가 원하지 않은 '피로도 기록' 지시를 더 자연스러운 확인·비교 표현으로 유도한다.
-    private static final Pattern FATIGUE_RECORDING_PATTERN = Pattern.compile(
-            "(?:피로(?:도|감)?)[^\\r\\n]{0,20}기록"
-                    + "|기록[^\\r\\n]{0,20}(?:피로(?:도|감)?)"
-    );
-
     private final ReportAiClient reportAiClient;
     private final ObjectMapper objectMapper;
+    private final ReportMarkdownValidator markdownValidator;
 
     /**
      * Report 출력 생성기와 유형별 Validator를 구성한다.
      *
      * @param reportAiClient AI 모델 호출 Port
      * @param objectMapper Structured Output을 내부 Record로 변환할 ObjectMapper
+     * @param markdownValidator AI Markdown 구조와 사용자 표현 Validator
      */
     public ReportContentGenerator(
             ReportAiClient reportAiClient,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            ReportMarkdownValidator markdownValidator
     ) {
         this.reportAiClient = reportAiClient;
         this.objectMapper = objectMapper;
+        this.markdownValidator = markdownValidator;
     }
 
     /**
@@ -130,16 +113,16 @@ public class ReportContentGenerator {
                     cast(data.promptInput(), CompareInput.class),
                     parse(aiResult.output(), CompareAiOutput.class)
             );
-            case AREA -> validateAreaMarkdown(
+            case AREA -> markdownValidator.validateArea(
                     cast(data.promptInput(), AreaInput.class),
                     aiResult.output()
             );
-            case ALL -> validateAllMarkdown(
+            case ALL -> markdownValidator.validateAll(
                     cast(data.promptInput(), AllInput.class),
                     aiResult.output()
             );
         };
-        validateCommonMarkdown(markdown);
+        markdownValidator.validateCommon(markdown);
         return new GeneratedReportContent(
                 aiResult.model(),
                 data.reportType().promptVersion(),
@@ -260,245 +243,10 @@ public class ReportContentGenerator {
             }
             requireText(item.category(), "COMPARE 확인 분류가 비어 있습니다.");
             requireText(item.content(), "COMPARE 확인 내용이 비어 있습니다.");
-            validateRemoteWorkChecklist(item.category() + ": " + item.content());
-        }
-    }
-
-    /**
-     * AREA Markdown의 필수 제목 순서와 3~7개 확인 항목을 검증한다.
-     */
-    private String validateAreaMarkdown(AreaInput input, String output) {
-        String markdown = output.strip();
-        String areaName = input.area().name();
-        List<String> requiredHeadings = List.of(
-                "# " + areaName + " 지역 상세 분석",
-                "## 평가 요약",
-                "## 항목별 분석",
-                "### 분위기",
-                "### 생활 인프라",
-                "### 청결도",
-                "### 넓은 집 가능성",
-                "### 접근성",
-                "## 방문별 변화",
-                "## 주요 장점",
-                "## 주요 단점",
-                "## 거주지 선택 시 고려사항",
-                "## 객관적으로 추가 확인할 사항",
-                "## 종합 평가"
-        );
-        validateHeadingOrder(markdown, requiredHeadings);
-        validateListItemCount(
-                markdown,
-                "## 객관적으로 추가 확인할 사항",
-                "## 종합 평가",
-                3,
-                7
-        );
-        validateRemoteWorkChecklistSection(
-                markdown,
-                "## 객관적으로 추가 확인할 사항",
-                "## 종합 평가"
-        );
-        return markdown;
-    }
-
-    /**
-     * ALL Markdown에 모든 입력 Area가 순서와 개수대로 한 번씩 포함됐는지 검증한다.
-     */
-    private String validateAllMarkdown(AllInput input, String output) {
-        String markdown = output.strip();
-        validateHeadingOrder(markdown, List.of(
-                "# 전체 지역 분석 리포트",
-                "## 전체 경향",
-                "## 지역별 분석"
-        ));
-        int previousIndex = indexOfExactLine(markdown, "## 지역별 분석", 0);
-        for (var area : input.areas()) {
-            String heading = "### " + area.name();
-            int headingIndex = indexOfExactLine(markdown, heading, previousIndex + 1);
-            if (headingIndex < 0) {
-                throw invalid("ALL 지역 제목이 누락되었습니다: " + area.name());
-            }
-            int nextAreaOrSection = markdown.length();
-            int nextSection = indexOfExactLine(
-                    markdown,
-                    "## 항목별 주요 후보",
-                    headingIndex + 1
-            );
-            if (nextSection >= 0) {
-                nextAreaOrSection = nextSection;
-            }
-            if (area.displayOrder() < input.areas().size()) {
-                String nextAreaHeading = "### "
-                        + input.areas().get(area.displayOrder()).name();
-                int nextArea = indexOfExactLine(
-                        markdown,
-                        nextAreaHeading,
-                        headingIndex + 1
-                );
-                if (nextArea >= 0) {
-                    nextAreaOrSection = Math.min(nextAreaOrSection, nextArea);
-                }
-            }
-            validateHeadingOrder(
-                    markdown.substring(headingIndex, nextAreaOrSection),
-                    List.of(
-                            "#### 평가 요약",
-                            "#### 주요 장점",
-                            "#### 주요 단점",
-                            "#### 고려사항"
-                    )
-            );
-            previousIndex = headingIndex;
-        }
-        for (String areaName : input.areas().stream().map(area -> area.name()).distinct().toList()) {
-            String heading = "### " + areaName;
-            long expectedCount = input.areas().stream()
-                    .filter(area -> area.name().equals(areaName))
-                    .count();
-            if (countExactLines(markdown, heading) != expectedCount) {
-                throw invalid("ALL 지역 제목의 개수가 입력과 다릅니다: " + areaName);
-            }
-        }
-        validateHeadingOrder(markdown, List.of(
-                "## 항목별 주요 후보",
-                "## 우선순위별 후보",
-                "## 객관적으로 추가 확인할 사항",
-                "## 종합 평가"
-        ), previousIndex);
-        validateListItemCount(
-                markdown,
-                "## 객관적으로 추가 확인할 사항",
-                "## 종합 평가",
-                5,
-                10
-        );
-        validateRemoteWorkChecklistSection(
-                markdown,
-                "## 객관적으로 추가 확인할 사항",
-                "## 종합 평가"
-        );
-        return markdown;
-    }
-
-    /**
-     * 모든 유형에 공통인 최상위 제목, 코드 블록 금지와 사용자용 점수명을 검증한다.
-     */
-    private void validateCommonMarkdown(String markdown) {
-        if (markdown.isBlank() || !markdown.stripLeading().startsWith("# ")) {
-            throw invalid("Markdown 최상위 제목이 없습니다.");
-        }
-        if (markdown.contains("```")) {
-            throw invalid("Markdown 결과에 코드 블록이 포함되었습니다.");
-        }
-        Matcher internalField = INTERNAL_SCORE_FIELD_PATTERN.matcher(markdown);
-        if (internalField.find()) {
-            throw invalid(
-                    "사용자용 Report에 내부 점수 필드명 '"
-                            + internalField.group()
-                            + "'이 포함되었습니다. 분위기, 생활 인프라, 청결도, "
-                            + "넓은 집 가능성 또는 접근성 중 대응하는 한글 표시명을 사용해야 합니다."
+            markdownValidator.validateChecklistText(
+                    item.category() + ": " + item.content()
             );
         }
-    }
-
-    private void validateHeadingOrder(String markdown, List<String> headings) {
-        validateHeadingOrder(markdown, headings, -1);
-    }
-
-    private void validateHeadingOrder(
-            String markdown,
-            List<String> headings,
-            int startingIndex
-    ) {
-        int previousIndex = startingIndex;
-        for (String heading : headings) {
-            int index = indexOfExactLine(markdown, heading, previousIndex + 1);
-            if (index < 0 || countExactLines(markdown, heading) != 1) {
-                throw invalid("필수 Markdown 제목이 누락되었거나 중복되었습니다: " + heading);
-            }
-            previousIndex = index;
-        }
-    }
-
-    private void validateListItemCount(
-            String markdown,
-            String sectionHeading,
-            String nextHeading,
-            int minimum,
-            int maximum
-    ) {
-        int sectionStart = indexOfExactLine(markdown, sectionHeading, 0);
-        int sectionEnd = indexOfExactLine(markdown, nextHeading, sectionStart + 1);
-        if (sectionStart < 0 || sectionEnd < 0) {
-            throw invalid("확인 체크리스트 구간을 찾을 수 없습니다.");
-        }
-        long itemCount = markdown.substring(sectionStart, sectionEnd)
-                .lines()
-                .map(String::stripLeading)
-                .filter(line -> line.startsWith("- ") || line.startsWith("* "))
-                .count();
-        if (itemCount < minimum || itemCount > maximum) {
-            throw invalid("확인 체크리스트 항목 수가 허용 범위를 벗어났습니다.");
-        }
-    }
-
-    private void validateRemoteWorkChecklistSection(
-            String markdown,
-            String sectionHeading,
-            String nextHeading
-    ) {
-        int sectionStart = indexOfExactLine(markdown, sectionHeading, 0);
-        int sectionEnd = indexOfExactLine(markdown, nextHeading, sectionStart + 1);
-        if (sectionStart < 0 || sectionEnd < 0) {
-            throw invalid("재택근무 생활 전제를 검증할 체크리스트 구간을 찾을 수 없습니다.");
-        }
-        validateRemoteWorkChecklist(markdown.substring(sectionStart, sectionEnd));
-    }
-
-    /**
-     * 확인 체크리스트가 전면 재택근무 사용자의 생활 패턴과 표현 선호를 지키는지 검사한다.
-     */
-    private void validateRemoteWorkChecklist(String checklist) {
-        if (DAILY_COMMUTE_PATTERN.matcher(checklist).find()) {
-            throw invalid(
-                    "재택근무 사용자에게 통근, 출근 또는 퇴근을 기본 확인 항목으로 "
-                            + "제안할 수 없습니다. 도쿄 주요 지역 이동을 기준으로 작성해야 합니다."
-            );
-        }
-        if (FATIGUE_RECORDING_PATTERN.matcher(checklist).find()) {
-            throw invalid(
-                    "체감 피로도를 기록하라고 요구하지 말고, "
-                            + "도쿄 주요 지역까지 이동한 후 확인하고 후보 간 비교하도록 작성해야 합니다."
-            );
-        }
-    }
-
-    private int indexOfExactLine(String markdown, String heading, int fromIndex) {
-        int lineStart = 0;
-        while (lineStart <= markdown.length()) {
-            int lineFeed = markdown.indexOf('\n', lineStart);
-            int lineEnd = lineFeed < 0 ? markdown.length() : lineFeed;
-            String line = markdown.substring(lineStart, lineEnd).stripTrailing();
-            if (lineStart >= fromIndex && line.equals(heading)) {
-                return lineStart;
-            }
-            if (lineFeed < 0) {
-                break;
-            }
-            lineStart = lineFeed + 1;
-        }
-        return -1;
-    }
-
-    private int countExactLines(String markdown, String heading) {
-        int count = 0;
-        for (String line : markdown.lines().toList()) {
-            if (line.stripTrailing().equals(heading)) {
-                count++;
-            }
-        }
-        return count;
     }
 
     private void appendScoreRows(StringBuilder markdown, ScoreAverages scores) {

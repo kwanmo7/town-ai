@@ -15,8 +15,14 @@
    - [O] Report REST API와 Local Report 생성·저장 흐름
    - [O] Statistics API와 SUMMARY 공통 집계 흐름
    - [O] 자연어 Visit Parser API
-   - [ ] LINE Webhook 서명 검증, Cloud Tasks 전달, Visit Draft 확인·취소 및 Visit 저장
-   - [ ] Production용 GCS Report Storage
+   - [O] LINE Webhook, 비동기 전달 및 Visit Draft 처리
+     - [O] 원문 Body HMAC-SHA256 서명 검증과 요청 DTO 역직렬화
+     - [O] `LINE_ALLOWED_USER_ID` 기반 1:1 사용자 및 지원 이벤트 선별
+     - [O] Webhook 이벤트 저장과 Local·Cloud Tasks Dispatcher 연결
+     - [O] 내부 Task Endpoint, OIDC 인증, 처리 Lease 및 최대 5회 상태 관리
+     - [O] Visit Draft 생성, LINE Push, 확인·취소 및 Visit 저장
+     - [O] 최대 처리 실패 안내 Push 및 30일이 지난 처리 데이터의 기회적 정리
+   - [O] Production용 GCS Report Storage
    - [ ] Local MySQL 기반 전체 API 통합 검증
 5. [ ] ERD PNG/XLSX 최종 동기화
 
@@ -103,7 +109,7 @@
   - SUMMARY와 ALL은 별도 파일명 없이 날짜와 Report ID를 사용
   - Bucket 이름은 `town-ai-reports-{uniqueSuffix}` 형식으로 생성하고 `GCS_BUCKET_NAME`으로 전달
   - 반영 문서: `003-erd.md`, `006-deployment.md`
-- [ ] Production용 `GcsReportStorage` 구현
+- [O] Production용 `GcsReportStorage` 구현
   - `ReportStorage`를 구현해 Markdown 객체 저장, UTF-8 조회 및 멱등 삭제를 지원
   - `REPORT_STORAGE_TYPE=gcs`일 때만 활성화하고 `GCS_BUCKET_NAME`을 필수로 검증
   - Google Cloud Storage Client 의존성과 `Storage` Bean 구성 추가
@@ -111,9 +117,13 @@
   - Bucket은 애플리케이션이 생성하지 않고 배포 단계에서 `asia-northeast1`에 비공개로 생성
   - 저장 시 `Content-Type: text/markdown; charset=UTF-8` 적용
   - 객체가 이미 없으면 삭제 성공으로 처리하고 그 외 GCS 오류는 `ReportStorageException`으로 변환
-  - Mock 기반 단위 Test와 실제 GCP 환경의 저장·조회·삭제 통합 검증 추가
+  - Mock 기반 저장·조회·삭제 및 Local·GCS 조건 전환 Test 추가
   - 구현 대상: `backend/app/build.gradle`, `backend/app/src/main/java/com/townai/report/storage/GcsReportStorage.java`, GCP Storage 설정 Class 및 Test
   - 확인 및 반영 문서: `006-deployment.md`
+- [ ] 실제 GCP Bucket을 사용한 `GcsReportStorage` 통합 검증
+  - GCP Project와 `asia-northeast1` 비공개 Bucket 생성 후 진행
+  - `REPORT_STORAGE_TYPE=gcs`, `GCS_BUCKET_NAME` 및 ADC를 설정해 저장·UTF-8 조회·멱등 삭제 확인
+  - 검증 후 반영 문서: `006-deployment.md`
 - [O] Production GCP Region은 `asia-northeast1`(Tokyo)로 통일
   - 적용 대상: Cloud Run, Cloud SQL, Cloud Storage, Artifact Registry
   - 반영 문서: `006-deployment.md`

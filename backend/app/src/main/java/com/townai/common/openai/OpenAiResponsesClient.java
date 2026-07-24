@@ -4,7 +4,6 @@ import com.townai.common.error.ApiException;
 import com.townai.common.error.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -41,21 +40,25 @@ public class OpenAiResponsesClient {
      *
      * @param restClientBuilder Spring RestClient Builder
      * @param objectMapper 요청·응답 JSON을 처리할 ObjectMapper
-     * @param baseUrl OpenAI 호환 API의 Base URL
-     * @param apiKey Bearer 인증에 사용할 API Key
-     * @param model Report와 Parser 요청에 사용할 기본 모델
-     * @param connectTimeout TCP 연결 제한 시간
-     * @param readTimeout 모델 응답 본문 수신 제한 시간
+     * @param properties Endpoint, 인증, 모델과 Timeout 설정
      */
     public OpenAiResponsesClient(
             RestClient.Builder restClientBuilder,
             ObjectMapper objectMapper,
-            @Value("${town-ai.openai.base-url:https://api.openai.com/v1}") String baseUrl,
-            @Value("${town-ai.openai.api-key:}") String apiKey,
-            @Value("${town-ai.openai.report-model:gpt-5.4-mini}") String model,
-            @Value("${town-ai.openai.connect-timeout:5s}") Duration connectTimeout,
-            @Value("${town-ai.openai.read-timeout:120s}") Duration readTimeout
+            OpenAiProperties properties
     ) {
+        String baseUrl = requireText(
+                properties.baseUrl(),
+                "OpenAI base URL"
+        );
+        Duration connectTimeout = requirePositiveDuration(
+                properties.connectTimeout(),
+                "OpenAI connect timeout"
+        );
+        Duration readTimeout = requirePositiveDuration(
+                properties.readTimeout(),
+                "OpenAI read timeout"
+        );
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(connectTimeout)
                 .build();
@@ -67,8 +70,11 @@ public class OpenAiResponsesClient {
                 .requestFactory(requestFactory)
                 .build();
         this.objectMapper = objectMapper;
-        this.apiKey = apiKey;
-        this.model = model;
+        this.apiKey = properties.apiKey();
+        this.model = requireText(
+                properties.reportModel(),
+                "OpenAI report model"
+        );
     }
 
     /**
@@ -220,6 +226,25 @@ public class OpenAiResponsesClient {
         return normalized.length() <= maximumLength
                 ? normalized
                 : normalized.substring(0, maximumLength) + "...";
+    }
+
+    private String requireText(String value, String settingName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(settingName + " must be configured.");
+        }
+        return value.strip();
+    }
+
+    private Duration requirePositiveDuration(
+            Duration value,
+            String settingName
+    ) {
+        if (value == null || value.isZero() || value.isNegative()) {
+            throw new IllegalStateException(
+                    settingName + " must be greater than zero."
+            );
+        }
+        return value;
     }
 
     private record OpenAiErrorDetails(

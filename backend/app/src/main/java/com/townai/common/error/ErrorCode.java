@@ -28,6 +28,12 @@ public enum ErrorCode {
     /** LINE Webhook 요청의 서명 검증에 실패함. */
     INVALID_LINE_SIGNATURE(HttpStatus.UNAUTHORIZED, "LINE Webhook 서명이 올바르지 않습니다."),
 
+    /** Production LINE 내부 Task 요청의 OIDC 인증에 실패함. */
+    INVALID_LINE_TASK_AUTHORIZATION(
+            HttpStatus.UNAUTHORIZED,
+            "LINE Task 요청 인증이 올바르지 않습니다."
+    ),
+
     /** Area가 없거나 논리 삭제되어 활성 조회 대상이 아님. */
     AREA_NOT_FOUND(HttpStatus.NOT_FOUND, "지역을 찾을 수 없습니다."),
 
@@ -42,6 +48,12 @@ public enum ErrorCode {
 
     /** prefecture, city, name 조합이 기존 Area와 중복됨. */
     AREA_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 지역입니다."),
+
+    /** AI Report 대상으로 선택한 Area에 분석할 Visit이 없음. */
+    AREA_HAS_NO_VISITS(
+            HttpStatus.CONFLICT,
+            "방문 기록이 없는 지역은 리포트를 생성할 수 없습니다."
+    ),
 
     /** 예상 가능한 오류로 분류되지 않은 서버 내부 실패. */
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),

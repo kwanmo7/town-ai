@@ -1,5 +1,6 @@
 package com.townai.report.generation;
 
+import com.townai.area.entity.AreaEntity;
 import com.townai.area.repository.AreaRepository;
 import com.townai.common.error.ApiException;
 import com.townai.common.error.ErrorCode;
@@ -16,8 +17,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -87,6 +90,29 @@ class ReportDataAssemblerTest {
         );
 
         assertEquals(ErrorCode.AREA_NOT_FOUND, exception.errorCode());
+    }
+
+    @Test
+    void rejectsAreaReportWhenTargetHasNoVisits() {
+        ReportCreateRequest request = request("AREA");
+        request.setAreaIds(List.of(1L));
+        AreaEntity area = AreaEntity.builder()
+                .name("센터미나미")
+                .prefecture("가나가와현")
+                .city("요코하마시")
+                .build();
+        ReflectionTestUtils.setField(area, "id", 1L);
+        when(areaRepository.findByIdAndDeletedAtIsNull(1L))
+                .thenReturn(Optional.of(area));
+        when(visitRepository.findAllByAreaIdsForReport(List.of(1L)))
+                .thenReturn(List.of());
+
+        ApiException exception = assertThrows(
+                ApiException.class,
+                () -> assembler.prepare(request)
+        );
+
+        assertEquals(ErrorCode.AREA_HAS_NO_VISITS, exception.errorCode());
     }
 
     @Test

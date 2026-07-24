@@ -19,7 +19,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Report DB 메타데이터와 외부 Storage 사이의 저장 순서 및 실패 보상을 담당한다.
@@ -81,7 +80,7 @@ public class ReportPersistenceService {
             String markdown,
             List<AreaEntity> targetAreas
     ) {
-        AtomicReference<String> attemptedStoragePath = new AtomicReference<>();
+        StorageWriteAttempt storageAttempt = new StorageWriteAttempt();
         try {
             ReportEntity result = transactionTemplate.execute(status -> {
                 ReportEntity report = ReportEntity.builder()
@@ -96,7 +95,7 @@ public class ReportPersistenceService {
                         report.getId(),
                         targetAreas
                 );
-                attemptedStoragePath.set(storagePath);
+                storageAttempt.record(storagePath);
                 reportStorage.write(storagePath, markdown);
                 report.assignStoragePath(storagePath);
 
@@ -116,7 +115,7 @@ public class ReportPersistenceService {
             }
             return result;
         } catch (RuntimeException exception) {
-            compensateStorage(attemptedStoragePath.get());
+            compensateStorage(storageAttempt.path());
             if (exception instanceof ReportStorageException) {
                 throw new ApiException(ErrorCode.STORAGE_ERROR);
             }
@@ -149,6 +148,24 @@ public class ReportPersistenceService {
                     storagePath,
                     compensationFailure
             );
+        }
+    }
+
+    /**
+     * Transaction Lambda가 시도한 외부 Storage 경로를 실패 보상 단계에 전달한다.
+     *
+     * <p>동시성 제어 목적이 아닌 한 번의 동기 생성 흐름에만 사용하는 상태 객체다.</p>
+     */
+    private static final class StorageWriteAttempt {
+
+        private String path;
+
+        private void record(String storagePath) {
+            this.path = storagePath;
+        }
+
+        private String path() {
+            return path;
         }
     }
 }

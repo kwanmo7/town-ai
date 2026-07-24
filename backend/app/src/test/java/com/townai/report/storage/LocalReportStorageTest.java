@@ -48,6 +48,18 @@ class LocalReportStorageTest {
                 ReportStorageException.class,
                 () -> storage.write("reports/../../outside.md", "content")
         );
+        assertThrows(
+                ReportStorageException.class,
+                () -> storage.write("other/outside.md", "content")
+        );
+        assertThrows(
+                ReportStorageException.class,
+                () -> storage.write("reports/v1/area/report.md", null)
+        );
+        assertThrows(
+                IllegalStateException.class,
+                () -> new LocalReportStorage(" ")
+        );
     }
 
     @Test

@@ -51,6 +51,8 @@ Cloud Tasks
 - LINE Push Message가 `2xx` 또는 이미 수락된 Request ID가 포함된 `409 Conflict`로 확인된 후에만 이벤트를 `COMPLETED`로 전환한다.
 - Draft가 이미 저장된 이벤트를 재처리할 때는 OpenAI를 다시 호출하거나 Draft를 다시 INSERT하지 않고 기존 Draft를 재사용한다.
 - 애플리케이션 처리 시도가 최대 횟수에 도달하면 이벤트를 `FAILED`로 종료해 `RECEIVED` 상태로 남지 않게 한다.
+- 이벤트를 `FAILED`로 확정한 뒤 내부 오류를 노출하지 않는 재입력 안내를 Best-effort Push한다. 안내 실패는 종료된 이벤트를 다시 처리 상태로 되돌리지 않는다.
+- 지원 Webhook 이벤트를 새로 수신하면 30일이 지난 Draft를 먼저 정리하고, 참조가 사라진 `COMPLETED`·`FAILED` 이벤트를 정리한다. `RECEIVED`·`PROCESSING` 이벤트와 확인 결과인 Visit은 자동 삭제하지 않는다.
 
 ## 설계 원칙
 - React와 LINE Bot은 입력 채널이다.

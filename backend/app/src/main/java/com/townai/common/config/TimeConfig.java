@@ -14,8 +14,14 @@ import java.time.ZoneId;
  * 사용자의 생활권 {@link ZoneId}를 사용한다. 두 값을 주입 가능하게 유지해 테스트에서
  * 고정 시각과 고정 시간대로 교체할 수 있다.</p>
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class TimeConfig {
+
+    /**
+     * 공통 시간 Bean 구성을 생성한다.
+     */
+    public TimeConfig() {
+    }
 
     /**
      * 서버와 DB에 기록할 현재 시각의 기준을 제공한다.
