@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 
@@ -63,21 +64,24 @@ class LocalReportStorageTest {
     }
 
     @Test
-    void createsPathUsingReportTypeTargetNamesDateAndId() {
+    void createsPathUsingUserTimeZoneReportTypeTargetNamesDateAndId() {
         Clock clock = Clock.fixed(
                 Instant.parse("2026-07-24T23:59:59Z"),
                 ZoneOffset.UTC
         );
-        ReportStoragePathFactory factory = new ReportStoragePathFactory(clock);
+        ReportStoragePathFactory factory = new ReportStoragePathFactory(
+                clock,
+                ZoneId.of("Asia/Tokyo")
+        );
         AreaEntity first = createArea("센터 미나미");
         AreaEntity second = createArea("타마/플라자");
 
         assertEquals(
-                "reports/v1/compare/센터-미나미-타마-플라자_2026-07-24_11.md",
+                "reports/v1/compare/센터-미나미-타마-플라자_2026-07-25_11.md",
                 factory.create(ReportType.COMPARE, 11L, List.of(first, second))
         );
         assertEquals(
-                "reports/v1/summary/2026-07-24_12.md",
+                "reports/v1/summary/2026-07-25_12.md",
                 factory.create(ReportType.SUMMARY, 12L, List.of())
         );
     }

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,14 +23,17 @@ public class ReportStoragePathFactory {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private final Clock clock;
+    private final ZoneId userTimeZone;
 
     /**
      * Storage 경로 생성기를 만든다.
      *
-     * @param clock 파일명에 포함할 현재 날짜의 기준
+     * @param clock 파일명에 포함할 현재 시각의 기준
+     * @param userTimeZone 파일명 날짜를 계산할 사용자 생활권 시간대
      */
-    public ReportStoragePathFactory(Clock clock) {
+    public ReportStoragePathFactory(Clock clock, ZoneId userTimeZone) {
         this.clock = clock;
+        this.userTimeZone = userTimeZone;
     }
 
     /**
@@ -45,7 +49,8 @@ public class ReportStoragePathFactory {
             Long reportId,
             List<AreaEntity> targetAreas
     ) {
-        String date = LocalDate.now(clock).format(DATE_FORMAT);
+        String date = LocalDate.now(clock.withZone(userTimeZone))
+                .format(DATE_FORMAT);
         String baseName = switch (reportType) {
             case SUMMARY, ALL -> date + "_" + reportId;
             case AREA, COMPARE -> targetAreas.stream()

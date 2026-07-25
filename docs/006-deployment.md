@@ -257,12 +257,13 @@ LINE Webhook
 - Queue 이름은 `line-events`, Region은 `asia-northeast1`을 사용한다.
 - 이벤트마다 `webhookEventId` 기반의 결정적 Task 이름을 사용해 중복 Task 생성을 방지한다.
 - 전달 방식은 At-least-once로 간주하고 최종 멱등성은 MySQL의 이벤트 PK와 Draft 상태 전환으로 보장한다.
-- 처리 시작 시 3분 Lease를 기록하고, Process 종료로 `PROCESSING`에 남은 이벤트는 Lease 만료 후 다음 시도가 다시 점유한다.
+- 처리 시작 시 6분 Lease를 기록하고, Process 종료로 `PROCESSING`에 남은 이벤트는 Lease 만료 후 다음 시도가 다시 점유한다.
 - Cloud Tasks는 일시 오류에 지수 Backoff를 적용한다. Queue의 `maxAttempts`는 최초 전달을 포함한 전달 시도 횟수이며 초기값은 `5`로 설정한다.
 - 양수인 `maxRetryDuration`을 함께 설정하면 Cloud Tasks는 `maxAttempts`와 `maxRetryDuration` 조건을 모두 충족할 때 재시도를 중단하므로 실제 Endpoint 전달 시도는 5회를 초과할 수 있다.
 - 애플리케이션의 `attemptCount`는 Endpoint에 도달해 이벤트를 `PROCESSING`으로 점유한 경우에만 증가하며 Cloud Tasks의 전달 시도 횟수와 별도로 관리한다.
 - 재시도 기간은 LINE Push Message Retry Key의 유효 기간을 넘지 않도록 `24시간 미만`으로 제한한다.
-- OpenAI 응답 시간을 고려해 Task Dispatch Deadline은 `120초`로 시작하고 실제 측정 후 조정한다.
+- OpenAI 출력 보정 재시도와 LINE Push 시간을 고려해 Task Dispatch Deadline은 `300초`로 설정한다.
+- Cloud Run Request Timeout도 Task Dispatch Deadline 이상인 `300초`로 설정한다.
 - Task Payload에는 `webhookEventId`만 포함하고 LINE 메시지 원문이나 Token을 넣지 않는다.
 - Cloud Tasks 전용 Service Account가 OIDC Token을 발급해 내부 처리 Endpoint를 호출한다.
 - Cloud Run 서비스는 LINE Webhook 수신을 위해 공개되어 있으므로, 내부 Endpoint는 애플리케이션에서 OIDC Token의 서명, Issuer, Audience 및 Service Account를 모두 검증한다.
@@ -348,6 +349,7 @@ reports/v1/all/2026-07-20_13.md
 ```
 
 - Report Type은 Directory에서 식별하므로 파일명에 영문 타입을 반복하지 않는다.
+- 파일명의 날짜는 UTC 시각을 `USER_TIME_ZONE`으로 변환한 사용자 생활권 날짜를 사용한다.
 - 같은 날짜와 대상을 사용해 다시 생성해도 충돌하지 않도록 `reportId`를 확장자 바로 앞에 둔다.
 - Area 이름은 Report 생성 당시 값을 사용한다.
 - `/`, `\` 및 제어 문자처럼 객체 경로에 부적합한 문자는 `-`로 치환한다.

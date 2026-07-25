@@ -18,12 +18,6 @@ import java.time.ZoneId;
 public class TimeConfig {
 
     /**
-     * 공통 시간 Bean 구성을 생성한다.
-     */
-    public TimeConfig() {
-    }
-
-    /**
      * 서버와 DB에 기록할 현재 시각의 기준을 제공한다.
      *
      * @return UTC 시스템 시계를 사용하는 Clock

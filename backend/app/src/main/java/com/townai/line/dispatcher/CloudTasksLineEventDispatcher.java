@@ -9,6 +9,7 @@ import com.google.cloud.tasks.v2.OidcToken;
 import com.google.cloud.tasks.v2.QueueName;
 import com.google.cloud.tasks.v2.Task;
 import com.google.cloud.tasks.v2.TaskName;
+import com.google.protobuf.Duration;
 import com.townai.line.config.LineTaskProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -28,6 +29,9 @@ import org.springframework.web.util.UriComponentsBuilder;
         havingValue = "cloud-tasks"
 )
 public class CloudTasksLineEventDispatcher implements LineEventDispatcher {
+
+    private static final Duration DISPATCH_DEADLINE =
+            Duration.newBuilder().setSeconds(300).build();
 
     private final CloudTasksClient cloudTasksClient;
     private final LineTaskIdFactory taskIdFactory;
@@ -110,6 +114,7 @@ public class CloudTasksLineEventDispatcher implements LineEventDispatcher {
         Task task = Task.newBuilder()
                 .setName(taskName)
                 .setHttpRequest(httpRequest)
+                .setDispatchDeadline(DISPATCH_DEADLINE)
                 .build();
         CreateTaskRequest request = CreateTaskRequest.newBuilder()
                 .setParent(QueueName.of(

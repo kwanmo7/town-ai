@@ -13,12 +13,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class App {
 
     /**
-     * Spring Boot가 애플리케이션 구성 클래스 인스턴스를 생성할 때 사용한다.
-     */
-    public App() {
-    }
-
-    /**
      * Spring Boot 애플리케이션을 시작한다.
      *
      * @param args 실행 시 전달된 명령행 인자

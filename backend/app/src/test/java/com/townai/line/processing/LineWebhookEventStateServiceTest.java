@@ -50,7 +50,7 @@ class LineWebhookEventStateServiceTest {
     @Test
     void rejectsDuplicateProcessingWhileLeaseIsActive() {
         LineWebhookEventEntity event = event();
-        event.startProcessing(NOW.minusSeconds(179));
+        event.startProcessing(NOW.minusSeconds(359));
         when(repository.findByIdForUpdate("event-1"))
                 .thenReturn(Optional.of(event));
 
@@ -61,9 +61,9 @@ class LineWebhookEventStateServiceTest {
     }
 
     @Test
-    void reclaimsProcessingEventWhenThreeMinuteLeaseExpires() {
+    void reclaimsProcessingEventWhenSixMinuteLeaseExpires() {
         LineWebhookEventEntity event = event();
-        event.startProcessing(NOW.minusSeconds(180));
+        event.startProcessing(NOW.minusSeconds(360));
         when(repository.findByIdForUpdate("event-1"))
                 .thenReturn(Optional.of(event));
 
@@ -77,7 +77,7 @@ class LineWebhookEventStateServiceTest {
     @Test
     void doesNotOverwriteNewerAttemptCompletion() {
         LineWebhookEventEntity event = event();
-        event.startProcessing(NOW.minusSeconds(180));
+        event.startProcessing(NOW.minusSeconds(360));
         event.startProcessing(NOW);
         when(repository.findByIdForUpdate("event-1"))
                 .thenReturn(Optional.of(event));

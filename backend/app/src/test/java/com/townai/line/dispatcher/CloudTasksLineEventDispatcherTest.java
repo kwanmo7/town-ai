@@ -60,6 +60,10 @@ class CloudTasksLineEventDispatcherTest {
                         .getOidcToken()
                         .getAudience()
         );
+        assertEquals(
+                300,
+                request.getTask().getDispatchDeadline().getSeconds()
+        );
     }
 
     @Test

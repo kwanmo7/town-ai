@@ -101,10 +101,11 @@
 
 - [O] Local MySQL 8.4 환경 전환
   - MySQL 8.4.10과 Local `town_ai` Database 사용
-  - Flyway V1, Hibernate Schema 검증 및 Health Check 기동 확인 완료
+  - Flyway V1·V2, Hibernate Schema 검증 및 Health Check 기동 확인 완료
   - 실행 절차 및 결과 문서: `007-local-database.md`
 - [O] Cloud Storage 디렉터리 및 파일명 정책 확정
   - 객체 경로: `reports/v1/{reportType-lowercase}/{filename}_{yyyy-MM-dd}_{reportId}.md`
+  - 파일명 날짜는 `USER_TIME_ZONE`의 사용자 생활권 날짜 사용
   - AREA와 COMPARE의 `filename`에는 대상 지역명을 사용
   - SUMMARY와 ALL은 별도 파일명 없이 날짜와 Report ID를 사용
   - Bucket 이름은 `town-ai-reports-{uniqueSuffix}` 형식으로 생성하고 `GCS_BUCKET_NAME`으로 전달

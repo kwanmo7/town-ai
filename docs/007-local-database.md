@@ -32,11 +32,15 @@ Spring Boot 시작
 → Backend 시작
 ```
 
-현재 초기 Migration은 다음 파일이다.
+현재 Migration은 다음 파일들이다.
 
 ```text
 backend/app/src/main/resources/db/migration/V1__initialize_schema.sql
+backend/app/src/main/resources/db/migration/V2__make_line_draft_warnings_required.sql
 ```
+
+V1은 초기 스키마를 생성하고, V2는 기존 Draft의 `warnings`가 `NULL`이면 빈 JSON
+배열로 정규화한 뒤 해당 Column을 `NOT NULL`로 변경한다.
 
 최초 실행 후에는 다음과 같은 이력이 저장된다.
 

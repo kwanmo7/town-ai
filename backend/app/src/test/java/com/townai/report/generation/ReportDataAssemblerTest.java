@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -113,6 +114,31 @@ class ReportDataAssemblerTest {
         );
 
         assertEquals(ErrorCode.AREA_HAS_NO_VISITS, exception.errorCode());
+    }
+
+    @Test
+    void includesAreaWithoutVisitsInAllReportAsInsufficientData() {
+        AreaEntity area = AreaEntity.builder()
+                .name("센터미나미")
+                .prefecture("가나가와현")
+                .city("요코하마시")
+                .build();
+        ReflectionTestUtils.setField(area, "id", 1L);
+        when(areaRepository.findAllByDeletedAtIsNullOrderByIdAsc())
+                .thenReturn(List.of(area));
+        when(visitRepository.findAllForActiveAreas())
+                .thenReturn(List.of());
+
+        ReportGenerationData result = assembler.prepare(request("ALL"));
+        ReportDataAssembler.AllInput input =
+                (ReportDataAssembler.AllInput) result.promptInput();
+        ReportDataAssembler.AllAreaInput areaInput = input.areas().getFirst();
+
+        assertEquals(ReportType.ALL, result.reportType());
+        assertEquals(1, result.targetAreas().size());
+        assertEquals(0, areaInput.visitCount());
+        assertNull(areaInput.averageScores().atmosphere());
+        assertEquals(List.of(), areaInput.visits());
     }
 
     @Test

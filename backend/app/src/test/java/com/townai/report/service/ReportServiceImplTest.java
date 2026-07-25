@@ -17,9 +17,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.mockito.Mockito.inOrder;
@@ -56,11 +53,7 @@ class ReportServiceImplTest {
                 persistenceService,
                 reportRepository,
                 reportAreaRepository,
-                reportStorage,
-                Clock.fixed(
-                        Instant.parse("2026-07-25T00:00:00Z"),
-                        ZoneOffset.UTC
-                )
+                reportStorage
         );
     }
 

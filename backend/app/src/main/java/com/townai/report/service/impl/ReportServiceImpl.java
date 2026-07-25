@@ -21,10 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Report 생성과 조회·삭제 Use Case의 최상위 흐름을 조정한다.
@@ -45,7 +43,6 @@ public class ReportServiceImpl implements ReportService {
     private final ReportRepository reportRepository;
     private final ReportAreaRepository reportAreaRepository;
     private final ReportStorage reportStorage;
-    private final Clock clock;
 
     /**
      * Report Use Case 조정 Service를 생성한다.
@@ -56,7 +53,6 @@ public class ReportServiceImpl implements ReportService {
      * @param reportRepository Report 메타데이터 Repository
      * @param reportAreaRepository 생성 대상 Area 연결 Repository
      * @param reportStorage Markdown 본문 저장소
-     * @param clock 생성 소요 시간 측정에 사용할 공통 시계
      */
     public ReportServiceImpl(
             ReportDataAssembler dataAssembler,
@@ -64,8 +60,7 @@ public class ReportServiceImpl implements ReportService {
             ReportPersistenceService persistenceService,
             ReportRepository reportRepository,
             ReportAreaRepository reportAreaRepository,
-            ReportStorage reportStorage,
-            Clock clock
+            ReportStorage reportStorage
     ) {
         this.dataAssembler = dataAssembler;
         this.contentGenerator = contentGenerator;
@@ -73,12 +68,11 @@ public class ReportServiceImpl implements ReportService {
         this.reportRepository = reportRepository;
         this.reportAreaRepository = reportAreaRepository;
         this.reportStorage = reportStorage;
-        this.clock = clock;
     }
 
     @Override
     public ReportResponse create(ReportCreateRequest request) {
-        Instant startedAt = clock.instant();
+        long startedAt = System.nanoTime();
         ReportGenerationData data = dataAssembler.prepare(request);
         try {
             GeneratedReportContent content = contentGenerator.generate(data);
@@ -180,7 +174,7 @@ public class ReportServiceImpl implements ReportService {
                 .orElseThrow(() -> new ApiException(ErrorCode.REPORT_NOT_FOUND));
     }
 
-    private long elapsedMillis(Instant startedAt) {
-        return Duration.between(startedAt, clock.instant()).toMillis();
+    private long elapsedMillis(long startedAt) {
+        return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
     }
 }

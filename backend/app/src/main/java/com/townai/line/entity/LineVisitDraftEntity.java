@@ -85,7 +85,7 @@ public class LineVisitDraftEntity {
     private String memo;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "JSON")
+    @Column(nullable = false, columnDefinition = "JSON")
     private List<String> warnings;
 
     @Enumerated(EnumType.STRING)

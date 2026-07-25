@@ -150,7 +150,6 @@ public class ReportDataAssembler {
         for (int index = 0; index < areas.size(); index++) {
             AreaEntity area = areas.get(index);
             List<VisitEntity> visits = visitsByArea.getOrDefault(area.getId(), List.of());
-            requireVisits(visits);
             areaInputs.add(new AllAreaInput(
                     index + 1,
                     area.getId(),

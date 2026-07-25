@@ -23,7 +23,7 @@ import java.util.Optional;
 public class LineWebhookEventStateService {
 
     private static final Duration PROCESSING_LEASE =
-            Duration.ofMinutes(3);
+            Duration.ofMinutes(6);
     private static final int MAX_ATTEMPTS = 5;
     private static final String MAX_ATTEMPTS_ERROR_CODE =
             "MAX_ATTEMPTS_EXCEEDED";

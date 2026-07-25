@@ -190,7 +190,7 @@ CREATE TABLE `line_visit_draft` (
     `size_score` TINYINT NULL COMMENT '넓은 집 가능성',
     `access_score` TINYINT NULL COMMENT '접근성',
     `memo` TEXT NULL COMMENT '메모',
-    `warnings` JSON NULL COMMENT '누락 또는 모호한 값 경고',
+    `warnings` JSON NOT NULL COMMENT '누락 또는 모호한 값 경고',
     `status` VARCHAR(30) NOT NULL
         COMMENT 'NEEDS_INPUT / AWAITING_CONFIRMATION / CONFIRMED / CANCELLED / EXPIRED',
     `expires_at` TIMESTAMP NOT NULL COMMENT '확인 만료 시각 UTC',
