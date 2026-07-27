@@ -371,9 +371,33 @@ Docker Image는 다음 원칙을 사용한다.
 
 - 실행에 필요한 JRE와 JAR만 최종 Image에 포함한다.
 - Source, `.env`, Test 결과 및 Gradle Cache를 최종 Image에 포함하지 않는다.
+- Gradle Resource Packaging에서도 `secret/**`와 환경 파일을 제외해 실행 JAR에 Secret이 포함되지 않게 한다.
 - Container는 환경변수로 설정을 전달받는다.
-- 가능하면 Root가 아닌 사용자로 실행한다.
+- Container는 `townai` Non-root 사용자로 실행한다.
+- Cloud Run이 주입하는 `PORT` 환경변수를 Spring Boot의 `server.port`로 사용한다.
 - Health Check Endpoint를 제공한다.
+
+구현 파일:
+
+```text
+backend/
+├── Dockerfile
+└── .dockerignore
+```
+
+Dockerfile은 Java 25 JDK에서 Gradle Wrapper로 Spring Boot 실행 JAR를 만드는
+Build Stage와 Java 25 JRE에서 JAR만 실행하는 Runtime Stage로 분리한다.
+
+Local Image Build:
+
+```powershell
+cd backend
+docker build --tag town-ai-backend:local .
+```
+
+Local MySQL을 Host에 직접 설치한 Windows 환경에서 Container를 실행할 때는
+`DB_HOST=host.docker.internal`을 사용한다. Secret은 Image Build Argument로
+전달하지 않고 Runtime 환경변수 또는 `--env-file`로만 주입한다.
 
 ### Frontend
 

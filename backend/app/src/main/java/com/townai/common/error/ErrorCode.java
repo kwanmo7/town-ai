@@ -43,6 +43,9 @@ public enum ErrorCode {
     /** Report 메타데이터가 존재하지 않음. */
     REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "리포트를 찾을 수 없습니다."),
 
+    /** 요청 URI에 대응하는 Controller 또는 정적 Resource가 존재하지 않음. */
+    ENDPOINT_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 API를 찾을 수 없습니다."),
+
     /** 해당 Endpoint가 요청한 HTTP Method를 지원하지 않음. */
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 HTTP Method입니다."),
 

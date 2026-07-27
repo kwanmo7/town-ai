@@ -13,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -112,6 +113,19 @@ public class GlobalExceptionHandler {
         return createResponse(
                 ErrorCode.METHOD_NOT_ALLOWED,
                 ErrorCode.METHOD_NOT_ALLOWED.message(),
+                request,
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    ResponseEntity<ErrorResponse> handleNoResourceFound(
+            NoResourceFoundException exception,
+            HttpServletRequest request
+    ) {
+        return createResponse(
+                ErrorCode.ENDPOINT_NOT_FOUND,
+                ErrorCode.ENDPOINT_NOT_FOUND.message(),
                 request,
                 List.of()
         );

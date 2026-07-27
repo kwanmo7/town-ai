@@ -52,10 +52,21 @@ tasks.withType(Test).configureEach {
     )
 }
 
+tasks.named('processResources') {
+    exclude 'secret/**'
+    exclude '**/.env'
+    exclude '**/.env.*'
+    exclude '**/*.env'
+}
+
 tasks.named('test') {
     useJUnitPlatform {
         excludeTags 'prompt-eval'
     }
+}
+
+tasks.named('bootJar') {
+    archiveFileName = 'app.jar'
 }
 
 tasks.register('promptEval', Test) {

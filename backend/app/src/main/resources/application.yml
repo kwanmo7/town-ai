@@ -16,6 +16,7 @@ spring:
       hibernate.jdbc.time_zone: UTC
 
 server:
+  port: ${PORT:8080}
   error:
     include-message: never
     include-stacktrace: never

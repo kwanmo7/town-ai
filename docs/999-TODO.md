@@ -9,21 +9,33 @@
 1. [O] API 설계 완료
 2. [O] Prompt 설계 완료
 3. [O] 배포 설계 완료
-4. [ ] Backend 구현
-   - [O] Area REST API
-   - [O] Visit REST API
-   - [O] Report REST API와 Local Report 생성·저장 흐름
-   - [O] Statistics API와 SUMMARY 공통 집계 흐름
-   - [O] 자연어 Visit Parser API
-   - [O] LINE Webhook, 비동기 전달 및 Visit Draft 처리
-     - [O] 원문 Body HMAC-SHA256 서명 검증과 요청 DTO 역직렬화
-     - [O] `LINE_ALLOWED_USER_ID` 기반 1:1 사용자 및 지원 이벤트 선별
-     - [O] Webhook 이벤트 저장과 Local·Cloud Tasks Dispatcher 연결
-     - [O] 내부 Task Endpoint, OIDC 인증, 처리 Lease 및 최대 5회 상태 관리
-     - [O] Visit Draft 생성, LINE Push, 확인·취소 및 Visit 저장
-     - [O] 최대 처리 실패 안내 Push 및 30일이 지난 처리 데이터의 기회적 정리
-   - [O] Production용 GCS Report Storage
-   - [ ] Local MySQL 기반 전체 API 통합 검증
+4. [ ] Backend 구현 및 Production 연동 검증
+   - [O] Backend 핵심 기능 구현
+     - [O] Area REST API
+     - [O] Visit REST API
+     - [O] Report REST API와 Local Report 생성·저장 흐름
+     - [O] Statistics API와 SUMMARY 공통 집계 흐름
+     - [O] 자연어 Visit Parser API
+     - [O] LINE Webhook, 비동기 전달 및 Visit Draft 처리
+       - [O] 원문 Body HMAC-SHA256 서명 검증과 요청 DTO 역직렬화
+       - [O] `LINE_ALLOWED_USER_ID` 기반 1:1 사용자 및 지원 이벤트 선별
+       - [O] Webhook 이벤트 저장과 Local·Cloud Tasks Dispatcher 연결
+       - [O] 내부 Task Endpoint, OIDC 인증, 처리 Lease 및 최대 5회 상태 관리
+       - [O] Visit Draft 생성, LINE Push, 확인·취소 및 Visit 저장
+       - [O] 최대 처리 실패 안내 Push 및 30일이 지난 처리 데이터의 기회적 정리
+     - [O] Production용 GCS Report Storage 구현체
+     - [O] Local MySQL 기반 전체 API 통합 검증
+       - 격리된 `town_ai_integration` Database에 Flyway V1·V2 적용
+       - Area, Visit, Statistics, Parser, Report 4종과 LINE 확인 흐름 검증
+       - OpenAI Responses API와 LINE Messaging API는 Local HTTP Mock 사용
+       - 검증 결과: `009-local-api-integration.md`
+   - [O] Production용 Backend Dockerfile과 Docker Build Context 제외 정책
+     - Java 25 Build·Runtime Multi-stage Image 및 Non-root 사용자 적용
+     - Cloud Run `PORT` 환경변수 연동
+     - Docker Build Context와 Spring Boot 실행 JAR에서 Local Secret·환경 파일 제외
+     - 현재 개발 PC에는 Docker Engine이 없어 실제 Image Build는 후속 검증
+   - [ ] GitHub Actions CI/CD Workflow 구현
+   - [ ] 실제 외부 서비스 및 Production GCP 통합 검증
 5. [ ] ERD PNG/XLSX 최종 동기화
 
 - ERD의 기준 스키마는 개발 중 `ERD/town-ai-v1.sql`로 관리한다.
