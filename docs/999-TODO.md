@@ -34,7 +34,13 @@
      - Cloud Run `PORT` 환경변수 연동
      - Docker Build Context와 Spring Boot 실행 JAR에서 Local Secret·환경 파일 제외
      - 현재 개발 PC에는 Docker Engine이 없어 실제 Image Build는 후속 검증
-   - [ ] GitHub Actions CI/CD Workflow 구현
+   - [O] GitHub Actions Backend CI Workflow 구현
+     - Java 25, Gradle Test·Build, Javadoc 및 Docker Image Build 검증
+     - Pull Request와 `main` Push에서 Backend 관련 경로가 변경될 때 실행
+   - [ ] Developer Connect·Cloud Build 기반 Backend CD 실제 배포 검증
+     - GitHub Actions CD와 중복 구성하지 않음
+     - Build Type은 Dockerfile, Source Location은 `backend/Dockerfile` 사용
+     - 현재 `town-ai-api`는 Placeholder Revision이므로 실제 Backend 배포 필요
    - [ ] 실제 외부 서비스 및 Production GCP 통합 검증
 5. [ ] ERD PNG/XLSX 최종 동기화
 
@@ -120,7 +126,7 @@
   - 파일명 날짜는 `USER_TIME_ZONE`의 사용자 생활권 날짜 사용
   - AREA와 COMPARE의 `filename`에는 대상 지역명을 사용
   - SUMMARY와 ALL은 별도 파일명 없이 날짜와 Report ID를 사용
-  - Bucket 이름은 `town-ai-reports-{uniqueSuffix}` 형식으로 생성하고 `GCS_BUCKET_NAME`으로 전달
+  - Production Bucket은 `gs://town_ai`, `GCS_BUCKET_NAME=town_ai`로 사용
   - 반영 문서: `003-erd.md`, `006-deployment.md`
 - [O] Production용 `GcsReportStorage` 구현
   - `ReportStorage`를 구현해 Markdown 객체 저장, UTF-8 조회 및 멱등 삭제를 지원
@@ -141,9 +147,11 @@
   - 적용 대상: Cloud Run, Cloud SQL, Cloud Storage, Artifact Registry
   - 반영 문서: `006-deployment.md`
 - [ ] Cloud SQL Instance 사양 및 월 비용 확정
-  - Backend 구현 완료 후 Production 운영 직전에 Pricing Calculator로 확인
-  - MySQL 8.4와 Enterprise Edition은 확정, CPU·Memory·Storage 사양만 결정
-  - 그전까지 Local MySQL 8.4 사용
+  - 30일 무료 평가 Instance `town-ai-api` 생성
+  - 연결 이름: `town-ai:asia-northeast1:town-ai-api`
+  - Cloud SQL Java Connector `1.29.0`과 Production `DB_URL` 적용
+  - 무료 평가 종료 전 Pricing Calculator로 장기 운영 사양과 비용 확정
+  - MySQL 8.4와 Enterprise Edition 기준으로 CPU·Memory·Storage 사양 확인
   - 결정 후 수정할 문서: `006-deployment.md`
 - [ ] Report 생성 중 장애로 남은 고아 Storage 객체 정리 방식 확정
   - Storage 저장 직후 Process가 종료되면 보상 삭제가 실행되지 않을 수 있음

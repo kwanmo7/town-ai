@@ -31,7 +31,7 @@ Town-AI V1을 GCP 기반으로 안전하게 배포하고 개인 사용량에서 
 - Frontend는 정적 파일로 빌드해 Firebase Hosting에 배포한다.
 - Secret은 Git과 Docker Image에 포함하지 않는다.
 - Production 서비스는 가능한 한 같은 GCP Region에 배치한다.
-- CI와 CD는 GitHub Actions Workflow 두 개로 관리한다.
+- CI는 GitHub Actions, CD는 Developer Connect와 Cloud Build Trigger로 관리한다.
 
 ## 환경 구성
 
@@ -80,7 +80,7 @@ Local Spring Boot
 | Report Storage | Cloud Storage |
 | Secret | Secret Manager |
 | Container Registry | Artifact Registry |
-| CI/CD | GitHub Actions |
+| CI/CD | GitHub Actions CI + Developer Connect·Cloud Build CD |
 
 Cloud SQL은 Backend 구현과 Local 검증이 끝난 후 실제 Production 운영 직전에 MySQL 8.4, Enterprise Edition으로 생성한다. Instance 사양은 비용 계산 후 결정한다.
 
@@ -124,6 +124,7 @@ Spring Boot : 4.1.x (초기 고정 Version 4.1.0)
 Gradle      : 9.6.1
 MySQL       : 8.4 LTS
 Google Cloud Java Libraries BOM : 26.83.0
+Cloud SQL Java Connector        : 1.29.0
 ```
 
 - Spring Boot Patch Version은 `4.1.x` 범위에서 Test 후 올린다.
@@ -140,7 +141,7 @@ application.yml
 ```yaml
 spring:
   datasource:
-    url: "jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:town_ai}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true"
+    url: "${DB_URL:jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:town_ai}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true}"
     username: ${DB_USERNAME:town_ai}
     password: ${DB_PASSWORD}
   jpa:
@@ -182,6 +183,7 @@ DB_HOST
 DB_PORT
 DB_NAME
 DB_USERNAME
+DB_URL
 USER_TIME_ZONE
 OPENAI_BASE_URL
 OPENAI_REPORT_MODEL
@@ -203,7 +205,26 @@ LINE_CLOUD_TASKS_OIDC_AUDIENCE
 LINE_CLOUD_TASKS_SERVICE_ACCOUNT
 ```
 
-Production 연결 방식이 확정되면 Cloud SQL 접속 관련 설정을 추가한다.
+Local에서는 `DB_URL`을 생략해 `DB_HOST`, `DB_PORT`, `DB_NAME`으로 구성한
+일반 TCP JDBC URL을 사용한다.
+
+Production Cloud Run에서는 Cloud SQL Java Connector URL을 `DB_URL`로 전달한다.
+DB 비밀번호는 URL에 포함하지 않고 `DB_PASSWORD` Secret으로 별도 주입한다.
+
+```text
+Cloud SQL Instance Connection Name
+: town-ai:asia-northeast1:town-ai-api
+
+DB_URL
+: jdbc:mysql:///town_ai?cloudSqlInstance=town-ai:asia-northeast1:town-ai-api&socketFactory=com.google.cloud.sql.mysql.SocketFactory&cloudSqlRefreshStrategy=lazy&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true
+```
+
+- Cloud SQL Admin API를 활성화한다.
+- Cloud Run Runtime Service Account에 `Cloud SQL Client` 역할을 부여한다.
+- Cloud SQL에 `town_ai` Database와 애플리케이션 전용 사용자를 생성한다.
+- `DB_USERNAME`은 일반 환경변수, `DB_PASSWORD`는 Secret Manager 참조로 전달한다.
+- Java Connector는 Application Default Credentials를 사용하므로 Service Account JSON Key를 배포하지 않는다.
+- Serverless 환경에서는 인증정보를 필요할 때 갱신하도록 `cloudSqlRefreshStrategy=lazy`를 사용한다.
 
 ## Secret 관리
 
@@ -317,7 +338,7 @@ Production에서 Google Cloud Storage에 Markdown Report를 저장한다.
 - 조회 결과는 UTF-8 Markdown으로 변환하고, 이미 없는 객체의 삭제는 성공으로 처리한다.
 - Google Cloud Storage API 오류는 `ReportStorageException`으로 변환한다.
 - DB에는 Storage 내부 경로만 저장한다.
-- Bucket 이름은 전역 고유해야 하므로 `town-ai-reports-{uniqueSuffix}` 형식을 사용하고 실제 이름은 `GCS_BUCKET_NAME`으로 전달한다.
+- Production Bucket은 `gs://town_ai`를 사용하고 `GCS_BUCKET_NAME=town_ai`로 전달한다.
 - Bucket의 기본 경로 Prefix는 `reports`를 사용한다.
 - 객체 경로의 `v1`은 Prompt Version이 아니라 Report 저장 구조 Version이다.
 - Bucket은 Public으로 공개하지 않는다.
@@ -414,8 +435,12 @@ npm ci
 
 ```text
 .github/workflows/
-├── ci.yml
-└── deploy.yml
+└── ci.yml
+
+GitHub Repository
+└── Developer Connect
+    └── Cloud Build Trigger
+        └── Cloud Run
 ```
 
 ### CI
@@ -426,38 +451,52 @@ Pull Request와 `main` Branch Push에서 실행한다.
 Backend Test
 → Backend Build
 → Prompt JSON Schema 검증
-→ Frontend Test
-→ Frontend Production Build 검증
+→ Javadoc 검증
+→ Backend Docker Image Build 검증
 ```
 
 하나의 단계가 실패하면 CI 전체를 실패 처리한다.
+Frontend 구현 이후 같은 Workflow에 Frontend Test와 Production Build 검증을 추가한다.
 
 ### CD
 
-V1에서는 수동 실행으로 시작한다.
+Cloud Run에서 연결한 Developer Connect Repository와 Cloud Build Trigger를 사용한다.
+별도의 GitHub Actions `deploy.yml`과 Workload Identity Federation은 구성하지 않는다.
+두 개의 배포 경로가 같은 Cloud Run Service를 동시에 갱신하는 상황을 피하기 위함이다.
 
-```yaml
-on:
-  workflow_dispatch:
+Developer Connect Build 설정:
+
+```text
+Repository      : kwanmo7/town-ai
+Branch          : ^main$
+Build Type      : Dockerfile
+Source Location : backend/Dockerfile
+Build Context   : backend/
+Cloud Run       : town-ai-api
+Region          : asia-northeast1
 ```
+
+`Source Location`에 `backend/Dockerfile`을 지정하면 해당 파일이 위치한
+`backend/` Directory가 Docker Build Context로 사용된다.
 
 배포 흐름:
 
 ```text
-CI 검증
-→ Backend JAR Build
-→ Docker Image Build
+main Push
+→ Developer Connect
+→ Cloud Build Trigger
+→ backend/Dockerfile Image Build
 → Artifact Registry Push
 → Cloud Run Deploy
 → Health Check
-→ Frontend Production Build
-→ Firebase Hosting Deploy
 ```
 
-- 배포에는 GitHub Actions의 Production Environment를 사용한다.
-- GCP 인증에는 장기 Service Account JSON Key보다 Workload Identity Federation 사용을 우선한다.
+- Developer Connect 연결이 Repository 읽기 인증을 담당하므로 GitHub Actions에 GCP 인증정보를 저장하지 않는다.
+- Cloud Build Service Account에는 Build, Artifact Registry Push, Cloud Run 배포에 필요한 최소 권한만 부여한다.
+- Cloud Run Runtime Service Account와 Cloud Build Service Account를 분리한다.
 - 배포 중 실패하면 기존 Cloud Run Revision과 기존 Frontend 배포를 유지한다.
-- 운영이 안정화된 이후 `main` Push 자동 배포 전환을 검토한다.
+- `main` Branch에는 GitHub Actions의 `Backend CI` 성공을 요구하는 Branch Protection 적용을 권장한다.
+- 현재 Cloud Run Endpoint는 Placeholder Revision이므로 실제 Backend 최초 배포 후 Health Endpoint를 다시 검증한다.
 
 ## DB Migration
 

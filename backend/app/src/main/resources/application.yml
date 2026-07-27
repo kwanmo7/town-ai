@@ -2,7 +2,7 @@ spring:
   application:
     name: town-ai
   datasource:
-    url: "jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:town_ai}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true"
+    url: "${DB_URL:jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:town_ai}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true}"
     username: ${DB_USERNAME:town_ai}
     password: ${DB_PASSWORD}
   flyway:
