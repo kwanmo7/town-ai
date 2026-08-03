@@ -2,6 +2,8 @@ package com.townai.report.service;
 
 import com.townai.report.entity.ReportEntity;
 import com.townai.report.entity.ReportType;
+import com.townai.report.dto.ReportCreateRequest;
+import com.townai.report.dto.ReportResponse;
 import com.townai.report.generation.ReportContentGenerator;
 import com.townai.report.generation.ReportDataAssembler;
 import com.townai.report.persistence.ReportPersistenceService;
@@ -18,8 +20,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
+import java.time.Instant;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,6 +59,36 @@ class ReportServiceImplTest {
                 reportRepository,
                 reportAreaRepository,
                 reportStorage
+        );
+    }
+
+    @Test
+    void reusesReportCreatedBySameLineWebhookEvent() {
+        ReportEntity report = ReportEntity.builder()
+                .reportType(ReportType.SUMMARY)
+                .model("test-model")
+                .promptVersion("summary-v1")
+                .sourceWebhookEventId("event-1")
+                .build();
+        ReflectionTestUtils.setField(report, "id", 10L);
+        ReflectionTestUtils.setField(
+                report,
+                "createdAt",
+                Instant.parse("2026-08-03T01:02:03Z")
+        );
+        when(reportRepository.findBySourceWebhookEventId("event-1"))
+                .thenReturn(Optional.of(report));
+
+        ReportResponse result = reportService.createForLine(
+                new ReportCreateRequest(),
+                "event-1"
+        );
+
+        assertEquals(10L, result.id());
+        verifyNoInteractions(
+                dataAssembler,
+                contentGenerator,
+                persistenceService
         );
     }
 

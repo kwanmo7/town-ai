@@ -118,6 +118,6 @@ Rich Menu는 LINE 모바일 앱에서 표시되며 LINE PC에서는 표시되지
 ## 구현 상태
 
 이 디렉터리는 화면 설계 기준본이다. 현재 Backend는 자연어 Text Message, Draft
-Flex 화면과 확인·취소 Postback을 처리한다. 고정 메뉴·안내 화면 Flex Factory도
-구현되어 있지만 Webhook Handler에는 아직 연결하지 않았다. 메뉴 Postback 처리,
-Report 선택·생성, Rich Menu 등록 및 안전한 Report URL은 후속 작업에서 구현한다.
+Flex 화면, Follow와 메뉴·Report Postback을 처리한다. 화면의 Area·Visit·Report
+값은 Backend Factory가 DB 결과로 동적 생성한다. Rich Menu 등록과 안전한 Report
+URL은 후속 Production 작업으로 남아 있다.

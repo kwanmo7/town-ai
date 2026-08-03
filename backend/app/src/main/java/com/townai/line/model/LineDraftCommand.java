@@ -9,5 +9,5 @@ package com.townai.line.model;
 public record LineDraftCommand(
         LineDraftAction action,
         Long draftId
-) {
+) implements LinePostbackCommand {
 }

@@ -92,4 +92,18 @@ final class LineFlexComponents {
                 .property("displayText", displayText)
                 .build();
     }
+
+    /**
+     * 외부 HTTPS 화면을 여는 URI Action을 생성한다.
+     *
+     * @param label 버튼에 표시할 문구
+     * @param uri 열 URI
+     * @return URI Action
+     */
+    static Map<String, Object> uri(String label, String uri) {
+        return LineFlexObjectBuilder.type("uri")
+                .property("label", label)
+                .property("uri", uri)
+                .build();
+    }
 }

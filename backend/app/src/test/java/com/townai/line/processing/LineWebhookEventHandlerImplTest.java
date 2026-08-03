@@ -3,6 +3,7 @@ package com.townai.line.processing;
 import com.townai.line.entity.LineVisitDraftEntity;
 import com.townai.line.messaging.LineDraftMessageFactory;
 import com.townai.line.messaging.LineMessagePurpose;
+import com.townai.line.messaging.LineMenuMessageFactory;
 import com.townai.line.messaging.LineMessagingException;
 import com.townai.line.messaging.LinePushClient;
 import com.townai.line.messaging.LinePushRequest;
@@ -11,7 +12,13 @@ import com.townai.line.model.LineWebhookEventType;
 import com.townai.line.model.LineWebhookEventWorkItem;
 import com.townai.line.model.LineDraftAction;
 import com.townai.line.model.LineDraftCommand;
+import com.townai.line.model.LineMenuCommand;
+import com.townai.line.model.LineMenuTarget;
+import com.townai.line.model.LineReportGenerateCommand;
+import com.townai.line.model.LineReportTypeCommand;
+import com.townai.report.entity.ReportType;
 import com.townai.line.service.LineDraftActionResult;
+import com.townai.line.service.LineReportInteractionService;
 import com.townai.line.service.LineVisitDraftActionService;
 import com.townai.line.service.LineVisitDraftService;
 import org.junit.jupiter.api.Test;
@@ -36,6 +43,10 @@ class LineWebhookEventHandlerImplTest {
             mock(LineVisitDraftService.class);
     private final LineDraftMessageFactory messageFactory =
             mock(LineDraftMessageFactory.class);
+    private final LineMenuMessageFactory menuMessageFactory =
+            mock(LineMenuMessageFactory.class);
+    private final LineReportInteractionService reportInteractionService =
+            mock(LineReportInteractionService.class);
     private final LineVisitDraftActionService actionService =
             mock(LineVisitDraftActionService.class);
     private final LinePostbackCommandParser commandParser =
@@ -49,6 +60,8 @@ class LineWebhookEventHandlerImplTest {
                     actionService,
                     commandParser,
                     messageFactory,
+                    menuMessageFactory,
+                    reportInteractionService,
                     retryKeyFactory,
                     pushClient
             );
@@ -59,6 +72,147 @@ class LineWebhookEventHandlerImplTest {
 
         assertFalse(handler.isReady());
         assertTrue(handler.isReady());
+    }
+
+    @Test
+    void pushesMainMenuForFollowEvent() {
+        LineWebhookEventWorkItem workItem = new LineWebhookEventWorkItem(
+                "event-follow",
+                "user-1",
+                LineWebhookEventType.FOLLOW,
+                null,
+                null,
+                Instant.parse("2026-07-25T08:00:00Z"),
+                1
+        );
+        LinePushRequest request = new LinePushRequest(
+                "user-1",
+                List.of(LinePushRequest.TextMessage.of("메뉴"))
+        );
+        UUID retryKey = UUID.randomUUID();
+        when(menuMessageFactory.createMainMenu("user-1"))
+                .thenReturn(request);
+        when(retryKeyFactory.create(
+                "event-follow",
+                LineMessagePurpose.MENU_RESULT
+        )).thenReturn(retryKey);
+
+        handler.handle(workItem);
+
+        verify(pushClient).push(request, retryKey);
+    }
+
+    @Test
+    void routesMenuPostbackToRequestedFlexScreen() {
+        LineWebhookEventWorkItem workItem = new LineWebhookEventWorkItem(
+                "event-menu",
+                "user-1",
+                LineWebhookEventType.POSTBACK,
+                null,
+                "action=menu&target=visit-register",
+                Instant.parse("2026-07-25T08:30:00Z"),
+                1
+        );
+        LineMenuCommand command = new LineMenuCommand(
+                LineMenuTarget.VISIT_REGISTER
+        );
+        LinePushRequest request = new LinePushRequest(
+                "user-1",
+                List.of(LinePushRequest.TextMessage.of("등록 안내"))
+        );
+        UUID retryKey = UUID.randomUUID();
+        when(commandParser.parse(workItem.postbackData()))
+                .thenReturn(command);
+        when(menuMessageFactory.createVisitRegistrationGuide("user-1"))
+                .thenReturn(request);
+        when(retryKeyFactory.create(
+                "event-menu",
+                LineMessagePurpose.MENU_RESULT
+        )).thenReturn(retryKey);
+
+        handler.handle(workItem);
+
+        verify(pushClient).push(request, retryKey);
+    }
+
+    @Test
+    void routesAreaReportTypeToTargetSelection() {
+        LineWebhookEventWorkItem workItem = postbackWorkItem(
+                "event-report-type",
+                "action=report-type&reportType=AREA"
+        );
+        LineReportTypeCommand command = new LineReportTypeCommand(
+                ReportType.AREA
+        );
+        LinePushRequest request = textRequest("지역 선택");
+        UUID retryKey = UUID.randomUUID();
+        when(commandParser.parse(workItem.postbackData()))
+                .thenReturn(command);
+        when(reportInteractionService.createSelection(
+                "user-1",
+                ReportType.AREA
+        )).thenReturn(request);
+        when(retryKeyFactory.create(
+                "event-report-type",
+                LineMessagePurpose.REPORT_SELECTION
+        )).thenReturn(retryKey);
+
+        handler.handle(workItem);
+
+        verify(pushClient).push(request, retryKey);
+    }
+
+    @Test
+    void pushesGeneratingThenIdempotentReportResult() {
+        LineWebhookEventWorkItem workItem = postbackWorkItem(
+                "event-summary",
+                "action=report-type&reportType=SUMMARY"
+        );
+        LineReportTypeCommand command = new LineReportTypeCommand(
+                ReportType.SUMMARY
+        );
+        LineReportGenerateCommand generateCommand =
+                new LineReportGenerateCommand(
+                        ReportType.SUMMARY,
+                        List.of()
+                );
+        LinePushRequest generating = textRequest("생성 중");
+        LinePushRequest result = textRequest("완료");
+        UUID generatingKey = UUID.randomUUID();
+        UUID resultKey = UUID.randomUUID();
+        when(commandParser.parse(workItem.postbackData()))
+                .thenReturn(command);
+        when(reportInteractionService.createGenerating(
+                "user-1",
+                ReportType.SUMMARY
+        )).thenReturn(generating);
+        when(reportInteractionService.generate(
+                "user-1",
+                "event-summary",
+                generateCommand
+        )).thenReturn(result);
+        when(retryKeyFactory.create(
+                "event-summary",
+                LineMessagePurpose.REPORT_GENERATING
+        )).thenReturn(generatingKey);
+        when(retryKeyFactory.create(
+                "event-summary",
+                LineMessagePurpose.REPORT_RESULT
+        )).thenReturn(resultKey);
+
+        handler.handle(workItem);
+
+        var order = org.mockito.Mockito.inOrder(
+                pushClient,
+                reportInteractionService
+        );
+        order.verify(pushClient).push(generating, generatingKey);
+        order.verify(reportInteractionService).generate(
+                "user-1",
+                "event-summary",
+                generateCommand
+        );
+        order.verify(pushClient).push(result, resultKey);
     }
 
     @Test
@@ -170,6 +324,28 @@ class LineWebhookEventHandlerImplTest {
                 null,
                 Instant.parse("2026-07-25T09:00:00Z"),
                 1
+        );
+    }
+
+    private LineWebhookEventWorkItem postbackWorkItem(
+            String eventId,
+            String data
+    ) {
+        return new LineWebhookEventWorkItem(
+                eventId,
+                "user-1",
+                LineWebhookEventType.POSTBACK,
+                null,
+                data,
+                Instant.parse("2026-07-25T09:00:00Z"),
+                1
+        );
+    }
+
+    private LinePushRequest textRequest(String text) {
+        return new LinePushRequest(
+                "user-1",
+                List.of(LinePushRequest.TextMessage.of(text))
         );
     }
 }

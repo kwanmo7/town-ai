@@ -5,6 +5,9 @@ package com.townai.line.model;
  */
 public enum LineWebhookEventType {
 
+    /** 친구 추가 또는 차단 해제 후 메인 메뉴를 안내할 Follow Event. */
+    FOLLOW,
+
     /** 자연어 Visit Draft를 생성할 Text Message Event. */
     TEXT_MESSAGE,
 

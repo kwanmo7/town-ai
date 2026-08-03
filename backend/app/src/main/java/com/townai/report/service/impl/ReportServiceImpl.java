@@ -72,17 +72,53 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public ReportResponse create(ReportCreateRequest request) {
+        return createInternal(request, null);
+    }
+
+    @Override
+    public ReportResponse createForLine(
+            ReportCreateRequest request,
+            String sourceWebhookEventId
+    ) {
+        if (sourceWebhookEventId == null
+                || sourceWebhookEventId.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Source webhook event ID must not be blank."
+            );
+        }
+        return reportRepository
+                .findBySourceWebhookEventId(sourceWebhookEventId)
+                .map(ReportResponse::from)
+                .orElseGet(() -> createInternal(
+                        request,
+                        sourceWebhookEventId
+                ));
+    }
+
+    private ReportResponse createInternal(
+            ReportCreateRequest request,
+            String sourceWebhookEventId
+    ) {
         long startedAt = System.nanoTime();
         ReportGenerationData data = dataAssembler.prepare(request);
         try {
             GeneratedReportContent content = contentGenerator.generate(data);
-            ReportEntity report = persistenceService.persist(
-                    data.reportType(),
-                    content.model(),
-                    content.promptVersion(),
-                    content.markdown(),
-                    data.targetAreas()
-            );
+            ReportEntity report = sourceWebhookEventId == null
+                    ? persistenceService.persist(
+                            data.reportType(),
+                            content.model(),
+                            content.promptVersion(),
+                            content.markdown(),
+                            data.targetAreas()
+                    )
+                    : persistenceService.persist(
+                            data.reportType(),
+                            content.model(),
+                            content.promptVersion(),
+                            content.markdown(),
+                            data.targetAreas(),
+                            sourceWebhookEventId
+                    );
             log.info(
                     "Report generation succeeded. reportId={}, type={}, durationMs={}",
                     report.getId(),

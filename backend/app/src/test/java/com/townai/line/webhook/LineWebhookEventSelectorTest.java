@@ -20,11 +20,15 @@ class LineWebhookEventSelectorTest {
     private static final long TIMESTAMP = 1_692_251_666_727L;
 
     @Test
-    void selectsAllowedActiveTextAndSupportedPostbackInRequestOrder() {
+    void selectsFollowTextAndSupportedPostbackInRequestOrder() {
         LineWebhookEventSelector selector = selector(ALLOWED_USER_ID);
         LineWebhookRequest request = new LineWebhookRequest(
                 "Ubot",
                 List.of(
+                        followEvent(
+                                "01H810YECXQQZ37VAXPF6H9E6S",
+                                ALLOWED_USER_ID
+                        ),
                         textEvent(
                                 "01H810YECXQQZ37VAXPF6H9E6T",
                                 ALLOWED_USER_ID,
@@ -41,19 +45,25 @@ class LineWebhookEventSelectorTest {
         List<LineWebhookEventPayload> result =
                 selector.select(request);
 
-        assertEquals(2, result.size());
+        assertEquals(3, result.size());
+        assertEquals(
+                LineWebhookEventType.FOLLOW,
+                result.getFirst().eventType()
+        );
+        assertNull(result.getFirst().messageText());
+        assertNull(result.getFirst().postbackData());
         assertEquals(
                 LineWebhookEventType.TEXT_MESSAGE,
-                result.getFirst().eventType()
+                result.get(1).eventType()
         );
         assertEquals(
                 "센터미나미 분위기 9점",
-                result.getFirst().messageText()
+                result.get(1).messageText()
         );
-        assertNull(result.getFirst().postbackData());
+        assertNull(result.get(1).postbackData());
         assertEquals(
                 Instant.ofEpochMilli(TIMESTAMP),
-                result.getFirst().occurredAt()
+                result.get(1).occurredAt()
         );
         assertEquals(
                 LineWebhookEventType.POSTBACK,
@@ -106,16 +116,6 @@ class LineWebhookEventSelectorTest {
                 ALLOWED_USER_ID,
                 "action=delete&draftId=12"
         );
-        LineWebhookRequest.Event follow = new LineWebhookRequest.Event(
-                "follow",
-                TIMESTAMP,
-                new LineWebhookRequest.Source("user", ALLOWED_USER_ID),
-                "01H810YECXQQZ37VAXPF6H9E6F",
-                "active",
-                null,
-                null
-        );
-
         List<LineWebhookEventPayload> result = selector.select(
                 new LineWebhookRequest(
                         "Ubot",
@@ -124,13 +124,57 @@ class LineWebhookEventSelectorTest {
                                 group,
                                 image,
                                 standby,
-                                unsupportedPostback,
-                                follow
+                                unsupportedPostback
                         )
                 )
         );
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void selectsSupportedMenuPostback() {
+        LineWebhookEventSelector selector = selector(ALLOWED_USER_ID);
+        LineWebhookRequest request = new LineWebhookRequest(
+                "Ubot",
+                List.of(postbackEvent(
+                        "01H810YECXQQZ37VAXPF6H9E6M",
+                        ALLOWED_USER_ID,
+                        "action=menu&target=visit-register"
+                ))
+        );
+
+        List<LineWebhookEventPayload> result = selector.select(request);
+
+        assertEquals(1, result.size());
+        assertEquals(
+                "action=menu&target=visit-register",
+                result.getFirst().postbackData()
+        );
+    }
+
+    @Test
+    void selectsSupportedReportPostbacks() {
+        LineWebhookEventSelector selector = selector(ALLOWED_USER_ID);
+        LineWebhookRequest request = new LineWebhookRequest(
+                "Ubot",
+                List.of(
+                        postbackEvent(
+                                "01H810YECXQQZ37VAXPF6H9E6N",
+                                ALLOWED_USER_ID,
+                                "action=report-type&reportType=COMPARE"
+                        ),
+                        postbackEvent(
+                                "01H810YECXQQZ37VAXPF6H9E6P",
+                                ALLOWED_USER_ID,
+                                "action=report-generate&reportType=COMPARE&areaIds=1,2"
+                        )
+                )
+        );
+
+        List<LineWebhookEventPayload> result = selector.select(request);
+
+        assertEquals(2, result.size());
     }
 
     @Test
@@ -167,6 +211,21 @@ class LineWebhookEventSelectorTest {
                 webhookEventId,
                 "active",
                 new LineWebhookRequest.Message("text", text),
+                null
+        );
+    }
+
+    private LineWebhookRequest.Event followEvent(
+            String webhookEventId,
+            String userId
+    ) {
+        return new LineWebhookRequest.Event(
+                "follow",
+                TIMESTAMP,
+                new LineWebhookRequest.Source("user", userId),
+                webhookEventId,
+                "active",
+                null,
                 null
         );
     }

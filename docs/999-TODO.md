@@ -28,11 +28,12 @@
        - [O] `2500 x 843`, 1MB 이하 Rich Menu 이미지와 터치 영역 정의
        - 반영 파일: `linebotdesign/`
        - 반영 문서: `011-line-bot-design.md`
-     - [ ] LINE 메뉴·Report 조회 Backend 연동
+     - [O] LINE 메뉴·Report 조회 Backend 연동
        - [O] Flex Message 공통 모델과 Serialization 구조
        - [O] Draft 확인 화면 및 고정 메뉴·안내 화면 Factory
-       - 메뉴·Report Type·Area 선택 Postback 처리
-       - LINE용 Report 생성 결과 Push
+       - [O] Follow·메뉴·Report Type·Area 선택 Postback 처리
+       - [O] LINE용 Report 생성 결과 Push 및 Webhook Event 기반 중복 방지
+     - [ ] LINE 화면 Production 마무리
        - 안전한 Report 보기·다운로드 URL
        - 실제 모바일 Rich Menu와 오래된 메시지 재클릭 검증
      - [O] Production용 GCS Report Storage 구현체
