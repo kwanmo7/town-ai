@@ -33,7 +33,7 @@ Town AI는 직접 방문한 지역에 대한 평가를 기록하고, 저장된 �
 - 방문 기록 조회
 - 방문 기록 수정
 - AI Parser를 이용한 자연어 입력 처리
-- LINE Bot을 이용한 자연어 방문 평가 입력, Visit Draft 확인 및 확정 저장
+- LINE Bot을 이용한 자연어 방문 평가 입력, 신규 Area 후보 확인 및 Visit 확정 저장
 - LINE Bot 메뉴를 이용한 Report Type·대상 Area 선택 및 Report 결과 수신
 - AI Report 생성
 - 생성된 Report 조회 및 다운로드
@@ -67,14 +67,17 @@ LINE Bot
 - 사용자는 Rich Menu 또는 기능 선택 메시지에서 방문 기록 등록과 리포트 조회를 선택할 수 있다.
 - Backend는 LINE Messaging API Webhook을 수신하고 요청 서명을 검증한다.
 - LINE의 텍스트 메시지는 Web과 동일한 Visit Draft 처리 기능을 사용한다.
+- 기존 Area가 없더라도 한 지역과 위치 정보가 명확하면 신규 Area 후보로 표시한다.
 - Bot은 파싱된 값과 누락 또는 경고 내용을 사용자에게 회신한다.
-- 필수 값이 모두 유효한 Draft에는 확인 및 취소 동작을 제공한다.
-- 사용자가 확인한 경우에만 Backend가 Draft를 Visit으로 저장한다.
-- 누락되거나 모호한 값이 있는 Draft는 저장하지 않고 수정된 자연어 입력을 다시 요청한다.
+- 필수 값이 모두 유효한 Draft에는 저장, 부분 수정 및 취소 동작을 제공한다.
+- 사용자가 신규 Area 후보를 확인한 경우에만 Area와 Visit을 하나의 Transaction으로 함께 저장한다.
+- 기존 Area가 식별된 경우에는 사용자가 확인한 Draft만 Visit으로 저장한다.
+- 누락되거나 모호한 값이 있는 Draft는 저장하지 않고, 기존 값을 유지한 채 누락되거나 바꿀 내용만 자연어로 입력받는다.
 - LINE Webhook 이벤트와 Draft 확인은 중복 요청에도 같은 결과가 되도록 멱등하게 처리한다.
 - LINE Push Message 재시도는 동일한 Retry Key를 사용해 LINE Platform이 같은 Push 요청을 중복 수락하지 않도록 한다.
 - 사용자는 AREA·COMPARE·SUMMARY·ALL Report를 선택할 수 있다.
 - AREA는 1개, COMPARE는 2~5개의 활성 Area를 선택하고 Backend가 대상과 Visit 존재 여부를 재검증한다.
+- 활성 Visit이 한 건도 없으면 SUMMARY와 ALL을 생성하지 않고 방문 기록 등록을 안내한다.
 - 생성된 Report는 LINE에서 안전한 HTTPS 보기 또는 다운로드 링크로 제공한다.
 
 ## 비기능 요구사항

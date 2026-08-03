@@ -57,6 +57,46 @@
           "contents": [
             {
               "type": "text",
+              "text": "위치",
+              "color": "#777777",
+              "size": "sm",
+              "flex": 2
+            },
+            {
+              "type": "text",
+              "text": "가나가와현 요코하마시",
+              "align": "end",
+              "wrap": true,
+              "flex": 4
+            }
+          ]
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "가까운 역",
+              "color": "#777777",
+              "size": "sm",
+              "flex": 2
+            },
+            {
+              "type": "text",
+              "text": "센터미나미역",
+              "align": "end",
+              "wrap": true,
+              "flex": 4
+            }
+          ]
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
               "text": "방문일",
               "color": "#777777",
               "size": "sm",
@@ -210,6 +250,17 @@
             "label": "저장",
             "displayText": "저장",
             "data": "action=confirm&draftId=10"
+          }
+        },
+        {
+          "type": "button",
+          "style": "secondary",
+          "height": "sm",
+          "action": {
+            "type": "postback",
+            "label": "수정",
+            "displayText": "수정",
+            "data": "action=edit&draftId=10"
           }
         },
         {

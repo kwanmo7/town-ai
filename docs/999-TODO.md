@@ -21,7 +21,8 @@
        - [O] `LINE_ALLOWED_USER_ID` 기반 1:1 사용자 및 지원 이벤트 선별
        - [O] Webhook 이벤트 저장과 Local·Cloud Tasks Dispatcher 연결
        - [O] 내부 Task Endpoint, OIDC 인증, 처리 Lease 및 최대 5회 상태 관리
-       - [O] Visit Draft 생성, LINE Push, 확인·취소 및 Visit 저장
+       - [O] Visit Draft 생성, LINE Push, 저장·부분 수정·취소 및 Visit 저장
+       - [O] 등록 Area 0건에서 신규 Area 후보 확인 후 Area·Visit 동시 저장
        - [O] 최대 처리 실패 안내 Push 및 30일이 지난 처리 데이터의 기회적 정리
      - [O] LINE Bot 등록·조회 화면과 Rich Menu 디자인
        - [O] 등록·조회·Report 결과 Flex Message JSON
@@ -33,12 +34,15 @@
        - [O] Draft 확인 화면 및 고정 메뉴·안내 화면 Factory
        - [O] Follow·메뉴·Report Type·Area 선택 Postback 처리
        - [O] LINE용 Report 생성 결과 Push 및 Webhook Event 기반 중복 방지
+       - [O] 활성 Visit 0건의 SUMMARY·ALL 생성 사전 차단
+       - [O] Draft 저장 전 자연어 부분 수정 및 누락값 병합
      - [ ] LINE 화면 Production 마무리
        - 안전한 Report 보기·다운로드 URL
        - 실제 모바일 Rich Menu와 오래된 메시지 재클릭 검증
+       - Flyway V5~V7 배포 후 신규 Area·Visit 동시 등록, Draft 부분 수정·경합 처리와 빈 Report 차단 재검증
      - [O] Production용 GCS Report Storage 구현체
      - [O] Local MySQL 기반 전체 API 통합 검증
-       - 격리된 `town_ai_integration` Database에 Flyway V1·V2 적용
+       - 격리된 `town_ai_integration` Database에 당시 Flyway V1·V2 적용
        - Area, Visit, Statistics, Parser, Report 4종과 LINE 확인 흐름 검증
        - OpenAI Responses API와 LINE Messaging API는 Local HTTP Mock 사용
        - 검증 결과: `009-local-api-integration.md`
@@ -70,8 +74,9 @@
   - 반영 문서: `003-erd.md`, `004-api.md`, `ERD/town-ai-v1.sql`
 - [O] Report Type은 Enum 사용
   - 반영 문서: `004-api.md`
-- [O] Prompt Version은 기능별 `{type}-v1` 형식 사용
-  - 값: `summary-v1`, `all-v1`, `area-v1`, `compare-v1`, `visit-parser-v1`
+- [O] Prompt Version은 기능별 독립 증가 형식 사용
+  - 현재 값: `summary-v1`, `all-v1`, `area-v1`, `compare-v1`, `visit-parser-v2`
+  - `visit-parser-v2`는 미등록 Area 후보와 위치 확인 규칙을 추가
   - DB 컬럼은 `VARCHAR(30)` 사용
   - 반영 문서: `003-erd.md`, `004-api.md`, `ERD/town-ai-v1.sql`
 - [O] PK 및 Timestamp 생성 정책 확정
@@ -86,7 +91,7 @@
   - 반영 문서: `003-erd.md`, `004-api.md`
 - [O] LINE Bot Backend V1 범위 확정
   - Webhook 서명 검증, 텍스트 Visit Draft 처리 및 Push Message 결과 회신
-  - 유효한 Draft에 확인·취소 Postback을 제공하고 확인된 Draft만 Visit으로 저장
+  - 유효한 Draft에 저장·부분 수정·취소 Postback을 제공하고 확인된 Draft만 Visit으로 저장
   - `LINE_ALLOWED_USER_ID`로 개인 사용자만 허용
   - 반영 문서: `001-requirements.md`, `002-architecture.md`, `003-erd.md`, `004-api.md`, `006-deployment.md`, `ERD/town-ai-v1.sql`
 - [O] LINE Webhook 비동기 처리 및 중복 방지 방식 확정

@@ -30,17 +30,27 @@ LINE Platform
 Cloud Tasks
 → POST /internal/tasks/line-events/{webhookEventId}
 → OpenAI Visit Parser 호출
+→ 기존 Area 연결 또는 신규 Area 위치 후보 검증
 → line_visit_draft 저장
-→ LINE Push Message로 Draft와 확인/취소 버튼 전송
+→ LINE Push Message로 Draft와 저장/수정/취소 버튼 전송
 → LINE이 Push 요청을 수락한 후 Webhook Event를 COMPLETED로 전환
 
 사용자 확인 Postback
 → LINE Webhook
 → Cloud Tasks
 → Draft 소유자·상태·만료·필수 값 재검증
-→ Visit 저장과 Draft 확정을 하나의 DB Transaction으로 처리
+→ 신규 후보이면 Area 등록
+→ Area·Visit 저장과 Draft 확정을 하나의 DB Transaction으로 처리
 → LINE Push Message로 저장 결과 전송
 → LINE이 Push 요청을 수락한 후 Webhook Event를 COMPLETED로 전환
+
+사용자 수정 Postback
+→ Draft를 AWAITING_REVISION으로 전환한 뒤 수정 입력 안내
+→ 다음 Text Message가 원본 Draft를 REVISION_PROCESSING으로 점유
+→ OpenAI가 반환한 changedFields만 Backend가 기존 Draft에 병합
+→ 검증된 새 line_visit_draft 저장
+→ 이전 Draft를 SUPERSEDED로 전환
+→ 수정된 Draft를 다시 LINE Push Message로 전송
 ```
 
 - Cloud Tasks는 적어도 한 번 전달될 수 있으므로 `webhookEventId`와 Draft 상태를 기준으로 멱등 처리한다.
@@ -51,8 +61,9 @@ Cloud Tasks
 - LINE Push Message는 `webhookEventId`와 메시지 용도로부터 만든 결정적 Retry Key를 사용해 재시도 중 중복 전송을 방지한다.
 - LINE Push Message가 `2xx` 또는 이미 수락된 Request ID가 포함된 `409 Conflict`로 확인된 후에만 이벤트를 `COMPLETED`로 전환한다.
 - Draft가 이미 저장된 이벤트를 재처리할 때는 OpenAI를 다시 호출하거나 Draft를 다시 INSERT하지 않고 기존 Draft를 재사용한다.
+- Parser가 기존 Area를 찾지 못해도 이름·도도부현·시구정촌이 확정된 한 지역은 신규 후보로 보존한다. AI가 보완한 위치 정보는 Draft 화면에서 사용자가 확인해야 한다.
 - 애플리케이션 처리 시도가 최대 횟수에 도달하면 이벤트를 `FAILED`로 종료해 `RECEIVED` 상태로 남지 않게 한다.
-- 이벤트를 `FAILED`로 확정한 뒤 내부 오류를 노출하지 않는 재입력 안내를 Best-effort Push한다. 안내 실패는 종료된 이벤트를 다시 처리 상태로 되돌리지 않는다.
+- 이벤트를 `FAILED`로 확정한 뒤 내부 오류를 노출하지 않는 일반 재시도 안내를 Best-effort Push한다. 안내 실패는 종료된 이벤트를 다시 처리 상태로 되돌리지 않는다.
 - 지원 Webhook 이벤트를 새로 수신하면 30일이 지난 Draft를 먼저 정리하고, 참조가 사라진 `COMPLETED`·`FAILED` 이벤트를 정리한다. `RECEIVED`·`PROCESSING` 이벤트와 확인 결과인 Visit은 자동 삭제하지 않는다.
 
 ## LINE 메뉴 및 Report 조회 흐름
@@ -71,6 +82,7 @@ Cloud Tasks
 조회 선택
 → AREA·COMPARE·SUMMARY·ALL 선택
 → 필요한 경우 Area 선택
+→ 분석 가능한 Visit 존재 여부 사전 확인
 → Cloud Tasks 내부 처리
 → Report 생성 및 GCS 저장
 → LINE Push Message로 보기·다운로드 링크 전송
@@ -80,6 +92,7 @@ Cloud Tasks
 - 모바일의 기본 진입점은 등록·조회 두 영역으로 구성된 Rich Menu이다.
 - LINE PC에서는 Rich Menu가 보이지 않으므로 각 결과 메시지에 메뉴 이동 Postback을 제공한다.
 - 메뉴와 Report Postback의 ID 및 선택 상태는 신뢰하지 않고 Backend에서 다시 검증한다.
+- 분석 가능한 활성 Visit이 없으면 생성 중 메시지와 OpenAI 호출 없이 등록 안내를 Push한다.
 - LINE은 일반 Markdown 파일 발신을 지원하지 않으므로 Report는 안전한 HTTPS URL로 전달한다.
 - 화면 및 Postback 기준은 `011-line-bot-design.md`와 `linebotdesign/`에서 관리한다.
 

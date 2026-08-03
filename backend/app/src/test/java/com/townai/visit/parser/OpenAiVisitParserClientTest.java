@@ -31,7 +31,7 @@ class OpenAiVisitParserClientTest {
         when(responsesClient.generateStructured(
                 anyString(),
                 any(),
-                eq("visit_parser_v1"),
+                eq("visit_parser_v2"),
                 any(JsonNode.class)
         )).thenReturn(new OpenAiResponse("test-model", "{\"warnings\":[]}"));
         OpenAiVisitParserClient client = new OpenAiVisitParserClient(
@@ -51,7 +51,7 @@ class OpenAiVisitParserClientTest {
         verify(responsesClient).generateStructured(
                 instructions.capture(),
                 eq(input),
-                eq("visit_parser_v1"),
+                eq("visit_parser_v2"),
                 schema.capture()
         );
         assertEquals("{\"warnings\":[]}", result);
@@ -59,5 +59,52 @@ class OpenAiVisitParserClientTest {
         assertEquals("object", schema.getValue().path("type").asString());
         assertTrue(schema.getValue().path("properties").has("visitDate"));
         assertTrue(schema.getValue().path("properties").has("warnings"));
+    }
+
+    @Test
+    void loadsRevisionSchemaWhenExistingDraftIsPresent() {
+        OpenAiResponsesClient responsesClient = mock(OpenAiResponsesClient.class);
+        ObjectMapper objectMapper = JsonMapper.builder()
+                .findAndAddModules()
+                .build();
+        when(responsesClient.generateStructured(
+                anyString(),
+                any(),
+                eq("visit_parser_revision_v2"),
+                any(JsonNode.class)
+        )).thenReturn(new OpenAiResponse("test-model", "{}"));
+        OpenAiVisitParserClient client = new OpenAiVisitParserClient(
+                responsesClient,
+                objectMapper
+        );
+        VisitParserInput input = new VisitParserInput(
+                LocalDate.of(2026, 8, 4),
+                "접근성 8로 수정",
+                List.of(),
+                new VisitParserInput.ExistingDraftInput(
+                        null,
+                        LocalDate.of(2026, 8, 3),
+                        8,
+                        8,
+                        8,
+                        7,
+                        7,
+                        null
+                )
+        );
+
+        client.parse(input, null);
+
+        ArgumentCaptor<JsonNode> schema = ArgumentCaptor.forClass(
+                JsonNode.class
+        );
+        verify(responsesClient).generateStructured(
+                anyString(),
+                eq(input),
+                eq("visit_parser_revision_v2"),
+                schema.capture()
+        );
+        assertTrue(schema.getValue().path("properties")
+                .has("changedFields"));
     }
 }

@@ -66,12 +66,23 @@ public class VisitDraftServiceImpl implements VisitDraftService {
 
     @Override
     public VisitDraftResponse create(VisitDraftRequest request) {
-        VisitParserInput input = createInput(request.text().strip());
+        return parse(createInput(request.text().strip(), null));
+    }
+
+    @Override
+    public VisitDraftResponse revise(
+            VisitDraftResponse existingDraft,
+            VisitDraftRequest request
+    ) {
+        return parse(createInput(
+                request.text().strip(),
+                VisitParserInput.ExistingDraftInput.from(existingDraft)
+        ));
+    }
+
+    private VisitDraftResponse parse(VisitParserInput input) {
         try {
-            return outputValidator.validate(
-                    parserAiClient.parse(input, null),
-                    input
-            );
+            return validate(parserAiClient.parse(input, null), input);
         } catch (InvalidVisitDraftOutputException firstFailure) {
             log.warn(
                     "Visit Parser output validation failed. Retrying correction once. reason={}",
@@ -82,7 +93,7 @@ public class VisitDraftServiceImpl implements VisitDraftService {
                     firstFailure.getMessage()
             );
             try {
-                return outputValidator.validate(correctedOutput, input);
+                return validate(correctedOutput, input);
             } catch (InvalidVisitDraftOutputException secondFailure) {
                 log.error(
                         "Corrected Visit Parser output validation failed. reason={}",
@@ -93,10 +104,22 @@ public class VisitDraftServiceImpl implements VisitDraftService {
         }
     }
 
+    private VisitDraftResponse validate(
+            String output,
+            VisitParserInput input
+    ) {
+        return input.existingDraft() == null
+                ? outputValidator.validate(output, input)
+                : outputValidator.validateRevision(output, input);
+    }
+
     /**
      * Parser가 임의의 Area를 만들지 못하도록 현재 활성 Area만 입력 후보로 제공한다.
      */
-    private VisitParserInput createInput(String text) {
+    private VisitParserInput createInput(
+            String text,
+            VisitParserInput.ExistingDraftInput existingDraft
+    ) {
         List<VisitParserInput.AreaInput> areas =
                 areaRepository.findAllByDeletedAtIsNullOrderByIdAsc()
                         .stream()
@@ -111,7 +134,8 @@ public class VisitDraftServiceImpl implements VisitDraftService {
         return new VisitParserInput(
                 LocalDate.ofInstant(clock.instant(), userTimeZone),
                 text,
-                areas
+                areas,
+                existingDraft
         );
     }
 }

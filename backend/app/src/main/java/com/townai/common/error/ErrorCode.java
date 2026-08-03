@@ -58,6 +58,12 @@ public enum ErrorCode {
             "방문 기록이 없는 지역은 리포트를 생성할 수 없습니다."
     ),
 
+    /** 전체 범위 Report를 분석할 활성 Visit이 한 건도 없음. */
+    REPORT_HAS_NO_VISITS(
+            HttpStatus.CONFLICT,
+            "분석할 방문 기록이 없어 리포트를 생성할 수 없습니다."
+    ),
+
     /** 예상 가능한 오류로 분류되지 않은 서버 내부 실패. */
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
 

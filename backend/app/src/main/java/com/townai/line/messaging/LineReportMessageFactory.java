@@ -275,7 +275,14 @@ public class LineReportMessageFactory {
         return bubble(areaHeader, body, footer);
     }
 
-    private LinePushRequest createUnavailable(
+    /**
+     * Report 생성 전에 데이터가 부족함을 안내한다.
+     *
+     * @param lineUserId 수신 사용자
+     * @param message 생성할 수 없는 구체적인 이유
+     * @return 방문 기록 등록과 메인 메뉴 이동 버튼이 있는 안내 메시지
+     */
+    public LinePushRequest createUnavailable(
             String lineUserId,
             String message
     ) {

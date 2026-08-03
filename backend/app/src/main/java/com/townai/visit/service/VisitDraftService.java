@@ -19,4 +19,17 @@ public interface VisitDraftService {
      * @throws ApiException AI 호출 또는 교정 출력 검증에 실패한 경우
      */
     VisitDraftResponse create(VisitDraftRequest request);
+
+    /**
+     * 기존 초안에서 사용자가 명시한 변경만 반영한 전체 초안을 만든다.
+     *
+     * @param existingDraft 수정 전 검증된 초안
+     * @param request 사용자가 보낸 부분 수정 내용
+     * @return 수정하지 않은 기존 값도 모두 포함한 새 초안
+     * @throws ApiException AI 호출 또는 교정 출력 검증에 실패한 경우
+     */
+    VisitDraftResponse revise(
+            VisitDraftResponse existingDraft,
+            VisitDraftRequest request
+    );
 }

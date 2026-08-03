@@ -154,6 +154,27 @@ class LineWebhookEventSelectorTest {
     }
 
     @Test
+    void selectsSupportedDraftEditPostback() {
+        LineWebhookEventSelector selector = selector(ALLOWED_USER_ID);
+        LineWebhookRequest request = new LineWebhookRequest(
+                "Ubot",
+                List.of(postbackEvent(
+                        "01H810YECXQQZ37VAXPF6H9E6R",
+                        ALLOWED_USER_ID,
+                        "action=edit&draftId=12"
+                ))
+        );
+
+        List<LineWebhookEventPayload> result = selector.select(request);
+
+        assertEquals(1, result.size());
+        assertEquals(
+                "action=edit&draftId=12",
+                result.getFirst().postbackData()
+        );
+    }
+
+    @Test
     void selectsSupportedReportPostbacks() {
         LineWebhookEventSelector selector = selector(ALLOWED_USER_ID);
         LineWebhookRequest request = new LineWebhookRequest(

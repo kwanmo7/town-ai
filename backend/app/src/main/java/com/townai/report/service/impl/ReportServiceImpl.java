@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -93,6 +94,19 @@ public class ReportServiceImpl implements ReportService {
                         request,
                         sourceWebhookEventId
                 ));
+    }
+
+    @Override
+    public Optional<ReportResponse> findBySourceWebhookEventId(
+            String sourceWebhookEventId
+    ) {
+        if (sourceWebhookEventId == null
+                || sourceWebhookEventId.isBlank()) {
+            return Optional.empty();
+        }
+        return reportRepository
+                .findBySourceWebhookEventId(sourceWebhookEventId)
+                .map(ReportResponse::from);
     }
 
     private ReportResponse createInternal(

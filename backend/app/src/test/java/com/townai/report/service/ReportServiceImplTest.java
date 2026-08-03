@@ -93,6 +93,34 @@ class ReportServiceImplTest {
     }
 
     @Test
+    void findsExistingLineReportWithoutGenerating() {
+        ReportEntity report = ReportEntity.builder()
+                .reportType(ReportType.ALL)
+                .model("test-model")
+                .promptVersion("all-v1")
+                .sourceWebhookEventId("event-1")
+                .build();
+        ReflectionTestUtils.setField(report, "id", 10L);
+        ReflectionTestUtils.setField(
+                report,
+                "createdAt",
+                Instant.parse("2026-08-03T01:02:03Z")
+        );
+        when(reportRepository.findBySourceWebhookEventId("event-1"))
+                .thenReturn(Optional.of(report));
+
+        Optional<ReportResponse> result =
+                reportService.findBySourceWebhookEventId("event-1");
+
+        assertEquals(10L, result.orElseThrow().id());
+        verifyNoInteractions(
+                dataAssembler,
+                contentGenerator,
+                persistenceService
+        );
+    }
+
+    @Test
     void deletesStorageBeforeDatabaseMetadata() {
         ReportEntity report = ReportEntity.builder()
                 .reportType(ReportType.AREA)

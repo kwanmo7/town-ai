@@ -72,7 +72,7 @@ tasks.named('bootJar') {
 
 tasks.register('promptEval', Test) {
     group = 'verification'
-    description = 'Calls the real OpenAI API and writes prompt evaluation reports.'
+    description = 'Calls the real OpenAI API and writes Report and Visit Parser evaluation outputs.'
 
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath

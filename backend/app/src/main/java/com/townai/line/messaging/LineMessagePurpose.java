@@ -23,6 +23,9 @@ public enum LineMessagePurpose {
     /** Draft 확인과 Visit 저장 결과 메시지. */
     CONFIRM_RESULT,
 
+    /** Draft 수정 입력을 요청하는 메시지. */
+    EDIT_RESULT,
+
     /** Draft 취소 결과 메시지. */
     CANCEL_RESULT,
 

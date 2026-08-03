@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -117,7 +116,7 @@ class ReportDataAssemblerTest {
     }
 
     @Test
-    void includesAreaWithoutVisitsInAllReportAsInsufficientData() {
+    void rejectsAllReportWhenNoActiveVisitExists() {
         AreaEntity area = AreaEntity.builder()
                 .name("센터미나미")
                 .prefecture("가나가와현")
@@ -129,16 +128,37 @@ class ReportDataAssemblerTest {
         when(visitRepository.findAllForActiveAreas())
                 .thenReturn(List.of());
 
-        ReportGenerationData result = assembler.prepare(request("ALL"));
-        ReportDataAssembler.AllInput input =
-                (ReportDataAssembler.AllInput) result.promptInput();
-        ReportDataAssembler.AllAreaInput areaInput = input.areas().getFirst();
+        ApiException exception = assertThrows(
+                ApiException.class,
+                () -> assembler.prepare(request("ALL"))
+        );
 
-        assertEquals(ReportType.ALL, result.reportType());
-        assertEquals(1, result.targetAreas().size());
-        assertEquals(0, areaInput.visitCount());
-        assertNull(areaInput.averageScores().atmosphere());
-        assertEquals(List.of(), areaInput.visits());
+        assertEquals(ErrorCode.REPORT_HAS_NO_VISITS, exception.errorCode());
+    }
+
+    @Test
+    void rejectsSummaryReportWhenNoActiveVisitExists() {
+        when(statisticsService.getOverallStatistics()).thenReturn(
+                new OverallStatistics(
+                        0,
+                        0,
+                        new ScoreAverages(null, null, null, null, null),
+                        new TopFive(
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                List.of()
+                        )
+                )
+        );
+
+        ApiException exception = assertThrows(
+                ApiException.class,
+                () -> assembler.prepare(request("SUMMARY"))
+        );
+
+        assertEquals(ErrorCode.REPORT_HAS_NO_VISITS, exception.errorCode());
     }
 
     @Test

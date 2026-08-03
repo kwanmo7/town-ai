@@ -1,6 +1,7 @@
 package com.townai.line.entity;
 
 import com.townai.area.entity.AreaEntity;
+import com.townai.visit.dto.VisitDraftAreaResponse;
 import com.townai.visit.dto.VisitDraftResponse;
 import com.townai.visit.entity.VisitEntity;
 import jakarta.persistence.Column;
@@ -35,8 +36,9 @@ import java.util.List;
  * LINE 자연어 입력의 검증된 Visit Draft와 사용자 확인 상태를 저장한다.
  *
  * <p>{@code sourceWebhookEventId}가 UNIQUE이므로 같은 Text Message 이벤트가
- * 재처리돼도 Draft를 하나만 유지한다. 확인 가능한 Draft는 Area, 방문일과 다섯
- * 점수가 모두 존재하며, 누락 값이 있으면 {@code NEEDS_INPUT}으로 저장한다.</p>
+ * 재처리돼도 Draft를 하나만 유지한다. 확인 가능한 Draft는 기존 Area 또는 등록에
+ * 필요한 신규 Area 위치, 방문일과 다섯 점수가 모두 존재하며, 누락 값이 있으면
+ * {@code NEEDS_INPUT}으로 저장한다.</p>
  */
 @Entity
 @Table(name = "line_visit_draft")
@@ -62,6 +64,21 @@ public class LineVisitDraftEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "area_id")
     private AreaEntity area;
+
+    @Column(name = "area_registration_required", nullable = false)
+    private boolean areaRegistrationRequired;
+
+    @Column(name = "area_name", length = 25)
+    private String areaName;
+
+    @Column(name = "area_prefecture", length = 20)
+    private String areaPrefecture;
+
+    @Column(name = "area_city", length = 20)
+    private String areaCity;
+
+    @Column(name = "area_station", length = 50)
+    private String areaStation;
 
     @Column(name = "visit_date")
     private LocalDate visitDate;
@@ -95,6 +112,9 @@ public class LineVisitDraftEntity {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
+    @Column(name = "revision_webhook_event_id", unique = true, length = 64)
+    private String revisionWebhookEventId;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "confirmed_visit_id", unique = true)
     private VisitEntity confirmedVisit;
@@ -112,6 +132,11 @@ public class LineVisitDraftEntity {
             String sourceWebhookEventId,
             String lineUserId,
             AreaEntity area,
+            boolean areaRegistrationRequired,
+            String areaName,
+            String areaPrefecture,
+            String areaCity,
+            String areaStation,
             LocalDate visitDate,
             Integer atmosphereScore,
             Integer infraScore,
@@ -126,6 +151,11 @@ public class LineVisitDraftEntity {
         this.sourceWebhookEventId = sourceWebhookEventId;
         this.lineUserId = lineUserId;
         this.area = area;
+        this.areaRegistrationRequired = areaRegistrationRequired;
+        this.areaName = areaName;
+        this.areaPrefecture = areaPrefecture;
+        this.areaCity = areaCity;
+        this.areaStation = areaStation;
         this.visitDate = visitDate;
         this.atmosphereScore = atmosphereScore;
         this.infraScore = infraScore;
@@ -144,6 +174,7 @@ public class LineVisitDraftEntity {
      * @param sourceWebhookEventId Draft를 생성한 Webhook Event ID
      * @param lineUserId Draft를 소유한 LINE User ID
      * @param area 현재도 활성 상태인 Parser 선택 Area
+     * @param areaRegistrationRequired 저장 시 새 Area를 함께 등록해야 하는지 여부
      * @param response Backend 검증을 통과한 Visit Parser 응답
      * @param warnings Area 재검증 결과까지 포함한 사용자 경고
      * @param createdAt Draft 유효 시간을 계산할 UTC 현재 시각
@@ -153,17 +184,32 @@ public class LineVisitDraftEntity {
             String sourceWebhookEventId,
             String lineUserId,
             AreaEntity area,
+            boolean areaRegistrationRequired,
             VisitDraftResponse response,
             List<String> warnings,
             Instant createdAt
     ) {
-        LineVisitDraftStatus status = isConfirmable(area, response)
+        LineVisitDraftStatus status = isConfirmable(
+                area,
+                areaRegistrationRequired,
+                response
+        )
                 ? LineVisitDraftStatus.AWAITING_CONFIRMATION
                 : LineVisitDraftStatus.NEEDS_INPUT;
+        VisitDraftAreaResponse areaResponse = response.area();
         return LineVisitDraftEntity.builder()
                 .sourceWebhookEventId(sourceWebhookEventId)
                 .lineUserId(lineUserId)
                 .area(area)
+                .areaRegistrationRequired(areaRegistrationRequired)
+                .areaName(areaResponse == null ? null : areaResponse.name())
+                .areaPrefecture(
+                        areaResponse == null ? null : areaResponse.prefecture()
+                )
+                .areaCity(areaResponse == null ? null : areaResponse.city())
+                .areaStation(
+                        areaResponse == null ? null : areaResponse.station()
+                )
                 .visitDate(response.visitDate())
                 .atmosphereScore(response.atmosphereScore())
                 .infraScore(response.infraScore())
@@ -176,6 +222,16 @@ public class LineVisitDraftEntity {
                 .expiresAt(createdAt.plus(24, ChronoUnit.HOURS)
                         .truncatedTo(ChronoUnit.SECONDS))
                 .build();
+    }
+
+    /**
+     * 확인 과정에서 찾거나 새로 만든 활성 Area를 Draft에 연결한다.
+     *
+     * @param area Visit이 참조할 활성 Area
+     */
+    public void assignArea(AreaEntity area) {
+        this.area = area;
+        this.areaRegistrationRequired = false;
     }
 
     /**
@@ -193,7 +249,81 @@ public class LineVisitDraftEntity {
      */
     public void cancel() {
         this.confirmedVisit = null;
+        this.revisionWebhookEventId = null;
         this.status = LineVisitDraftStatus.CANCELLED;
+    }
+
+    /**
+     * 다음 LINE Text Message로 현재 값을 수정할 수 있는 대기 상태로 전환한다.
+     */
+    public void requestRevision() {
+        this.confirmedVisit = null;
+        this.revisionWebhookEventId = null;
+        this.status = LineVisitDraftStatus.AWAITING_REVISION;
+    }
+
+    /**
+     * 수정 대기 Draft를 하나의 Text Message가 처리하도록 점유한다.
+     *
+     * @param webhookEventId 수정 내용을 담은 LINE Webhook Event ID
+     */
+    public void beginRevision(String webhookEventId) {
+        if (status != LineVisitDraftStatus.AWAITING_REVISION) {
+            throw new IllegalStateException(
+                    "Only an awaiting Draft can begin revision."
+            );
+        }
+        this.revisionWebhookEventId = webhookEventId;
+        this.status = LineVisitDraftStatus.REVISION_PROCESSING;
+    }
+
+    /**
+     * 현재 처리 중인 Text Message가 이 Draft를 점유했는지 확인한다.
+     *
+     * @param webhookEventId 확인할 LINE Webhook Event ID
+     * @return 같은 수정 처리이면 {@code true}
+     */
+    public boolean isRevisionClaimedBy(String webhookEventId) {
+        return status == LineVisitDraftStatus.REVISION_PROCESSING
+                && revisionWebhookEventId != null
+                && revisionWebhookEventId.equals(webhookEventId);
+    }
+
+    /**
+     * 수정된 새 Draft가 생성된 뒤 현재 Draft를 대체 완료 상태로 전환한다.
+     */
+    public void supersede() {
+        this.confirmedVisit = null;
+        this.revisionWebhookEventId = null;
+        this.status = LineVisitDraftStatus.SUPERSEDED;
+    }
+
+    /**
+     * Parser 수정 모드에 전달할 현재 Draft Snapshot을 만든다.
+     *
+     * @return 현재 화면에 표시된 Area와 Visit 값
+     */
+    public VisitDraftResponse toDraftResponse() {
+        VisitDraftAreaResponse areaResponse = area == null
+                ? candidateAreaResponse()
+                : new VisitDraftAreaResponse(
+                        area.getId(),
+                        area.getName(),
+                        area.getPrefecture(),
+                        area.getCity(),
+                        area.getStation()
+                );
+        return new VisitDraftResponse(
+                areaResponse,
+                visitDate,
+                atmosphereScore,
+                infraScore,
+                cleanScore,
+                sizeScore,
+                accessScore,
+                memo,
+                List.copyOf(warnings)
+        );
     }
 
     /**
@@ -201,6 +331,7 @@ public class LineVisitDraftEntity {
      */
     public void expire() {
         this.confirmedVisit = null;
+        this.revisionWebhookEventId = null;
         this.status = LineVisitDraftStatus.EXPIRED;
     }
 
@@ -211,17 +342,36 @@ public class LineVisitDraftEntity {
      */
     public void requireNewInput(String warning) {
         this.confirmedVisit = null;
+        this.revisionWebhookEventId = null;
         this.status = LineVisitDraftStatus.NEEDS_INPUT;
         if (!this.warnings.contains(warning)) {
             this.warnings.add(warning);
         }
     }
 
+    private VisitDraftAreaResponse candidateAreaResponse() {
+        if (areaName == null || areaName.isBlank()) {
+            return null;
+        }
+        return new VisitDraftAreaResponse(
+                null,
+                areaName,
+                areaPrefecture,
+                areaCity,
+                areaStation
+        );
+    }
+
     private static boolean isConfirmable(
             AreaEntity area,
+            boolean areaRegistrationRequired,
             VisitDraftResponse response
     ) {
-        return area != null
+        boolean areaReady = area != null
+                || (areaRegistrationRequired
+                && response.area() != null
+                && response.area().hasRequiredLocation());
+        return areaReady
                 && response.visitDate() != null
                 && response.atmosphereScore() != null
                 && response.infraScore() != null

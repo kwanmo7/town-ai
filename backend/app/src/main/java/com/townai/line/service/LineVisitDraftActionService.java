@@ -1,7 +1,10 @@
 package com.townai.line.service;
 
+import com.townai.area.dto.AreaDetailResponse;
+import com.townai.area.dto.AreaRequest;
 import com.townai.area.entity.AreaEntity;
 import com.townai.area.repository.AreaRepository;
+import com.townai.area.service.AreaService;
 import com.townai.line.entity.LineVisitDraftEntity;
 import com.townai.line.entity.LineVisitDraftStatus;
 import com.townai.line.messaging.LineMessagePurpose;
@@ -19,32 +22,35 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 /**
- * LINE Draft의 소유자·상태·만료·필수 값을 잠금 안에서 재검증하고 확인 또는
- * 취소를 처리한다.
+ * LINE Draft의 소유자·상태·만료·필수 값을 잠금 안에서 재검증하고 저장,
+ * 수정 요청 또는 취소를 처리한다.
  */
 @Service
 public class LineVisitDraftActionService {
 
     private static final String AREA_REVALIDATION_WARNING =
-            "선택된 지역이 삭제되었거나 존재하지 않아 다시 입력해야 합니다.";
+            "지역이 삭제되었거나 신규 지역 정보를 등록할 수 없어 다시 입력해야 합니다.";
     private static final String VALUE_REVALIDATION_WARNING =
             "방문일 또는 점수 값이 유효하지 않아 다시 입력해야 합니다.";
 
     private final LineVisitDraftRepository draftRepository;
     private final AreaRepository areaRepository;
+    private final AreaService areaService;
     private final VisitRepository visitRepository;
     private final VisitService visitService;
     private final Clock clock;
     private final ZoneId userTimeZone;
 
     /**
-     * LINE Draft 확인·취소 Service를 생성한다.
+     * LINE Draft 저장·수정·취소 Service를 생성한다.
      *
      * @param draftRepository Draft Lock 및 상태 저장 Repository
      * @param areaRepository 활성 Area 재검증 Repository
+     * @param areaService 신규 Area 등록 규칙을 재사용할 Service
      * @param visitRepository 확정된 Visit 관계 Reference 조회 Repository
      * @param visitService 기존 Visit 생성 규칙을 재사용할 Service
      * @param clock Draft 만료 판단 기준
@@ -53,6 +59,7 @@ public class LineVisitDraftActionService {
     public LineVisitDraftActionService(
             LineVisitDraftRepository draftRepository,
             AreaRepository areaRepository,
+            AreaService areaService,
             VisitRepository visitRepository,
             VisitService visitService,
             Clock clock,
@@ -60,6 +67,7 @@ public class LineVisitDraftActionService {
     ) {
         this.draftRepository = draftRepository;
         this.areaRepository = areaRepository;
+        this.areaService = areaService;
         this.visitRepository = visitRepository;
         this.visitService = visitService;
         this.clock = clock;
@@ -69,7 +77,7 @@ public class LineVisitDraftActionService {
     /**
      * Postback 사용자와 Draft를 검증하고 결과를 하나의 Transaction으로 반영한다.
      *
-     * @param command 확인 또는 취소 명령
+     * @param command 수정, 확인 또는 취소 명령
      * @param lineUserId Postback을 발생시킨 LINE User ID
      * @return 사용자에게 동일하게 재전송할 수 있는 처리 결과
      */
@@ -90,9 +98,11 @@ public class LineVisitDraftActionService {
 
         LineVisitDraftEntity draft = found.get();
         expireIfNecessary(draft);
-        return command.action() == LineDraftAction.CONFIRM
-                ? confirm(draft)
-                : cancel(draft);
+        return switch (command.action()) {
+            case CONFIRM -> confirm(draft);
+            case EDIT -> requestRevision(draft);
+            case CANCEL -> cancel(draft);
+        };
     }
 
     private LineDraftActionResult confirm(LineVisitDraftEntity draft) {
@@ -113,14 +123,72 @@ public class LineVisitDraftActionService {
                     LineDraftAction.CONFIRM,
                     "필수 값이 부족해 저장할 수 없습니다. 자연어 평가를 다시 보내주세요."
             );
+            case AWAITING_REVISION -> result(
+                    LineDraftAction.CONFIRM,
+                    "수정 내용을 기다리고 있습니다. 변경할 내용만 보내주세요."
+            );
+            case REVISION_PROCESSING -> result(
+                    LineDraftAction.CONFIRM,
+                    "수정 내용을 처리 중입니다. 새 초안을 확인한 뒤 저장해주세요."
+            );
+            case SUPERSEDED -> result(
+                    LineDraftAction.CONFIRM,
+                    "수정된 새 방문 기록 초안이 이미 생성되었습니다."
+            );
             case AWAITING_CONFIRMATION -> confirmAwaiting(draft);
+        };
+    }
+
+    private LineDraftActionResult requestRevision(
+            LineVisitDraftEntity draft
+    ) {
+        return switch (draft.getStatus()) {
+            case AWAITING_CONFIRMATION, NEEDS_INPUT -> {
+                supersedeOtherPendingRevisions(draft);
+                draft.requestRevision();
+                yield result(
+                        LineDraftAction.EDIT,
+                        revisionInstruction()
+                );
+            }
+            case AWAITING_REVISION -> {
+                supersedeOtherPendingRevisions(draft);
+                yield result(
+                        LineDraftAction.EDIT,
+                        revisionInstruction()
+                );
+            }
+            case REVISION_PROCESSING -> {
+                supersedeOtherPendingRevisions(draft);
+                draft.requestRevision();
+                yield result(
+                        LineDraftAction.EDIT,
+                        revisionInstruction()
+                );
+            }
+            case SUPERSEDED -> result(
+                    LineDraftAction.EDIT,
+                    "이미 수정된 초안입니다. 가장 최근 초안의 수정 버튼을 이용해주세요."
+            );
+            case CONFIRMED -> result(
+                    LineDraftAction.EDIT,
+                    "이미 저장된 방문 기록은 이 화면에서 수정할 수 없습니다."
+            );
+            case CANCELLED -> result(
+                    LineDraftAction.EDIT,
+                    "이미 취소된 방문 기록 초안입니다."
+            );
+            case EXPIRED -> result(
+                    LineDraftAction.EDIT,
+                    "수정 시간이 만료되었습니다. 방문 평가를 다시 보내주세요."
+            );
         };
     }
 
     private LineDraftActionResult confirmAwaiting(
             LineVisitDraftEntity draft
     ) {
-        AreaEntity area = findActiveArea(draft);
+        AreaEntity area = resolveAreaForConfirmation(draft);
         if (area == null) {
             draft.requireNewInput(AREA_REVALIDATION_WARNING);
             return result(
@@ -181,25 +249,104 @@ public class LineVisitDraftActionService {
                     LineDraftAction.CANCEL,
                     "확인 대기 중인 방문 기록 초안이 아닙니다."
             );
+            case AWAITING_REVISION -> {
+                draft.cancel();
+                yield result(
+                        LineDraftAction.CANCEL,
+                        "방문 기록 초안을 취소했습니다."
+                );
+            }
+            case REVISION_PROCESSING -> {
+                draft.cancel();
+                yield result(
+                        LineDraftAction.CANCEL,
+                        "방문 기록 초안을 취소했습니다. 처리 중인 수정 내용은 반영되지 않습니다."
+                );
+            }
+            case SUPERSEDED -> result(
+                    LineDraftAction.CANCEL,
+                    "수정된 새 방문 기록 초안이 이미 생성되었습니다."
+            );
         };
     }
 
     private void expireIfNecessary(LineVisitDraftEntity draft) {
         if ((draft.getStatus()
                 == LineVisitDraftStatus.AWAITING_CONFIRMATION
-                || draft.getStatus() == LineVisitDraftStatus.NEEDS_INPUT)
+                || draft.getStatus() == LineVisitDraftStatus.NEEDS_INPUT
+                || draft.getStatus()
+                == LineVisitDraftStatus.AWAITING_REVISION
+                || draft.getStatus()
+                == LineVisitDraftStatus.REVISION_PROCESSING)
                 && !clock.instant().isBefore(draft.getExpiresAt())) {
             draft.expire();
         }
     }
 
-    private AreaEntity findActiveArea(LineVisitDraftEntity draft) {
-        if (draft.getArea() == null) {
+    private void supersedeOtherPendingRevisions(
+            LineVisitDraftEntity selectedDraft
+    ) {
+        draftRepository.findAllByLineUserIdAndStatusIn(
+                selectedDraft.getLineUserId(),
+                List.of(
+                        LineVisitDraftStatus.AWAITING_REVISION,
+                        LineVisitDraftStatus.REVISION_PROCESSING
+                )
+        ).stream()
+                .filter(draft -> !draft.getId().equals(
+                        selectedDraft.getId()
+                ))
+                .forEach(LineVisitDraftEntity::supersede);
+    }
+
+    private AreaEntity resolveAreaForConfirmation(
+            LineVisitDraftEntity draft
+    ) {
+        if (draft.getArea() != null) {
+            return areaRepository.findByIdAndDeletedAtIsNull(
+                    draft.getArea().getId()
+            ).orElse(null);
+        }
+        if (!draft.isAreaRegistrationRequired()
+                || !hasText(draft.getAreaName())
+                || !hasText(draft.getAreaPrefecture())
+                || !hasText(draft.getAreaCity())) {
             return null;
         }
-        return areaRepository.findByIdAndDeletedAtIsNull(
-                draft.getArea().getId()
-        ).orElse(null);
+
+        Optional<AreaEntity> existing = areaRepository
+                .findByPrefectureAndCityAndNameAndDeletedAtIsNull(
+                        draft.getAreaPrefecture(),
+                        draft.getAreaCity(),
+                        draft.getAreaName()
+                );
+        if (existing.isPresent()) {
+            draft.assignArea(existing.get());
+            return existing.get();
+        }
+        if (areaRepository.existsByPrefectureAndCityAndName(
+                draft.getAreaPrefecture(),
+                draft.getAreaCity(),
+                draft.getAreaName()
+        )) {
+            return null;
+        }
+
+        AreaDetailResponse created = areaService.create(new AreaRequest(
+                draft.getAreaName(),
+                draft.getAreaPrefecture(),
+                draft.getAreaCity(),
+                draft.getAreaStation()
+        ));
+        AreaEntity area = areaRepository.findByIdAndDeletedAtIsNull(
+                created.id()
+        ).orElseThrow();
+        draft.assignArea(area);
+        return area;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private boolean hasValidRequiredValues(
@@ -232,10 +379,16 @@ public class LineVisitDraftActionService {
             LineDraftAction action,
             String message
     ) {
-        LineMessagePurpose purpose =
-                action == LineDraftAction.CONFIRM
-                        ? LineMessagePurpose.CONFIRM_RESULT
-                        : LineMessagePurpose.CANCEL_RESULT;
+        LineMessagePurpose purpose = switch (action) {
+            case CONFIRM -> LineMessagePurpose.CONFIRM_RESULT;
+            case EDIT -> LineMessagePurpose.EDIT_RESULT;
+            case CANCEL -> LineMessagePurpose.CANCEL_RESULT;
+        };
         return new LineDraftActionResult(purpose, message);
+    }
+
+    private String revisionInstruction() {
+        return "수정할 내용만 입력해주세요. 예: '접근성 8로 수정', "
+                + "'방문일은 7월 26일', '메모에 공원이 가까웠다고 추가'.";
     }
 }

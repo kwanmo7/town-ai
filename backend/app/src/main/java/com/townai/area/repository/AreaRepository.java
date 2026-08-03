@@ -36,6 +36,20 @@ public interface AreaRepository extends JpaRepository<AreaEntity, Long> {
     Optional<AreaEntity> findByIdAndDeletedAtIsNull(Long id);
 
     /**
+     * 정규화된 위치 조합으로 활성 Area를 조회한다.
+     *
+     * @param prefecture 도도부현 이름
+     * @param city 시구정촌 이름
+     * @param name 동네 이름
+     * @return 같은 위치 조합의 활성 Area
+     */
+    Optional<AreaEntity> findByPrefectureAndCityAndNameAndDeletedAtIsNull(
+            String prefecture,
+            String city,
+            String name
+    );
+
+    /**
      * DB UNIQUE 정책에 맞춰 Soft Delete 여부와 관계없이 같은 위치 조합을 검사한다.
      *
      * @param prefecture 도도부현 이름

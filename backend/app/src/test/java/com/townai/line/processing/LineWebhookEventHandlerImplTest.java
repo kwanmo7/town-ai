@@ -21,10 +21,12 @@ import com.townai.line.service.LineDraftActionResult;
 import com.townai.line.service.LineReportInteractionService;
 import com.townai.line.service.LineVisitDraftActionService;
 import com.townai.line.service.LineVisitDraftService;
+import com.townai.line.service.LineVisitDraftResult;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,6 +37,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 class LineWebhookEventHandlerImplTest {
@@ -216,6 +219,83 @@ class LineWebhookEventHandlerImplTest {
     }
 
     @Test
+    void reportsNoDataWithoutSendingGeneratingMessage() {
+        LineWebhookEventWorkItem workItem = postbackWorkItem(
+                "event-all-empty",
+                "action=report-type&reportType=ALL"
+        );
+        LineReportTypeCommand command = new LineReportTypeCommand(
+                ReportType.ALL
+        );
+        LineReportGenerateCommand generateCommand =
+                new LineReportGenerateCommand(ReportType.ALL, List.of());
+        LinePushRequest unavailable = textRequest("방문 기록 없음");
+        UUID resultKey = UUID.randomUUID();
+        when(commandParser.parse(workItem.postbackData()))
+                .thenReturn(command);
+        when(reportInteractionService.findUnavailableMessage(
+                "user-1",
+                generateCommand
+        )).thenReturn(Optional.of(unavailable));
+        when(retryKeyFactory.create(
+                "event-all-empty",
+                LineMessagePurpose.REPORT_RESULT
+        )).thenReturn(resultKey);
+
+        handler.handle(workItem);
+
+        verify(pushClient).push(unavailable, resultKey);
+        verify(reportInteractionService, never()).createGenerating(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.any()
+        );
+        verify(reportInteractionService, never()).generate(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
+    @Test
+    void pushesExistingReportBeforeMutableAvailabilityCheck() {
+        LineWebhookEventWorkItem workItem = postbackWorkItem(
+                "event-all-retry",
+                "action=report-type&reportType=ALL"
+        );
+        LineReportTypeCommand command = new LineReportTypeCommand(
+                ReportType.ALL
+        );
+        LineReportGenerateCommand generateCommand =
+                new LineReportGenerateCommand(ReportType.ALL, List.of());
+        LinePushRequest existing = textRequest("기존 Report");
+        UUID resultKey = UUID.randomUUID();
+        when(commandParser.parse(workItem.postbackData()))
+                .thenReturn(command);
+        when(reportInteractionService.findExistingResult(
+                "user-1",
+                "event-all-retry",
+                generateCommand
+        )).thenReturn(Optional.of(existing));
+        when(retryKeyFactory.create(
+                "event-all-retry",
+                LineMessagePurpose.REPORT_RESULT
+        )).thenReturn(resultKey);
+
+        handler.handle(workItem);
+
+        verify(pushClient).push(existing, resultKey);
+        verify(reportInteractionService, never()).findUnavailableMessage(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.any()
+        );
+        verify(reportInteractionService, never()).generate(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
+    @Test
     void createsDraftAndPushesDeterministicResult() {
         LineWebhookEventWorkItem workItem = textWorkItem();
         LineVisitDraftEntity draft = mock(LineVisitDraftEntity.class);
@@ -226,7 +306,9 @@ class LineWebhookEventHandlerImplTest {
         UUID retryKey = UUID.fromString(
                 "123e4567-e89b-52d3-a456-426614174000"
         );
-        when(draftService.getOrCreate(workItem)).thenReturn(draft);
+        when(draftService.getOrCreate(workItem)).thenReturn(
+                LineVisitDraftResult.draft(draft)
+        );
         when(messageFactory.create(draft)).thenReturn(request);
         when(retryKeyFactory.create(
                 "event-1",
@@ -247,7 +329,9 @@ class LineWebhookEventHandlerImplTest {
                 List.of(LinePushRequest.TextMessage.of("초안"))
         );
         UUID retryKey = UUID.randomUUID();
-        when(draftService.getOrCreate(workItem)).thenReturn(draft);
+        when(draftService.getOrCreate(workItem)).thenReturn(
+                LineVisitDraftResult.draft(draft)
+        );
         when(messageFactory.create(draft)).thenReturn(request);
         when(retryKeyFactory.create(
                 "event-1",

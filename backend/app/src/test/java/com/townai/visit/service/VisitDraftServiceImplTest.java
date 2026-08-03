@@ -57,7 +57,13 @@ class VisitDraftServiceImplTest {
     void returnsReviewableDraftWithoutSavingVisit() {
         FakeVisitParserAiClient aiClient = new FakeVisitParserAiClient("""
                 {
-                  "area": {"id": 1, "name": "센터미나미"},
+                  "area": {
+                    "id": 1,
+                    "name": "센터미나미",
+                    "prefecture": "가나가와현",
+                    "city": "요코하마시",
+                    "station": "센터미나미역"
+                  },
                   "visitDate": "2026-07-24",
                   "atmosphereScore": 9,
                   "infraScore": null,
@@ -103,7 +109,7 @@ class VisitDraftServiceImplTest {
         assertEquals(1L, result.area().id());
         assertEquals(2, aiClient.correctionInstructions.size());
         assertEquals(
-                "Parser Area ID 또는 이름이 입력 Area와 일치하지 않습니다.",
+                "Parser Area 정보가 입력 Area와 일치하지 않습니다.",
                 aiClient.correctionInstructions.get(1)
         );
     }
@@ -148,6 +154,94 @@ class VisitDraftServiceImplTest {
         assertEquals(2, aiClient.inputs.size());
     }
 
+    @Test
+    void returnsReviewableNewAreaCandidateWhenNoRegisteredAreaMatches() {
+        FakeVisitParserAiClient aiClient = new FakeVisitParserAiClient("""
+                {
+                  "area": {
+                    "id": null,
+                    "name": "무사시코스기",
+                    "prefecture": "가나가와현",
+                    "city": "가와사키시",
+                    "station": "무사시코스기역"
+                  },
+                  "visitDate": "2026-07-24",
+                  "atmosphereScore": 8,
+                  "infraScore": 8,
+                  "cleanScore": 8,
+                  "sizeScore": 7,
+                  "accessScore": 9,
+                  "memo": "역 주변을 둘러봄",
+                  "warnings": ["새 지역의 위치 정보를 확인해주세요."]
+                }
+                """);
+        VisitDraftService service = service(aiClient);
+
+        VisitDraftResponse result = service.create(new VisitDraftRequest(
+                "무사시코스기를 방문했어. 점수는 모두 입력했어."
+        ));
+
+        assertNull(result.area().id());
+        assertEquals("무사시코스기", result.area().name());
+        assertEquals("가나가와현", result.area().prefecture());
+        assertEquals("가와사키시", result.area().city());
+    }
+
+    @Test
+    void providesExistingDraftWhenParsingPartialRevision() {
+        FakeVisitParserAiClient aiClient = new FakeVisitParserAiClient(
+                completeOutput(1L, "센터미나미")
+                        .replace(
+                                "\"accessScore\": 8",
+                                "\"accessScore\": 9"
+                        )
+                        .replace(
+                                "\"atmosphereScore\": 8",
+                                "\"atmosphereScore\": 2"
+                        )
+                        .replace(
+                                "\"warnings\": []",
+                                "\"warnings\": [],\n"
+                                        + "  \"changedFields\": [\"accessScore\"]"
+                        )
+        );
+        VisitDraftService service = service(aiClient);
+        VisitDraftResponse existing = new VisitDraftResponse(
+                new com.townai.visit.dto.VisitDraftAreaResponse(
+                        1L,
+                        "센터미나미",
+                        "가나가와현",
+                        "요코하마시",
+                        "센터미나미역"
+                ),
+                java.time.LocalDate.parse("2026-07-24"),
+                8,
+                8,
+                8,
+                8,
+                7,
+                "방문 메모",
+                List.of()
+        );
+
+        VisitDraftResponse result = service.revise(
+                existing,
+                new VisitDraftRequest("접근성 9로 수정")
+        );
+
+        assertEquals(9, result.accessScore());
+        assertEquals(8, result.atmosphereScore());
+        assertEquals("접근성 9로 수정", aiClient.inputs.getFirst().text());
+        assertEquals(
+                7,
+                aiClient.inputs.getFirst().existingDraft().accessScore()
+        );
+        assertEquals(
+                "센터미나미",
+                aiClient.inputs.getFirst().existingDraft().area().name()
+        );
+    }
+
     private VisitDraftService service(FakeVisitParserAiClient aiClient) {
         Clock clock = Clock.fixed(
                 Instant.parse("2026-07-23T16:30:00Z"),
@@ -167,7 +261,13 @@ class VisitDraftServiceImplTest {
     private String completeOutput(Long areaId, String areaName) {
         return """
                 {
-                  "area": {"id": %d, "name": "%s"},
+                  "area": {
+                    "id": %d,
+                    "name": "%s",
+                    "prefecture": "가나가와현",
+                    "city": "요코하마시",
+                    "station": "센터미나미역"
+                  },
                   "visitDate": "2026-07-24",
                   "atmosphereScore": 8,
                   "infraScore": 8,

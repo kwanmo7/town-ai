@@ -27,7 +27,7 @@ class LineDraftMessageFactoryTest {
     private final ObjectMapper objectMapper = JsonMapper.builder().build();
 
     @Test
-    void createsSingleFlexMessageWithConfirmAndCancelActions()
+    void createsSingleFlexMessageWithConfirmEditAndCancelActions()
             throws JacksonException {
         LineVisitDraftEntity draft = completeDraft();
         ReflectionTestUtils.setField(draft, "id", 42L);
@@ -59,6 +59,9 @@ class LineDraftMessageFactoryTest {
         assertTrue(json.contains(
                 "\"data\":\"action=cancel&draftId=42\""
         ));
+        assertTrue(json.contains(
+                "\"data\":\"action=edit&draftId=42\""
+        ));
         assertTrue(json.contains("\"displayText\":\"저장\""));
     }
 
@@ -80,10 +83,12 @@ class LineDraftMessageFactoryTest {
                 "event-1",
                 "user-1",
                 null,
+                false,
                 response,
                 response.warnings(),
                 Instant.parse("2026-07-25T10:00:00Z")
         );
+        ReflectionTestUtils.setField(draft, "id", 11L);
 
         LinePushRequest request = factory.create(draft);
 
@@ -107,7 +112,9 @@ class LineDraftMessageFactoryTest {
         ));
         assertFalse(json.contains("action=confirm"));
         assertFalse(json.contains("action=cancel"));
-        assertFalse(json.contains("action=menu"));
+        assertTrue(json.contains("action=edit&draftId=11"));
+        assertFalse(json.contains("\"inputOption\":\"openKeyboard\""));
+        assertTrue(json.contains("action=menu&target=main"));
     }
 
     @Test
@@ -128,7 +135,13 @@ class LineDraftMessageFactoryTest {
                 .station("센터미나미역")
                 .build();
         VisitDraftResponse response = new VisitDraftResponse(
-                new VisitDraftAreaResponse(1L, "센터미나미"),
+                new VisitDraftAreaResponse(
+                        1L,
+                        "센터미나미",
+                        "가나가와현",
+                        "요코하마시",
+                        "센터미나미역"
+                ),
                 LocalDate.parse("2026-07-24"),
                 8,
                 9,
@@ -142,6 +155,7 @@ class LineDraftMessageFactoryTest {
                 "event-1",
                 "user-1",
                 area,
+                false,
                 response,
                 response.warnings(),
                 Instant.parse("2026-07-25T10:00:00Z")

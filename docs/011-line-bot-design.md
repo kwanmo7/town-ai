@@ -30,14 +30,17 @@ Client이다. 모든 저장과 검증은 Backend가 담당하며 LINE 메시지�
 → 자연어 입력 안내
 → 사용자가 평가 전송
 → OpenAI Visit Parser
+→ 기존 Area 또는 신규 Area 위치 후보가 포함된 Draft
 → 저장 가능한 Draft 또는 재입력 안내
-→ 저장·취소
+→ 저장·수정·취소
+→ 수정 선택 시 바꿀 내용만 입력하고 수정된 Draft 재확인
 → 처리 결과와 다음 메뉴
 
 리포트 조회
 → AREA·COMPARE·SUMMARY·ALL 선택
 → 필요한 경우 Area 선택
-→ Report 생성 중 안내
+→ 분석 가능한 Visit 존재 여부 확인
+→ 생성 가능한 경우에만 Report 생성 중 안내
 → OpenAI Report 생성 및 GCS 저장
 → Report 결과 카드
 → HTTPS 보기 또는 Markdown 다운로드
@@ -50,8 +53,8 @@ Client이다. 모든 저장과 검증은 Backend가 담당하며 LINE 메시지�
 | Welcome | `welcome-message.json` | 최초 사용 안내 |
 | 메인 메뉴 | `main-menu-message.json` | 등록·조회 선택 |
 | 등록 안내 | `visit-registration-guide-message.json` | 자연어 입력 방법 안내 |
-| Draft 확인 | `visit-draft-message.json` | 저장·취소 |
-| Draft 보완 | `visit-draft-needs-input-message.json` | 재입력·메뉴 이동 |
+| Draft 확인 | `visit-draft-message.json` | 저장·부분 수정·취소 |
+| Draft 보완 | `visit-draft-needs-input-message.json` | 누락값 보완·메뉴 이동 |
 | Visit 저장 결과 | `visit-save-result-message.json` | 계속 등록·메뉴 이동 |
 | Report Type | `report-type-menu-message.json` | 네 가지 Report Type 선택 |
 | AREA 선택 | `report-area-list-message.json` | Area별 Report 생성 |
@@ -99,8 +102,8 @@ Backend Parser는 파라미터 순서에 의존하는 정규식 대신 Key 기�
 | `menu` | `target=main` | 메인 메뉴 표시 |
 | `menu` | `target=visit-register` | Visit 등록 안내 표시 |
 | `menu` | `target=report` | Report Type 메뉴 표시 |
-| `visit-input` | `draftId` | 재입력용 키보드 열기 |
 | `confirm` | `draftId` | Draft 확인 및 Visit 저장 |
+| `edit` | `draftId` | Draft 수정 대기 상태를 먼저 저장하고 입력 안내 전송 |
 | `cancel` | `draftId` | Draft 취소 |
 | `report-type` | `reportType` | Report Type에 따른 다음 화면 결정 |
 | `compare-toggle` | `areaId`, `selectedAreaIds` | 비교 대상 선택·해제 |
@@ -111,7 +114,7 @@ Postback Data는 화면 상태 표현일 뿐 신뢰 가능한 권한 정보가 �
 
 - `LINE_ALLOWED_USER_ID`와 Event User ID 일치
 - Draft 소유자·상태·만료 및 필수 값
-- Area 존재 및 Soft Delete 여부
+- 기존 Area 존재·Soft Delete 여부 또는 신규 Area의 이름·도도부현·시구정촌
 - 대상 Area에 Visit 존재 여부
 - 중복 Area 제거
 - AREA 1개, COMPARE 2~5개, SUMMARY·ALL 대상 ID 없음
@@ -135,10 +138,12 @@ Postback Data는 화면 상태 표현일 뿐 신뢰 가능한 권한 정보가 �
 
 별도 Area 선택 없이 바로 생성한다. `SUMMARY`는 SQL 통계 중심의 짧은 AI Comment,
 `ALL`은 모든 대상 Area의 상세 AI 분석이라는 기존 Report 정책을 유지한다.
+단, 활성 Visit이 한 건도 없으면 생성 중 화면과 AI 호출 없이 방문 기록 등록 안내를
+표시한다.
 
 ### 결과 전달
 
-Report 생성 작업이 시작되면 진행 안내를 먼저 Push하고, 생성과 GCS 저장이
+사전 검증을 통과해 Report 생성 작업이 시작되면 진행 안내를 먼저 Push하고, 생성과 GCS 저장이
 완료되면 결과 Flex Message를 Push한다.
 
 결과 카드에는 다음 정보만 표시한다.
@@ -159,6 +164,16 @@ Backend는 Follow, 자연어 Text Message와 메뉴·Draft·Report Postback을 �
 메인 메뉴, 등록 안내, Draft, Report 유형·대상 선택과 생성 결과 화면을 동적 Flex
 Message로 만들며 COMPARE는 2~5개 선택을 검증한다. LINE Report는 Webhook Event
 ID를 UNIQUE 멱등 Key로 저장해 Cloud Tasks 재처리 시 기존 결과를 재사용한다.
+기존 Area가 없으면 Parser의 신규 위치 후보를 Draft에 보존하고, 사용자가 저장을
+확인한 시점에 Area와 Visit을 하나의 Transaction으로 생성한다.
+사용자는 기본적으로 지역명만 입력할 수 있으며, Parser가 위치를 명확히 특정할 수
+있으면 도도부현·시구정촌·인접 역을 보완한다. 보완된 위치는 저장 전에 Draft에서
+사용자가 확인하고, 동명 지역처럼 모호한 경우에만 위치 추가 입력을 요구한다.
+Draft의 수정 버튼은 수정 대기 상태가 저장된 뒤 입력 안내를 보낸다. 사용자는 안내를
+확인하고 `접근성 8로 수정`, `방문일은 7월 26일`, `메모에 공원이 가까웠다고 추가`
+같은 부분 입력을 보낸다. 수정 Text Message는 AI 호출 전에 원본 Draft를 점유하며,
+Backend는 Parser의 `changedFields`만 기존 값에 병합한다. 사용자는 새 Draft를 다시
+확인한 뒤 저장한다.
 
 남은 적용 작업은 다음과 같다.
 
@@ -180,6 +195,8 @@ Flex Message를 Push한다. 차단 해제에서도 같은 흐름을 멱등하게
 - LINE 모바일 단말에서 Rich Menu와 모든 버튼 확인
 - 오래된 메시지 재클릭과 Cloud Tasks 재시도에서 중복 Visit·Report가 생성되지
   않는지 확인
+- 활성 Visit 0건에서 SUMMARY·ALL이 생성 중 화면이나 AI 호출로 넘어가지 않는지 확인
+- 기존 Area 0건에서 신규 Area 후보를 확인·저장해 Area와 Visit이 함께 생기는지 확인
 - 허용되지 않은 LINE User와 조작된 ID가 거부되는지 확인
 
 ## 10. 공식 참고 문서

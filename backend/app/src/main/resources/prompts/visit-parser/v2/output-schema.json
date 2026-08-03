@@ -1,0 +1,107 @@
+{
+  "type": "object",
+  "description": "Natural-language visit evaluation parsed into a reviewable Visit draft.",
+  "properties": {
+    "area": {
+      "description": "An existing Area, a new Area candidate, or null when missing or ambiguous.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "prefecture": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "city": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "station": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "prefecture",
+            "city",
+            "station"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "visitDate": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "atmosphereScore": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 10
+    },
+    "infraScore": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 10
+    },
+    "cleanScore": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 10
+    },
+    "sizeScore": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 10
+    },
+    "accessScore": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 10
+    },
+    "memo": {
+      "type": ["string", "null"]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "area",
+    "visitDate",
+    "atmosphereScore",
+    "infraScore",
+    "cleanScore",
+    "sizeScore",
+    "accessScore",
+    "memo",
+    "warnings"
+  ],
+  "additionalProperties": false
+}

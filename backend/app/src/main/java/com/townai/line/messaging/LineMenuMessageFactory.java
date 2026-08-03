@@ -111,8 +111,9 @@ public class LineMenuMessageFactory {
                         .property("wrap", true)
                         .build(),
                 text(
-                        "지역, 방문일, 다섯 가지 점수와 메모를 한 번에 입력하면 "
-                                + "정확한 초안을 만들 수 있습니다."
+                        "지역명, 방문일·다섯 가지 점수·메모를 한 번에 입력해주세요. "
+                                + "위치를 명확히 알 수 있는 지역은 도도부현과 "
+                                + "시구정촌을 자동으로 보완합니다."
                 ).property("size", "sm")
                         .property("color", "#555555")
                         .property("wrap", true)

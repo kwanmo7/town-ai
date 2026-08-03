@@ -1,4 +1,40 @@
 {
-  "type": "text",
-  "text": "리포트를 생성하고 있습니다. 완료되면 이 채팅으로 알려드릴게요."
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#294C74",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "리포트 생성 중",
+        "color": "#FFFFFF",
+        "size": "xl",
+        "weight": "bold"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "전체 상세 분석을 생성하고 있습니다.",
+        "weight": "bold",
+        "wrap": true
+      },
+      {
+        "type": "text",
+        "text": "완료되면 이 채팅으로 결과를 보내드립니다.",
+        "size": "sm",
+        "color": "#777777",
+        "wrap": true
+      }
+    ]
+  }
 }

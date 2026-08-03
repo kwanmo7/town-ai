@@ -39,12 +39,21 @@ backend/app/src/main/resources/db/migration/V1__initialize_schema.sql
 backend/app/src/main/resources/db/migration/V2__make_line_draft_warnings_required.sql
 backend/app/src/main/resources/db/migration/V3__support_line_follow_event.sql
 backend/app/src/main/resources/db/migration/V4__add_line_report_idempotency_key.sql
+backend/app/src/main/resources/db/migration/V5__support_area_registration_from_line_draft.sql
+backend/app/src/main/resources/db/migration/V6__support_line_visit_draft_revision.sql
+backend/app/src/main/resources/db/migration/V7__claim_line_visit_draft_revision.sql
 ```
 
 V1은 초기 스키마를 생성하고, V2는 기존 Draft의 `warnings`가 `NULL`이면 빈 JSON
 배열로 정규화한 뒤 해당 Column을 `NOT NULL`로 변경한다.
 V3는 LINE `FOLLOW` Event 제약을 추가하고, V4는 LINE Report 재처리용
-`source_webhook_event_id` UNIQUE Key를 추가한다.
+`source_webhook_event_id` UNIQUE Key를 추가한다. V5는 LINE에서 첫 Visit 확인 시
+신규 Area를 함께 등록할 수 있도록 Draft에 위치 Snapshot과 등록 필요 여부를 추가한다.
+V6는 LINE Draft 부분 수정을 위한 `AWAITING_REVISION`, `SUPERSEDED` 상태와 최신
+수정 대기 Draft 조회 Index를 추가한다.
+V7은 수정 Text Message가 원본 Draft를 AI 호출 전에 점유하는
+`REVISION_PROCESSING` 상태와 `revision_webhook_event_id`를 추가하고, 재시도에서도
+수정 의도를 유지하도록 Event에 `revision_source_draft_id`를 보존한다.
 
 최초 실행 후에는 다음과 같은 이력이 저장된다.
 
