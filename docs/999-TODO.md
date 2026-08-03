@@ -23,6 +23,18 @@
        - [O] 내부 Task Endpoint, OIDC 인증, 처리 Lease 및 최대 5회 상태 관리
        - [O] Visit Draft 생성, LINE Push, 확인·취소 및 Visit 저장
        - [O] 최대 처리 실패 안내 Push 및 30일이 지난 처리 데이터의 기회적 정리
+     - [O] LINE Bot 등록·조회 화면과 Rich Menu 디자인
+       - [O] 등록·조회·Report 결과 Flex Message JSON
+       - [O] `2500 x 843`, 1MB 이하 Rich Menu 이미지와 터치 영역 정의
+       - 반영 파일: `linebotdesign/`
+       - 반영 문서: `011-line-bot-design.md`
+     - [ ] LINE 메뉴·Report 조회 Backend 연동
+       - [O] Flex Message 공통 모델과 Serialization 구조
+       - [O] Draft 확인 화면 및 고정 메뉴·안내 화면 Factory
+       - 메뉴·Report Type·Area 선택 Postback 처리
+       - LINE용 Report 생성 결과 Push
+       - 안전한 Report 보기·다운로드 URL
+       - 실제 모바일 Rich Menu와 오래된 메시지 재클릭 검증
      - [O] Production용 GCS Report Storage 구현체
      - [O] Local MySQL 기반 전체 API 통합 검증
        - 격리된 `town_ai_integration` Database에 Flyway V1·V2 적용
@@ -37,11 +49,14 @@
    - [O] GitHub Actions Backend CI Workflow 구현
      - Java 25, Gradle Test·Build, Javadoc 및 Docker Image Build 검증
      - Pull Request와 `main` Push에서 Backend 관련 경로가 변경될 때 실행
-   - [ ] Developer Connect·Cloud Build 기반 Backend CD 실제 배포 검증
+   - [O] Developer Connect·Cloud Build 기반 Backend CD 실제 배포 검증
      - GitHub Actions CD와 중복 구성하지 않음
      - Build Type은 Dockerfile, Source Location은 `backend/Dockerfile` 사용
-     - 현재 `town-ai-api`는 Placeholder Revision이므로 실제 Backend 배포 필요
+     - `town-ai-api` 실제 Backend 배포 및 Liveness·Readiness `UP` 확인
    - [ ] 실제 외부 서비스 및 Production GCP 통합 검증
+     - [O] Cloud Run, Cloud SQL, 실제 OpenAI AREA Report와 GCS 저장·조회·삭제
+     - [ ] LINE Messaging API, Cloud Tasks와 OIDC
+     - 검증 결과: `010-production-gcp-integration.md`
 5. [ ] ERD PNG/XLSX 최종 동기화
 
 - ERD의 기준 스키마는 개발 중 `ERD/town-ai-v1.sql`로 관리한다.
@@ -139,10 +154,11 @@
   - Mock 기반 저장·조회·삭제 및 Local·GCS 조건 전환 Test 추가
   - 구현 대상: `backend/app/build.gradle`, `backend/app/src/main/java/com/townai/report/storage/GcsReportStorage.java`, GCP Storage 설정 Class 및 Test
   - 확인 및 반영 문서: `006-deployment.md`
-- [ ] 실제 GCP Bucket을 사용한 `GcsReportStorage` 통합 검증
-  - GCP Project와 `asia-northeast1` 비공개 Bucket 생성 후 진행
-  - `REPORT_STORAGE_TYPE=gcs`, `GCS_BUCKET_NAME` 및 ADC를 설정해 저장·UTF-8 조회·멱등 삭제 확인
-  - 검증 후 반영 문서: `006-deployment.md`
+- [O] 실제 GCP Bucket을 사용한 `GcsReportStorage` 통합 검증
+  - `gs://town_ai`와 Cloud Run Runtime Service Account의 ADC 사용
+  - 실제 OpenAI AREA Report 저장, UTF-8 조회·다운로드 및 삭제 성공
+  - 테스트 Report·Visit 삭제와 Area Soft Delete 완료
+  - 검증 결과: `010-production-gcp-integration.md`
 - [O] Production GCP Region은 `asia-northeast1`(Tokyo)로 통일
   - 적용 대상: Cloud Run, Cloud SQL, Cloud Storage, Artifact Registry
   - 반영 문서: `006-deployment.md`
@@ -150,6 +166,7 @@
   - 30일 무료 평가 Instance `town-ai-api` 생성
   - 연결 이름: `town-ai:asia-northeast1:town-ai-api`
   - Cloud SQL Java Connector `1.29.0`과 Production `DB_URL` 적용
+  - Cloud Run Readiness `UP`, Flyway V1·V2 및 실제 API CRUD로 연결 검증 완료
   - 무료 평가 종료 전 Pricing Calculator로 장기 운영 사양과 비용 확정
   - MySQL 8.4와 Enterprise Edition 기준으로 CPU·Memory·Storage 사양 확인
   - 결정 후 수정할 문서: `006-deployment.md`

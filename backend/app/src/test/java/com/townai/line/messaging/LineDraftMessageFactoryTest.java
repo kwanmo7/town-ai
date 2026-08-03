@@ -6,6 +6,9 @@ import com.townai.visit.dto.VisitDraftAreaResponse;
 import com.townai.visit.dto.VisitDraftResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -14,46 +17,54 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LineDraftMessageFactoryTest {
 
     private final LineDraftMessageFactory factory =
             new LineDraftMessageFactory();
+    private final ObjectMapper objectMapper = JsonMapper.builder().build();
 
     @Test
-    void addsConfirmAndCancelActionsForCompleteDraft() {
+    void createsSingleFlexMessageWithConfirmAndCancelActions()
+            throws JacksonException {
         LineVisitDraftEntity draft = completeDraft();
         ReflectionTestUtils.setField(draft, "id", 42L);
 
         LinePushRequest request = factory.create(draft);
 
         assertEquals("user-1", request.to());
-        assertEquals(2, request.messages().size());
-        LinePushRequest.TextMessage text = assertInstanceOf(
-                LinePushRequest.TextMessage.class,
+        assertEquals(1, request.messages().size());
+        LineFlexMessage flex = assertInstanceOf(
+                LineFlexMessage.class,
                 request.messages().getFirst()
         );
-        assertTrue(text.text().contains("지역: 센터미나미"));
-        assertTrue(text.text().contains("생활 인프라: 9/10"));
+        assertEquals("flex", flex.type());
+        assertEquals("bubble", flex.contents().get("type"));
+        assertEquals(
+                "센터미나미 방문 기록 초안을 확인해주세요.",
+                flex.altText()
+        );
 
-        LinePushRequest.TemplateMessage template = assertInstanceOf(
-                LinePushRequest.TemplateMessage.class,
-                request.messages().get(1)
-        );
-        assertEquals(2, template.template().actions().size());
-        assertEquals(
-                "action=confirm&draftId=42",
-                template.template().actions().getFirst().data()
-        );
-        assertEquals(
-                "action=cancel&draftId=42",
-                template.template().actions().get(1).data()
-        );
+        String json = objectMapper.writeValueAsString(request);
+        assertTrue(json.contains("\"지역\""));
+        assertTrue(json.contains("\"센터미나미\""));
+        assertTrue(json.contains("\"생활 인프라\""));
+        assertTrue(json.contains("\"9 / 10\""));
+        assertTrue(json.contains("\"type\":\"postback\""));
+        assertTrue(json.contains(
+                "\"data\":\"action=confirm&draftId=42\""
+        ));
+        assertTrue(json.contains(
+                "\"data\":\"action=cancel&draftId=42\""
+        ));
+        assertTrue(json.contains("\"displayText\":\"저장\""));
     }
 
     @Test
-    void omitsConfirmationActionsForIncompleteDraft() {
+    void createsNeedsInputFlexMessageWithoutUnsupportedActions()
+            throws JacksonException {
         VisitDraftResponse response = new VisitDraftResponse(
                 null,
                 LocalDate.parse("2026-07-24"),
@@ -77,14 +88,36 @@ class LineDraftMessageFactoryTest {
         LinePushRequest request = factory.create(draft);
 
         assertEquals(1, request.messages().size());
-        LinePushRequest.TextMessage text = assertInstanceOf(
-                LinePushRequest.TextMessage.class,
+        LineFlexMessage flex = assertInstanceOf(
+                LineFlexMessage.class,
                 request.messages().getFirst()
         );
-        assertTrue(text.text().contains("지역: 미확정"));
-        assertTrue(text.text().contains("생활 인프라: 미입력"));
-        assertTrue(text.text().contains("자연어 평가를 다시 보내주세요"));
-        assertFalse(text.text().contains("action=confirm"));
+        assertEquals(
+                "방문 기록에 추가 입력이 필요합니다.",
+                flex.altText()
+        );
+        String json = objectMapper.writeValueAsString(request);
+        assertTrue(json.contains("추가 입력이 필요합니다"));
+        assertTrue(json.contains("\"지역\""));
+        assertTrue(json.contains("\"미확정\""));
+        assertTrue(json.contains("\"생활 인프라\""));
+        assertTrue(json.contains("\"미입력\""));
+        assertTrue(json.contains(
+                "지역과 생활 인프라 점수를 확인해주세요."
+        ));
+        assertFalse(json.contains("action=confirm"));
+        assertFalse(json.contains("action=cancel"));
+        assertFalse(json.contains("action=menu"));
+    }
+
+    @Test
+    void rejectsConfirmableDraftWithoutPersistedId() {
+        LineVisitDraftEntity draft = completeDraft();
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> factory.create(draft)
+        );
     }
 
     private LineVisitDraftEntity completeDraft() {

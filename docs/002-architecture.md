@@ -4,6 +4,7 @@
 - [시스템 구성](#시스템-구성)
 - [Report Generation Sequence](#report-generation-sequence)
 - [LINE Visit 입력 흐름](#line-visit-입력-흐름)
+- [LINE 메뉴 및 Report 조회 흐름](#line-메뉴-및-report-조회-흐름)
 - [설계 원칙](#설계-원칙)
 
 ## 시스템 구성
@@ -53,6 +54,32 @@ Cloud Tasks
 - 애플리케이션 처리 시도가 최대 횟수에 도달하면 이벤트를 `FAILED`로 종료해 `RECEIVED` 상태로 남지 않게 한다.
 - 이벤트를 `FAILED`로 확정한 뒤 내부 오류를 노출하지 않는 재입력 안내를 Best-effort Push한다. 안내 실패는 종료된 이벤트를 다시 처리 상태로 되돌리지 않는다.
 - 지원 Webhook 이벤트를 새로 수신하면 30일이 지난 Draft를 먼저 정리하고, 참조가 사라진 `COMPLETED`·`FAILED` 이벤트를 정리한다. `RECEIVED`·`PROCESSING` 이벤트와 확인 결과인 Visit은 자동 삭제하지 않는다.
+
+## LINE 메뉴 및 Report 조회 흐름
+
+```text
+최초 친구 추가
+→ LINE Official Account Greeting Message
+→ 기본 Rich Menu 표시
+
+등록 선택
+→ 자연어 입력 안내
+→ 기존 LINE Visit 입력 흐름
+
+조회 선택
+→ AREA·COMPARE·SUMMARY·ALL 선택
+→ 필요한 경우 Area 선택
+→ Cloud Tasks 내부 처리
+→ Report 생성 및 GCS 저장
+→ LINE Push Message로 보기·다운로드 링크 전송
+```
+
+- 채팅방을 여는 동작은 Webhook Event가 아니므로 Welcome Message를 반복 전송하지 않는다.
+- 모바일의 기본 진입점은 등록·조회 두 영역으로 구성된 Rich Menu이다.
+- LINE PC에서는 Rich Menu가 보이지 않으므로 각 결과 메시지에 메뉴 이동 Postback을 제공한다.
+- 메뉴와 Report Postback의 ID 및 선택 상태는 신뢰하지 않고 Backend에서 다시 검증한다.
+- LINE은 일반 Markdown 파일 발신을 지원하지 않으므로 Report는 안전한 HTTPS URL로 전달한다.
+- 화면 및 Postback 기준은 `011-line-bot-design.md`와 `linebotdesign/`에서 관리한다.
 
 ## 설계 원칙
 - React와 LINE Bot은 입력 채널이다.

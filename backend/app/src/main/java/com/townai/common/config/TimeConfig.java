@@ -18,6 +18,12 @@ import java.time.ZoneId;
 public class TimeConfig {
 
     /**
+     * Spring이 시간 관련 구성 클래스를 생성할 때 사용하는 기본 생성자다.
+     */
+    public TimeConfig() {
+    }
+
+    /**
      * 서버와 DB에 기록할 현재 시각의 기준을 제공한다.
      *
      * @return UTC 시스템 시계를 사용하는 Clock

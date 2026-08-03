@@ -72,11 +72,11 @@ class LineWebhookServiceImplTest {
         byte[] body = "{\"events\":[]}".getBytes();
         when(requestProcessor.verifyAndSelect(body, "signature"))
                 .thenReturn(List.of());
-        when(persistenceService.store(List.of())).thenReturn(List.of());
 
         service.receive(body, "signature");
 
         verify(cleanupService, never()).cleanupExpiredData();
+        verify(persistenceService, never()).store(List.of());
         verify(dispatcher, never()).dispatch("event-1");
     }
 

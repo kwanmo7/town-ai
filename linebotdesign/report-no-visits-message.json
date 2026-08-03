@@ -1,0 +1,57 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "방문 기록이 없습니다",
+        "size": "xl",
+        "weight": "bold",
+        "color": "#555555"
+      },
+      {
+        "type": "text",
+        "text": "리포트를 생성할 지역에 방문 기록을 먼저 등록해주세요.",
+        "size": "sm",
+        "color": "#777777",
+        "wrap": true
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "horizontal",
+    "spacing": "md",
+    "paddingAll": "16px",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "height": "sm",
+        "color": "#176B5B",
+        "action": {
+          "type": "postback",
+          "label": "방문 기록 등록",
+          "displayText": "방문 기록 등록",
+          "data": "action=menu&target=visit-register"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "메뉴",
+          "displayText": "메뉴",
+          "data": "action=menu&target=main"
+        }
+      }
+    ]
+  }
+}

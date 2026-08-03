@@ -1,0 +1,97 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#294C74",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "리포트 조회",
+        "color": "#FFFFFF",
+        "size": "xl",
+        "weight": "bold"
+      },
+      {
+        "type": "text",
+        "text": "생성할 리포트 종류를 선택해주세요.",
+        "color": "#DCE9F7",
+        "size": "sm",
+        "margin": "sm"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "sm",
+    "paddingAll": "16px",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "height": "sm",
+        "color": "#294C74",
+        "action": {
+          "type": "postback",
+          "label": "한 지역 분석",
+          "displayText": "한 지역 분석",
+          "data": "action=report-type&reportType=AREA"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "지역 비교",
+          "displayText": "지역 비교",
+          "data": "action=report-type&reportType=COMPARE"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "전체 요약",
+          "displayText": "전체 요약",
+          "data": "action=report-type&reportType=SUMMARY"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "전체 상세 분석",
+          "displayText": "전체 상세 분석",
+          "data": "action=report-type&reportType=ALL"
+        }
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "16px",
+    "contents": [
+      {
+        "type": "button",
+        "style": "link",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "메뉴로 돌아가기",
+          "displayText": "메뉴",
+          "data": "action=menu&target=main"
+        }
+      }
+    ]
+  }
+}

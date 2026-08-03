@@ -1,0 +1,39 @@
+{
+  "size": {
+    "width": 2500,
+    "height": 843
+  },
+  "selected": true,
+  "name": "town-ai-main-menu-v1",
+  "chatBarText": "기능 메뉴",
+  "areas": [
+    {
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1250,
+        "height": 843
+      },
+      "action": {
+        "type": "postback",
+        "label": "방문 기록 등록",
+        "displayText": "방문 기록 등록",
+        "data": "action=menu&target=visit-register"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1250,
+        "y": 0,
+        "width": 1250,
+        "height": 843
+      },
+      "action": {
+        "type": "postback",
+        "label": "리포트 조회",
+        "displayText": "리포트 조회",
+        "data": "action=menu&target=report"
+      }
+    }
+  ]
+}

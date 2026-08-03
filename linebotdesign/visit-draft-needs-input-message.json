@@ -1,0 +1,88 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#A66A00",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "추가 입력이 필요합니다",
+        "color": "#FFFFFF",
+        "size": "xl",
+        "weight": "bold"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "입력한 내용만으로는 방문 기록을 저장할 수 없습니다.",
+        "wrap": true
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "type": "text",
+        "text": "확인이 필요한 항목",
+        "size": "sm",
+        "weight": "bold",
+        "color": "#A66A00"
+      },
+      {
+        "type": "text",
+        "text": "• 방문일이 입력되지 않았습니다.\n• 접근성 점수가 입력되지 않았습니다.",
+        "size": "sm",
+        "color": "#333333",
+        "wrap": true
+      },
+      {
+        "type": "text",
+        "text": "누락된 내용을 포함해 전체 평가를 다시 보내주세요.",
+        "size": "sm",
+        "color": "#777777",
+        "wrap": true
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "horizontal",
+    "spacing": "md",
+    "paddingAll": "16px",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "height": "sm",
+        "color": "#A66A00",
+        "action": {
+          "type": "postback",
+          "label": "다시 입력하기",
+          "displayText": "다시 입력하기",
+          "data": "action=visit-input&draftId=11",
+          "inputOption": "openKeyboard"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "메뉴",
+          "displayText": "메뉴",
+          "data": "action=menu&target=main"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,228 @@
+{
+    "type": "bubble",
+    "size": "mega",
+    "direction": "ltr",
+    "header": {
+      "type": "box",
+      "layout": "vertical",
+      "backgroundColor": "#176B5B",
+      "paddingAll": "20px",
+      "contents": [
+        {
+          "type": "text",
+          "text": "방문 기록 초안",
+          "color": "#FFFFFF",
+          "size": "xl",
+          "weight": "bold"
+        },
+        {
+          "type": "text",
+          "text": "내용을 확인한 후 저장해주세요.",
+          "color": "#D8F3EA",
+          "size": "sm",
+          "margin": "sm"
+        }
+      ]
+    },
+    "body": {
+      "type": "box",
+      "layout": "vertical",
+      "spacing": "md",
+      "paddingAll": "20px",
+      "contents": [
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "지역",
+              "color": "#777777",
+              "size": "sm",
+              "flex": 2
+            },
+            {
+              "type": "text",
+              "text": "센터미나미",
+              "weight": "bold",
+              "align": "end",
+              "wrap": true,
+              "flex": 4
+            }
+          ]
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "방문일",
+              "color": "#777777",
+              "size": "sm",
+              "flex": 2
+            },
+            {
+              "type": "text",
+              "text": "2026-07-28",
+              "align": "end",
+              "flex": 4
+            }
+          ]
+        },
+        {
+          "type": "separator",
+          "margin": "md"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "분위기",
+              "color": "#555555",
+              "flex": 4
+            },
+            {
+              "type": "text",
+              "text": "8 / 10",
+              "weight": "bold",
+              "align": "end",
+              "color": "#176B5B",
+              "flex": 2
+            }
+          ]
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "생활 인프라",
+              "color": "#555555",
+              "flex": 4
+            },
+            {
+              "type": "text",
+              "text": "9 / 10",
+              "weight": "bold",
+              "align": "end",
+              "color": "#176B5B",
+              "flex": 2
+            }
+          ]
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "청결도",
+              "color": "#555555",
+              "flex": 4
+            },
+            {
+              "type": "text",
+              "text": "8 / 10",
+              "weight": "bold",
+              "align": "end",
+              "color": "#176B5B",
+              "flex": 2
+            }
+          ]
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "넓은 집 가능성",
+              "color": "#555555",
+              "flex": 4
+            },
+            {
+              "type": "text",
+              "text": "7 / 10",
+              "weight": "bold",
+              "align": "end",
+              "color": "#176B5B",
+              "flex": 2
+            }
+          ]
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "접근성",
+              "color": "#555555",
+              "flex": 4
+            },
+            {
+              "type": "text",
+              "text": "8 / 10",
+              "weight": "bold",
+              "align": "end",
+              "color": "#176B5B",
+              "flex": 2
+            }
+          ]
+        },
+        {
+          "type": "separator",
+          "margin": "md"
+        },
+        {
+          "type": "text",
+          "text": "메모",
+          "color": "#777777",
+          "size": "sm",
+          "weight": "bold"
+        },
+        {
+          "type": "text",
+          "text": "역 주변이 정돈돼 있고 쇼핑하기 편했다.",
+          "color": "#333333",
+          "size": "sm",
+          "wrap": true
+        }
+      ]
+    },
+    "footer": {
+      "type": "box",
+      "layout": "horizontal",
+      "spacing": "md",
+      "paddingAll": "16px",
+      "contents": [
+        {
+          "type": "button",
+          "style": "primary",
+          "height": "sm",
+          "color": "#176B5B",
+          "action": {
+            "type": "postback",
+            "label": "저장",
+            "displayText": "저장",
+            "data": "action=confirm&draftId=10"
+          }
+        },
+        {
+          "type": "button",
+          "style": "secondary",
+          "height": "sm",
+          "action": {
+            "type": "postback",
+            "label": "취소",
+            "displayText": "취소",
+            "data": "action=cancel&draftId=10"
+          }
+        }
+      ]
+    }
+}

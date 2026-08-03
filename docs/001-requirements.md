@@ -34,6 +34,7 @@ Town AI는 직접 방문한 지역에 대한 평가를 기록하고, 저장된 �
 - 방문 기록 수정
 - AI Parser를 이용한 자연어 입력 처리
 - LINE Bot을 이용한 자연어 방문 평가 입력, Visit Draft 확인 및 확정 저장
+- LINE Bot 메뉴를 이용한 Report Type·대상 Area 선택 및 Report 결과 수신
 - AI Report 생성
 - 생성된 Report 조회 및 다운로드
 
@@ -62,6 +63,8 @@ AI기능
 - 생성된 리포트를 다시 조회할 수 있다.
 
 LINE Bot
+- 최초 친구 추가 시 Welcome Message를 제공하고 모바일 채팅방에 등록·조회 Rich Menu를 표시한다.
+- 사용자는 Rich Menu 또는 기능 선택 메시지에서 방문 기록 등록과 리포트 조회를 선택할 수 있다.
 - Backend는 LINE Messaging API Webhook을 수신하고 요청 서명을 검증한다.
 - LINE의 텍스트 메시지는 Web과 동일한 Visit Draft 처리 기능을 사용한다.
 - Bot은 파싱된 값과 누락 또는 경고 내용을 사용자에게 회신한다.
@@ -70,6 +73,9 @@ LINE Bot
 - 누락되거나 모호한 값이 있는 Draft는 저장하지 않고 수정된 자연어 입력을 다시 요청한다.
 - LINE Webhook 이벤트와 Draft 확인은 중복 요청에도 같은 결과가 되도록 멱등하게 처리한다.
 - LINE Push Message 재시도는 동일한 Retry Key를 사용해 LINE Platform이 같은 Push 요청을 중복 수락하지 않도록 한다.
+- 사용자는 AREA·COMPARE·SUMMARY·ALL Report를 선택할 수 있다.
+- AREA는 1개, COMPARE는 2~5개의 활성 Area를 선택하고 Backend가 대상과 Visit 존재 여부를 재검증한다.
+- 생성된 Report는 LINE에서 안전한 HTTPS 보기 또는 다운로드 링크로 제공한다.
 
 ## 비기능 요구사항
 ### AI 역할
@@ -112,6 +118,7 @@ AI는 다음 역할만 수행한다.
 - 방문 기록 수정
 - AI Parser 동작
 - LINE Webhook 서명 검증, Visit Draft 응답 및 확인 후 Visit 저장
+- LINE Rich Menu와 기능 선택 메시지를 통한 Report 생성·결과 수신
 - AI Report 생성
 - 생성된 Report 조회
 - Report 다운로드

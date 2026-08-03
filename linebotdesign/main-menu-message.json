@@ -1,0 +1,111 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#176B5B",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "Town AI",
+        "color": "#FFFFFF",
+        "size": "xl",
+        "weight": "bold"
+      },
+      {
+        "type": "text",
+        "text": "사용할 기능을 선택해주세요.",
+        "color": "#D8F3EA",
+        "size": "sm",
+        "margin": "sm"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "box",
+        "layout": "vertical",
+        "backgroundColor": "#F0F7F5",
+        "cornerRadius": "md",
+        "paddingAll": "16px",
+        "contents": [
+          {
+            "type": "text",
+            "text": "방문 기록 등록",
+            "weight": "bold",
+            "color": "#176B5B"
+          },
+          {
+            "type": "text",
+            "text": "방문한 지역의 점수와 메모를 자연어로 등록합니다.",
+            "size": "sm",
+            "color": "#555555",
+            "wrap": true,
+            "margin": "sm"
+          }
+        ]
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "backgroundColor": "#F5F5F5",
+        "cornerRadius": "md",
+        "paddingAll": "16px",
+        "contents": [
+          {
+            "type": "text",
+            "text": "리포트 조회",
+            "weight": "bold",
+            "color": "#333333"
+          },
+          {
+            "type": "text",
+            "text": "등록된 지역을 선택해 분석 리포트를 생성합니다.",
+            "size": "sm",
+            "color": "#555555",
+            "wrap": true,
+            "margin": "sm"
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "sm",
+    "paddingAll": "16px",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "height": "sm",
+        "color": "#176B5B",
+        "action": {
+          "type": "postback",
+          "label": "방문 기록 등록",
+          "displayText": "방문 기록 등록",
+          "data": "action=menu&target=visit-register"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "리포트 조회",
+          "displayText": "리포트 조회",
+          "data": "action=menu&target=report"
+        }
+      }
+    ]
+  }
+}

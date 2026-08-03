@@ -1,0 +1,44 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "등록된 지역이 없습니다",
+        "size": "xl",
+        "weight": "bold",
+        "color": "#555555"
+      },
+      {
+        "type": "text",
+        "text": "리포트를 생성하려면 먼저 Town AI에 지역을 등록해주세요.",
+        "size": "sm",
+        "color": "#777777",
+        "wrap": true
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "16px",
+    "contents": [
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "메뉴로 돌아가기",
+          "displayText": "메뉴",
+          "data": "action=menu&target=main"
+        }
+      }
+    ]
+  }
+}

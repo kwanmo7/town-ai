@@ -1,0 +1,193 @@
+{
+  "type": "carousel",
+  "contents": [
+    {
+      "type": "bubble",
+      "size": "mega",
+      "header": {
+        "type": "box",
+        "layout": "vertical",
+        "backgroundColor": "#294C74",
+        "paddingAll": "20px",
+        "contents": [
+          {
+            "type": "text",
+            "text": "센터미나미",
+            "color": "#FFFFFF",
+            "size": "xl",
+            "weight": "bold",
+            "wrap": true
+          },
+          {
+            "type": "text",
+            "text": "가나가와현 요코하마시",
+            "color": "#DCE9F7",
+            "size": "sm",
+            "margin": "sm",
+            "wrap": true
+          }
+        ]
+      },
+      "body": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "md",
+        "paddingAll": "20px",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              {
+                "type": "text",
+                "text": "방문 기록",
+                "color": "#777777",
+                "size": "sm",
+                "flex": 3
+              },
+              {
+                "type": "text",
+                "text": "3건",
+                "align": "end",
+                "weight": "bold",
+                "flex": 2
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              {
+                "type": "text",
+                "text": "최근 방문일",
+                "color": "#777777",
+                "size": "sm",
+                "flex": 3
+              },
+              {
+                "type": "text",
+                "text": "2026-07-28",
+                "align": "end",
+                "flex": 2
+              }
+            ]
+          }
+        ]
+      },
+      "footer": {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "16px",
+        "contents": [
+          {
+            "type": "button",
+            "style": "primary",
+            "height": "sm",
+            "color": "#294C74",
+            "action": {
+              "type": "postback",
+              "label": "이 지역 분석",
+              "displayText": "센터미나미 지역 분석",
+              "data": "action=report-generate&reportType=AREA&areaId=1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "bubble",
+      "size": "mega",
+      "header": {
+        "type": "box",
+        "layout": "vertical",
+        "backgroundColor": "#294C74",
+        "paddingAll": "20px",
+        "contents": [
+          {
+            "type": "text",
+            "text": "무사시코스기",
+            "color": "#FFFFFF",
+            "size": "xl",
+            "weight": "bold",
+            "wrap": true
+          },
+          {
+            "type": "text",
+            "text": "가나가와현 가와사키시",
+            "color": "#DCE9F7",
+            "size": "sm",
+            "margin": "sm",
+            "wrap": true
+          }
+        ]
+      },
+      "body": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "md",
+        "paddingAll": "20px",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              {
+                "type": "text",
+                "text": "방문 기록",
+                "color": "#777777",
+                "size": "sm",
+                "flex": 3
+              },
+              {
+                "type": "text",
+                "text": "2건",
+                "align": "end",
+                "weight": "bold",
+                "flex": 2
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              {
+                "type": "text",
+                "text": "최근 방문일",
+                "color": "#777777",
+                "size": "sm",
+                "flex": 3
+              },
+              {
+                "type": "text",
+                "text": "2026-07-20",
+                "align": "end",
+                "flex": 2
+              }
+            ]
+          }
+        ]
+      },
+      "footer": {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "16px",
+        "contents": [
+          {
+            "type": "button",
+            "style": "primary",
+            "height": "sm",
+            "color": "#294C74",
+            "action": {
+              "type": "postback",
+              "label": "이 지역 분석",
+              "displayText": "무사시코스기 지역 분석",
+              "data": "action=report-generate&reportType=AREA&areaId=2"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

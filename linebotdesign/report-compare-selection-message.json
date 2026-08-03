@@ -1,0 +1,108 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#294C74",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "비교 지역 선택",
+        "color": "#FFFFFF",
+        "size": "xl",
+        "weight": "bold"
+      },
+      {
+        "type": "text",
+        "text": "2개 이상 5개 이하를 선택해주세요.",
+        "color": "#DCE9F7",
+        "size": "sm",
+        "margin": "sm"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "sm",
+    "paddingAll": "16px",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "height": "sm",
+        "color": "#176B5B",
+        "action": {
+          "type": "postback",
+          "label": "✓ 센터미나미",
+          "displayText": "센터미나미 선택 해제",
+          "data": "action=compare-toggle&areaId=1&selectedAreaIds=1,2"
+        }
+      },
+      {
+        "type": "button",
+        "style": "primary",
+        "height": "sm",
+        "color": "#176B5B",
+        "action": {
+          "type": "postback",
+          "label": "✓ 무사시코스기",
+          "displayText": "무사시코스기 선택 해제",
+          "data": "action=compare-toggle&areaId=2&selectedAreaIds=1,2"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "후타코타마가와",
+          "displayText": "후타코타마가와 선택",
+          "data": "action=compare-toggle&areaId=3&selectedAreaIds=1,2"
+        }
+      },
+      {
+        "type": "text",
+        "text": "현재 2개 지역 선택",
+        "size": "xs",
+        "color": "#777777",
+        "align": "center",
+        "margin": "md"
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "horizontal",
+    "spacing": "md",
+    "paddingAll": "16px",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "height": "sm",
+        "color": "#294C74",
+        "action": {
+          "type": "postback",
+          "label": "비교 리포트 생성",
+          "displayText": "비교 리포트 생성",
+          "data": "action=report-generate&reportType=COMPARE&areaIds=1,2"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "취소",
+          "displayText": "리포트 선택 취소",
+          "data": "action=menu&target=report"
+        }
+      }
+    ]
+  }
+}

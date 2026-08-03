@@ -1,0 +1,56 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "방문 기록을 저장했습니다",
+        "size": "xl",
+        "weight": "bold",
+        "color": "#176B5B"
+      },
+      {
+        "type": "text",
+        "text": "센터미나미 · 2026-07-28",
+        "color": "#555555",
+        "wrap": true
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "horizontal",
+    "spacing": "md",
+    "paddingAll": "16px",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "height": "sm",
+        "color": "#176B5B",
+        "action": {
+          "type": "postback",
+          "label": "계속 등록",
+          "displayText": "방문 기록 등록",
+          "data": "action=menu&target=visit-register"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "메뉴",
+          "displayText": "메뉴",
+          "data": "action=menu&target=main"
+        }
+      }
+    ]
+  }
+}

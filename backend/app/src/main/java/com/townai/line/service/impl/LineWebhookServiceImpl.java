@@ -71,9 +71,11 @@ public class LineWebhookServiceImpl implements LineWebhookService {
         List<LineWebhookEventPayload> payloads =
                 requestProcessor.verifyAndSelect(rawBody, signature);
 
-        if (!payloads.isEmpty()) {
-            cleanupExpiredData();
+        if (payloads.isEmpty()) {
+            return;
         }
+
+        cleanupExpiredData();
         try {
             List<String> eventIds = persistenceService.store(payloads);
             eventIds.forEach(eventDispatcher::dispatch);

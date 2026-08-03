@@ -1,0 +1,126 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#294C74",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "리포트 생성 완료",
+        "color": "#FFFFFF",
+        "size": "xl",
+        "weight": "bold"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "box",
+        "layout": "horizontal",
+        "contents": [
+          {
+            "type": "text",
+            "text": "종류",
+            "color": "#777777",
+            "size": "sm",
+            "flex": 2
+          },
+          {
+            "type": "text",
+            "text": "한 지역 분석",
+            "align": "end",
+            "weight": "bold",
+            "flex": 4
+          }
+        ]
+      },
+      {
+        "type": "box",
+        "layout": "horizontal",
+        "contents": [
+          {
+            "type": "text",
+            "text": "대상",
+            "color": "#777777",
+            "size": "sm",
+            "flex": 2
+          },
+          {
+            "type": "text",
+            "text": "센터미나미",
+            "align": "end",
+            "wrap": true,
+            "flex": 4
+          }
+        ]
+      },
+      {
+        "type": "box",
+        "layout": "horizontal",
+        "contents": [
+          {
+            "type": "text",
+            "text": "생성일",
+            "color": "#777777",
+            "size": "sm",
+            "flex": 2
+          },
+          {
+            "type": "text",
+            "text": "2026-08-03",
+            "align": "end",
+            "flex": 4
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "sm",
+    "paddingAll": "16px",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "height": "sm",
+        "color": "#294C74",
+        "action": {
+          "type": "uri",
+          "label": "리포트 보기",
+          "uri": "https://town-ai-api-574086886148.asia-northeast1.run.app/api/reports/10/content"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "uri",
+          "label": "Markdown 다운로드",
+          "uri": "https://town-ai-api-574086886148.asia-northeast1.run.app/api/reports/10/download"
+        }
+      },
+      {
+        "type": "button",
+        "style": "link",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "다른 리포트 조회",
+          "displayText": "리포트 조회",
+          "data": "action=menu&target=report"
+        }
+      }
+    ]
+  }
+}
