@@ -107,11 +107,13 @@ CREATE TABLE `line_webhook_event` (
     `line_user_id` VARCHAR(64) NOT NULL COMMENT 'LINE User ID',
     `event_type` VARCHAR(20) NOT NULL COMMENT 'FOLLOW / TEXT_MESSAGE / POSTBACK',
     `message_text` TEXT NULL COMMENT '텍스트 메시지 입력',
-    `postback_data` VARCHAR(255) NULL COMMENT '확인 또는 취소 Postback Data',
+    `postback_data` VARCHAR(255) NULL COMMENT '메뉴 또는 Draft·Report Postback Data',
     `status` VARCHAR(20) NOT NULL
         COMMENT 'RECEIVED / PROCESSING / COMPLETED / FAILED',
     `attempt_count` INT NOT NULL DEFAULT 0 COMMENT '비동기 처리 시도 횟수',
     `last_error_code` VARCHAR(50) NULL COMMENT '마지막 처리 오류 코드',
+    `revision_source_draft_id` BIGINT NULL
+        COMMENT 'Text Message 최초 처리에서 선택한 수정 원본 Draft ID',
     `occurred_at` TIMESTAMP NOT NULL COMMENT 'LINE 이벤트 발생 시각 UTC',
     `processing_started_at` TIMESTAMP NULL
         COMMENT '현재 처리 시도 시작 시각 UTC',
@@ -194,6 +196,12 @@ CREATE TABLE `line_visit_draft` (
         COMMENT 'Draft를 생성한 LINE webhookEventId',
     `line_user_id` VARCHAR(64) NOT NULL COMMENT 'Draft 소유 LINE User ID',
     `area_id` BIGINT NULL COMMENT '파싱된 Area ID',
+    `area_registration_required` BOOLEAN NOT NULL DEFAULT FALSE
+        COMMENT '확인 시 신규 Area 등록 필요 여부',
+    `area_name` VARCHAR(25) NULL COMMENT '기존 또는 신규 Area 이름 Snapshot',
+    `area_prefecture` VARCHAR(20) NULL COMMENT '도도부현 이름 Snapshot',
+    `area_city` VARCHAR(20) NULL COMMENT '시구정촌 이름 Snapshot',
+    `area_station` VARCHAR(50) NULL COMMENT '인접 역 이름 Snapshot',
     `visit_date` DATE NULL COMMENT '파싱된 방문일',
     `atmosphere_score` TINYINT NULL COMMENT '분위기',
     `infra_score` TINYINT NULL COMMENT '생활 인프라',
@@ -203,8 +211,10 @@ CREATE TABLE `line_visit_draft` (
     `memo` TEXT NULL COMMENT '메모',
     `warnings` JSON NOT NULL COMMENT '누락 또는 모호한 값 경고',
     `status` VARCHAR(30) NOT NULL
-        COMMENT 'NEEDS_INPUT / AWAITING_CONFIRMATION / CONFIRMED / CANCELLED / EXPIRED',
+        COMMENT 'NEEDS_INPUT / AWAITING_CONFIRMATION / AWAITING_REVISION / REVISION_PROCESSING / SUPERSEDED / CONFIRMED / CANCELLED / EXPIRED',
     `expires_at` TIMESTAMP NOT NULL COMMENT '확인 만료 시각 UTC',
+    `revision_webhook_event_id` VARCHAR(64) NULL
+        COMMENT '현재 Draft를 점유한 수정 Text Message webhookEventId',
     `confirmed_visit_id` BIGINT NULL COMMENT '확정 후 생성된 Visit ID',
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일 UTC',
     `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -219,14 +229,36 @@ CREATE TABLE `line_visit_draft` (
     CONSTRAINT `UK_LINE_VISIT_DRAFT_CONFIRMED_VISIT`
         UNIQUE (`confirmed_visit_id`),
 
+    CONSTRAINT `UK_LINE_VISIT_DRAFT_REVISION_EVENT`
+        UNIQUE (`revision_webhook_event_id`),
+
+    INDEX `IDX_LINE_VISIT_DRAFT_USER_STATUS_UPDATED`
+        (`line_user_id`, `status`, `updated_at`, `id`),
+
     CONSTRAINT `CHK_LINE_VISIT_DRAFT_STATUS`
         CHECK (
             `status` IN (
                 'NEEDS_INPUT',
                 'AWAITING_CONFIRMATION',
+                'AWAITING_REVISION',
+                'REVISION_PROCESSING',
+                'SUPERSEDED',
                 'CONFIRMED',
                 'CANCELLED',
                 'EXPIRED'
+            )
+        ),
+
+    CONSTRAINT `CHK_LINE_DRAFT_REVISION_EVENT`
+        CHECK (
+            (
+                `status` = 'REVISION_PROCESSING'
+                AND `revision_webhook_event_id` IS NOT NULL
+            )
+            OR
+            (
+                `status` <> 'REVISION_PROCESSING'
+                AND `revision_webhook_event_id` IS NULL
             )
         ),
 
@@ -275,6 +307,10 @@ CREATE TABLE `line_visit_draft` (
 
     CONSTRAINT `FK_LINE_DRAFT_SOURCE_EVENT`
         FOREIGN KEY (`source_webhook_event_id`)
+        REFERENCES `line_webhook_event` (`webhook_event_id`),
+
+    CONSTRAINT `FK_LINE_DRAFT_REVISION_EVENT`
+        FOREIGN KEY (`revision_webhook_event_id`)
         REFERENCES `line_webhook_event` (`webhook_event_id`),
 
     CONSTRAINT `FK_LINE_DRAFT_AREA`

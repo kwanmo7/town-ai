@@ -17,9 +17,8 @@ import static com.townai.line.messaging.LineFlexComponents.text;
 /**
  * 저장된 LINE Visit Draft를 사용자 확인용 Flex Message로 변환한다.
  *
- * <p>Draft 값은 하나의 Bubble에서 보여주고, 확인 가능한 상태에만 저장·취소
- * Postback 버튼을 추가한다. 누락 Draft는 현재 처리 가능한 값과 경고를 보여준 뒤
- * 전체 자연어 평가를 다시 보내도록 안내한다.</p>
+ * <p>Draft 값은 하나의 Bubble에서 보여준다. 확인 가능한 상태에는 저장·수정·취소
+ * Postback을, 누락 상태에는 기존 값을 유지하는 수정 입력 Postback을 추가한다.</p>
  */
 @Component
 public class LineDraftMessageFactory {
@@ -57,6 +56,23 @@ public class LineDraftMessageFactory {
         );
     }
 
+    /**
+     * Draft를 생성하지 않은 Text Message 처리 결과를 안내한다.
+     *
+     * @param lineUserId 메시지를 받을 LINE User ID
+     * @param notice 사용자 안내 문구
+     * @return Text Message Push 요청
+     */
+    public LinePushRequest createNotice(
+            String lineUserId,
+            String notice
+    ) {
+        return new LinePushRequest(
+                lineUserId,
+                List.of(LinePushRequest.TextMessage.of(notice))
+        );
+    }
+
     private Map<String, Object> createBubble(
             LineVisitDraftEntity draft
     ) {
@@ -67,6 +83,8 @@ public class LineDraftMessageFactory {
                 .property("body", createBody(draft));
         if (isConfirmable(draft)) {
             bubble.property("footer", createFooter(draft.getId()));
+        } else if (needsInput(draft)) {
+            bubble.property("footer", createReinputFooter(draft.getId()));
         }
         return bubble.build();
     }
@@ -85,7 +103,7 @@ public class LineDraftMessageFactory {
                 ? "추가 입력이 필요합니다"
                 : "방문 기록 초안";
         String subtitle = needsInput
-                ? "확인한 값을 검토하고 전체 평가를 다시 보내주세요."
+                ? "누락되거나 바꿀 내용만 보내주세요."
                 : "내용을 확인한 후 저장해주세요.";
 
         return box("vertical", List.of(
@@ -111,11 +129,20 @@ public class LineDraftMessageFactory {
         List<Object> contents = new ArrayList<>();
         contents.add(valueRow(
                 "지역",
-                draft.getArea() == null
-                        ? "미확정"
-                        : draft.getArea().getName(),
+                areaDisplayName(draft),
                 true
         ));
+        String location = areaLocation(draft);
+        if (location != null) {
+            contents.add(valueRow("위치", location, false));
+        }
+        if (hasText(draft.getAreaStation())) {
+            contents.add(valueRow(
+                    "가까운 역",
+                    draft.getAreaStation(),
+                    false
+            ));
+        }
         contents.add(valueRow(
                 "방문일",
                 draft.getVisitDate() == null
@@ -146,7 +173,7 @@ public class LineDraftMessageFactory {
         appendWarnings(contents, draft.getWarnings());
         if (needsInput(draft)) {
             contents.add(text(
-                    "누락되거나 모호한 내용을 포함해 전체 평가를 다시 보내주세요."
+                    "누락되거나 바꿀 내용만 보내주세요. 기존 값은 유지됩니다."
             ).property("color", WARNING_COLOR)
                     .property("size", "sm")
                     .property("weight", "bold")
@@ -202,6 +229,11 @@ public class LineDraftMessageFactory {
                 button(
                         "secondary",
                         null,
+                        editAction(draftId, "수정")
+                ),
+                button(
+                        "secondary",
+                        null,
                         postback(
                                 "취소",
                                 "action=cancel&draftId=" + draftId,
@@ -210,6 +242,43 @@ public class LineDraftMessageFactory {
                 )
         )).property("spacing", "md")
                 .property("paddingAll", "16px")
+                .build();
+    }
+
+    private Map<String, Object> createReinputFooter(Long draftId) {
+        if (draftId == null || draftId <= 0) {
+            throw new IllegalStateException(
+                    "Persisted LINE Draft ID is required."
+            );
+        }
+        return box("vertical", List.of(
+                button(
+                        "primary",
+                        WARNING_COLOR,
+                        editAction(draftId, "내용 보완하기")
+                ),
+                button(
+                        "secondary",
+                        null,
+                        postback(
+                                "메뉴",
+                                "action=menu&target=main",
+                                "메뉴"
+                        )
+                )
+        )).property("spacing", "sm")
+                .property("paddingAll", "16px")
+                .build();
+    }
+
+    private Map<String, Object> editAction(
+            Long draftId,
+            String label
+    ) {
+        return LineFlexObjectBuilder.type("postback")
+                .property("label", label)
+                .property("data", "action=edit&draftId=" + draftId)
+                .property("displayText", label)
                 .build();
     }
 
@@ -261,10 +330,41 @@ public class LineDraftMessageFactory {
         if (needsInput(draft)) {
             return "방문 기록에 추가 입력이 필요합니다.";
         }
-        String areaName = draft.getArea() == null
-                ? "방문 기록"
-                : draft.getArea().getName();
+        String areaName = draft.getArea() != null
+                ? draft.getArea().getName()
+                : valueOrDefault(draft.getAreaName(), "방문 기록");
         return areaName + " 방문 기록 초안을 확인해주세요.";
+    }
+
+    private String areaDisplayName(LineVisitDraftEntity draft) {
+        String areaName = draft.getArea() != null
+                ? draft.getArea().getName()
+                : draft.getAreaName();
+        if (areaName == null || areaName.isBlank()) {
+            return "미확정";
+        }
+        return draft.isAreaRegistrationRequired()
+                ? areaName + " (신규)"
+                : areaName;
+    }
+
+    private String areaLocation(LineVisitDraftEntity draft) {
+        String prefecture = draft.getAreaPrefecture();
+        String city = draft.getAreaCity();
+        if (!hasText(prefecture) && !hasText(city)) {
+            return null;
+        }
+        return java.util.stream.Stream.of(prefecture, city)
+                .filter(this::hasText)
+                .collect(java.util.stream.Collectors.joining(" "));
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String valueOrDefault(String value, String defaultValue) {
+        return hasText(value) ? value : defaultValue;
     }
 
     private boolean isConfirmable(LineVisitDraftEntity draft) {

@@ -59,6 +59,9 @@ public class LineWebhookEventEntity {
     @Column(name = "last_error_code", length = 50)
     private String lastErrorCode;
 
+    @Column(name = "revision_source_draft_id")
+    private Long revisionSourceDraftId;
+
     @Column(name = "occurred_at", nullable = false)
     private Instant occurredAt;
 
@@ -168,6 +171,29 @@ public class LineWebhookEventEntity {
         this.processingStartedAt = null;
         this.processedAt = toSeconds(failedAt);
         this.lastErrorCode = errorCode;
+    }
+
+    /**
+     * Text Message가 최초 처리에서 선택한 수정 원본을 보존한다.
+     *
+     * <p>Task 재시도 시 원본 상태가 바뀌었더라도 일반 신규 방문 입력으로 해석되지
+     * 않도록 수정 의도를 이벤트에 고정한다.</p>
+     *
+     * @param draftId 수정 대상으로 선택한 원본 Draft ID
+     */
+    public void assignRevisionSource(Long draftId) {
+        if (draftId == null || draftId <= 0) {
+            throw new IllegalArgumentException(
+                    "Revision source Draft ID must be positive."
+            );
+        }
+        if (revisionSourceDraftId != null
+                && !revisionSourceDraftId.equals(draftId)) {
+            throw new IllegalStateException(
+                    "Revision source Draft cannot be changed."
+            );
+        }
+        this.revisionSourceDraftId = draftId;
     }
 
     private Instant toSeconds(Instant instant) {

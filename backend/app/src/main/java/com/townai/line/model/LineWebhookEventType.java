@@ -11,6 +11,6 @@ public enum LineWebhookEventType {
     /** 자연어 Visit Draft를 생성할 Text Message Event. */
     TEXT_MESSAGE,
 
-    /** 저장 확인 또는 취소를 요청하는 Postback Event. */
+    /** 메뉴 이동 또는 Draft·Report 동작을 요청하는 Postback Event. */
     POSTBACK
 }

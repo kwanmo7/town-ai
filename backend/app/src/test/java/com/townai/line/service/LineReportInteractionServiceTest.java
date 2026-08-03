@@ -19,10 +19,13 @@ import org.mockito.ArgumentCaptor;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class LineReportInteractionServiceTest {
@@ -135,6 +138,60 @@ class LineReportInteractionServiceTest {
         );
         assertEquals("COMPARE", requestCaptor.getValue().getReportType());
         assertEquals(List.of(1L, 2L), requestCaptor.getValue().getAreaIds());
+    }
+
+    @Test
+    void restoresExistingReportBeforeCurrentDataValidation() {
+        LineReportGenerateCommand command = new LineReportGenerateCommand(
+                ReportType.ALL,
+                List.of()
+        );
+        ReportResponse report = new ReportResponse(
+                10L,
+                ReportType.ALL,
+                "test-model",
+                "all-v1",
+                Instant.parse("2026-08-03T01:02:03Z")
+        );
+        LinePushRequest expected = textRequest("기존 완료 결과");
+        when(reportService.findBySourceWebhookEventId("event-1"))
+                .thenReturn(Optional.of(report));
+        when(messageFactory.createResult(
+                "user-1",
+                report,
+                "전체 지역"
+        )).thenReturn(expected);
+
+        Optional<LinePushRequest> result = service.findExistingResult(
+                "user-1",
+                "event-1",
+                command
+        );
+
+        assertEquals(Optional.of(expected), result);
+        verifyNoInteractions(visitRepository);
+    }
+
+    @Test
+    void returnsUnavailableMessageWhenOverallReportHasNoVisits() {
+        when(areaService.findAll()).thenReturn(List.of());
+        when(visitRepository.findAllForActiveAreas()).thenReturn(List.of());
+        LinePushRequest unavailable = textRequest("방문 기록 없음");
+        when(messageFactory.createUnavailable(
+                "user-1",
+                "아직 등록된 방문 기록이 없습니다."
+        )).thenReturn(unavailable);
+
+        Optional<LinePushRequest> result = service.findUnavailableMessage(
+                "user-1",
+                new LineReportGenerateCommand(ReportType.ALL, List.of())
+        );
+
+        assertEquals(Optional.of(unavailable), result);
+        verify(reportService, never()).createForLine(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyString()
+        );
     }
 
     private VisitEntity visit(long areaId, String date) {

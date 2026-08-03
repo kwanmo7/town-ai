@@ -22,10 +22,14 @@ class LinePostbackCommandParserTest {
             new LinePostbackCommandParser();
 
     @Test
-    void parsesConfirmAndCancelCommands() {
+    void parsesConfirmEditAndCancelCommands() {
         assertEquals(
                 new LineDraftCommand(LineDraftAction.CONFIRM, 42L),
                 parser.parse("action=confirm&draftId=42")
+        );
+        assertEquals(
+                new LineDraftCommand(LineDraftAction.EDIT, 42L),
+                parser.parse("action=edit&draftId=42")
         );
         assertEquals(
                 new LineDraftCommand(LineDraftAction.CANCEL, 42L),

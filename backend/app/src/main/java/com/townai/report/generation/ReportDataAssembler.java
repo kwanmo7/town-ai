@@ -84,6 +84,9 @@ public class ReportDataAssembler {
     private ReportGenerationData prepareSummary() {
         OverallStatistics statistics =
                 statisticsService.getOverallStatistics();
+        if (statistics.visitCount() == 0) {
+            throw new ApiException(ErrorCode.REPORT_HAS_NO_VISITS);
+        }
 
         SummaryInput input = new SummaryInput(
                 Math.toIntExact(statistics.areaCount()),
@@ -143,9 +146,11 @@ public class ReportDataAssembler {
 
     private ReportGenerationData prepareAll() {
         List<AreaEntity> areas = areaRepository.findAllByDeletedAtIsNullOrderByIdAsc();
-        Map<Long, List<VisitEntity>> visitsByArea = groupByArea(
-                visitRepository.findAllForActiveAreas()
-        );
+        List<VisitEntity> allVisits = visitRepository.findAllForActiveAreas();
+        if (allVisits.isEmpty()) {
+            throw new ApiException(ErrorCode.REPORT_HAS_NO_VISITS);
+        }
+        Map<Long, List<VisitEntity>> visitsByArea = groupByArea(allVisits);
         List<AllAreaInput> areaInputs = new ArrayList<>();
         for (int index = 0; index < areas.size(); index++) {
             AreaEntity area = areas.get(index);

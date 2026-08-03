@@ -26,6 +26,7 @@ class LineVisitDraftEntityTest {
                 "event-1",
                 "user-1",
                 area,
+                false,
                 response,
                 response.warnings(),
                 NOW
@@ -61,6 +62,7 @@ class LineVisitDraftEntityTest {
                 "event-1",
                 "user-1",
                 null,
+                false,
                 response,
                 response.warnings(),
                 NOW
@@ -76,7 +78,7 @@ class LineVisitDraftEntityTest {
 
     private VisitDraftResponse completeResponse() {
         return new VisitDraftResponse(
-                new VisitDraftAreaResponse(1L, "센터미나미"),
+                existingAreaResponse(),
                 LocalDate.parse("2026-07-24"),
                 8,
                 9,
@@ -85,6 +87,55 @@ class LineVisitDraftEntityTest {
                 9,
                 "걷기 편했음",
                 List.of()
+        );
+    }
+
+    @Test
+    void createsConfirmableDraftForCompleteNewAreaCandidate() {
+        VisitDraftResponse response = new VisitDraftResponse(
+                new VisitDraftAreaResponse(
+                        null,
+                        "센터미나미",
+                        "가나가와현",
+                        "요코하마시",
+                        "센터미나미역"
+                ),
+                LocalDate.parse("2026-07-24"),
+                8,
+                9,
+                7,
+                6,
+                9,
+                "걷기 편했음",
+                List.of("신규 지역의 위치를 확인해주세요.")
+        );
+
+        LineVisitDraftEntity draft = LineVisitDraftEntity.create(
+                "event-new-area",
+                "user-1",
+                null,
+                true,
+                response,
+                response.warnings(),
+                NOW
+        );
+
+        assertEquals(
+                LineVisitDraftStatus.AWAITING_CONFIRMATION,
+                draft.getStatus()
+        );
+        assertEquals("센터미나미", draft.getAreaName());
+        assertEquals("가나가와현", draft.getAreaPrefecture());
+        assertEquals(true, draft.isAreaRegistrationRequired());
+    }
+
+    private VisitDraftAreaResponse existingAreaResponse() {
+        return new VisitDraftAreaResponse(
+                1L,
+                "센터미나미",
+                "가나가와현",
+                "요코하마시",
+                "센터미나미역"
         );
     }
 

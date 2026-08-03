@@ -44,7 +44,13 @@ class VisitDraftControllerTest {
     @Test
     void returnsParsedVisitDraft() throws Exception {
         when(visitDraftService.create(any())).thenReturn(new VisitDraftResponse(
-                new VisitDraftAreaResponse(1L, "센터미나미"),
+                new VisitDraftAreaResponse(
+                        1L,
+                        "센터미나미",
+                        "가나가와현",
+                        "요코하마시",
+                        "센터미나미역"
+                ),
                 LocalDate.of(2026, 7, 12),
                 9,
                 null,
@@ -65,6 +71,9 @@ class VisitDraftControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.area.id").value(1))
                 .andExpect(jsonPath("$.area.name").value("센터미나미"))
+                .andExpect(jsonPath("$.area.prefecture").value("가나가와현"))
+                .andExpect(jsonPath("$.area.registered").doesNotExist())
+                .andExpect(jsonPath("$.area.requiredLocation").doesNotExist())
                 .andExpect(jsonPath("$.visitDate").value("2026-07-12"))
                 .andExpect(jsonPath("$.atmosphereScore").value(9))
                 .andExpect(jsonPath("$.infraScore").isEmpty())

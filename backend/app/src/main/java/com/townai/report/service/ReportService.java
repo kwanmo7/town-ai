@@ -6,6 +6,7 @@ import com.townai.report.dto.ReportDetailResponse;
 import com.townai.report.dto.ReportResponse;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Report 생성·조회·본문 접근·삭제의 비즈니스 계약을 정의한다.
@@ -30,6 +31,16 @@ public interface ReportService {
      */
     ReportResponse createForLine(
             ReportCreateRequest request,
+            String sourceWebhookEventId
+    );
+
+    /**
+     * LINE 재시도에서 생성 완료된 기존 Report를 조회한다.
+     *
+     * @param sourceWebhookEventId 원본 LINE Webhook Event ID
+     * @return 같은 이벤트가 이미 생성한 Report
+     */
+    Optional<ReportResponse> findBySourceWebhookEventId(
             String sourceWebhookEventId
     );
 

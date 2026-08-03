@@ -43,6 +43,10 @@ public class LinePostbackCommandParser {
                     parameters,
                     LineDraftAction.CONFIRM
             );
+            case "edit" -> draftCommand(
+                    parameters,
+                    LineDraftAction.EDIT
+            );
             case "cancel" -> draftCommand(
                     parameters,
                     LineDraftAction.CANCEL

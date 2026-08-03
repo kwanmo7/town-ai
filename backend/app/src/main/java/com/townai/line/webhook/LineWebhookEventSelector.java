@@ -27,7 +27,7 @@ public class LineWebhookEventSelector {
     private static final int MAX_LINE_USER_ID_LENGTH = 64;
     private static final int MAX_POSTBACK_DATA_LENGTH = 255;
     private static final Pattern SUPPORTED_POSTBACK = Pattern.compile(
-            "^(?:action=(?:confirm|cancel)&draftId=[1-9][0-9]*"
+            "^(?:action=(?:confirm|edit|cancel)&draftId=[1-9][0-9]*"
                     + "|action=menu&target=(?:main|visit-register|report)"
                     + "|action=report-type&reportType=(?:AREA|COMPARE|SUMMARY|ALL)"
                     + "|action=compare-toggle&areaId=[1-9][0-9]*"

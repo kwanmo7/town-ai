@@ -11,13 +11,14 @@ JSON은 실제 데이터 대신 예시 값을 사용한 디자인 샘플이며, 
 | `welcome-message.json` | Text Message | 최초 친구 추가 시 안내 |
 | `main-menu-message.json` | Flex Bubble | 방문 기록 등록·리포트 조회 선택 |
 | `visit-registration-guide-message.json` | Flex Bubble | 자연어 방문 평가 입력 안내 |
-| `visit-draft-message.json` | Flex Bubble | 저장 가능한 Visit Draft 확인 |
-| `visit-draft-needs-input-message.json` | Flex Bubble | 필수 값 누락 및 재입력 안내 |
+| `visit-draft-message.json` | Flex Bubble | 저장·부분 수정·취소 가능한 Visit Draft 확인 |
+| `visit-draft-new-area-message.json` | Flex Bubble | 신규 Area와 Visit 동시 등록·수정 확인 |
+| `visit-draft-needs-input-message.json` | Flex Bubble | 필수 값 누락 및 부분 보완 안내 |
 | `visit-save-result-message.json` | Flex Bubble | Visit 저장 완료 안내 |
 | `report-type-menu-message.json` | Flex Bubble | AREA·COMPARE·SUMMARY·ALL 선택 |
 | `report-area-list-message.json` | Flex Carousel | AREA Report 대상 선택 |
 | `report-compare-selection-message.json` | Flex Bubble | COMPARE 대상 2~5개 선택 |
-| `report-generating-message.json` | Text Message | 비동기 Report 생성 진행 안내 |
+| `report-generating-message.json` | Flex Bubble | 비동기 Report 생성 진행 안내 |
 | `report-result-message.json` | Flex Bubble | Report 보기·다운로드 안내 |
 | `report-no-area-message.json` | Flex Bubble | 활성 Area가 없는 상태 안내 |
 | `report-no-visits-message.json` | Flex Bubble | Report 대상 Visit이 없는 상태 안내 |
@@ -33,13 +34,13 @@ JSON은 실제 데이터 대신 예시 값을 사용한 디자인 샘플이며, 
 방문 기록 등록
 → 입력 안내
 → 자연어 입력
-→ Draft 확인 또는 재입력
+→ 기존 Area 또는 신규 Area 후보 Draft 확인 또는 재입력
 → 저장 또는 취소
 
 리포트 조회
 → Report Type 선택
 → Area 또는 비교 대상 선택
-→ 생성 중 안내
+→ Visit 존재 여부 확인 후 생성 중 안내
 → 보기 또는 다운로드
 ```
 
@@ -70,14 +71,14 @@ Flex 디자인 JSON은 LINE Flex Message Simulator에 바로 붙여 넣을 수 �
 }
 ```
 
-`welcome-message.json`과 `report-generating-message.json`은 일반 Text Message이며
-Flex Message Simulator 대상이 아니다.
+`welcome-message.json`만 일반 Text Message이며 Flex Message Simulator 대상이 아니다.
 
 ## 동적 값
 
 다음 값은 화면 확인용 예시이므로 Backend에서 실제 값으로 교체한다.
 
 - Area ID, 이름, 위치 및 Visit 개수
+- 신규 Area 여부와 사용자 확인이 필요한 위치 정보
 - 방문일, 다섯 가지 점수, 메모 및 경고
 - Draft ID와 선택된 비교 Area ID 목록
 - Report ID, Type, 대상 Area 및 생성일
@@ -93,11 +94,14 @@ ID만으로 접근할 수 없는 인증 또는 만료 URL 정책을 적용한다
 | 메인 메뉴 | `action=menu&target=main` |
 | Visit 등록 | `action=menu&target=visit-register` |
 | Report 메뉴 | `action=menu&target=report` |
-| Draft 저장·취소 | `action=confirm&draftId=10`, `action=cancel&draftId=10` |
+| Draft 저장·수정·취소 | `action=confirm&draftId=10`, `action=edit&draftId=10`, `action=cancel&draftId=10` |
 | Report Type | `action=report-type&reportType=AREA` |
 | AREA 생성 | `action=report-generate&reportType=AREA&areaId=1` |
 | 비교 선택 | `action=compare-toggle&areaId=1&selectedAreaIds=1,2` |
 | COMPARE 생성 | `action=report-generate&reportType=COMPARE&areaIds=1,2` |
+
+Draft 수정 버튼은 키보드를 즉시 열지 않는다. Backend가 수정 대기 상태를 저장한
+뒤 보내는 입력 안내를 확인하고 다음 Text Message로 변경할 내용만 보낸다.
 
 Backend는 전달된 ID와 선택 상태를 신뢰하지 않고 활성 Area, Visit 존재 여부,
 중복, 소유자 및 Report Type별 대상 개수를 다시 검증한다.

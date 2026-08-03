@@ -1,7 +1,6 @@
 package com.townai.line.processing;
 
 import com.townai.common.error.ApiException;
-import com.townai.line.entity.LineVisitDraftEntity;
 import com.townai.line.messaging.LineDraftMessageFactory;
 import com.townai.line.messaging.LineMessagePurpose;
 import com.townai.line.messaging.LineMenuMessageFactory;
@@ -20,9 +19,11 @@ import com.townai.line.model.LineWebhookEventWorkItem;
 import com.townai.line.service.LineDraftActionResult;
 import com.townai.line.service.LineReportInteractionService;
 import com.townai.line.service.LineVisitDraftService;
+import com.townai.line.service.LineVisitDraftResult;
 import com.townai.line.service.LineVisitDraftActionService;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -48,7 +49,7 @@ public class LineWebhookEventHandlerImpl
      * LINE Webhook 이벤트 업무 처리기를 생성한다.
      *
      * @param lineVisitDraftService Text Message Parser와 Draft 저장 Service
-     * @param draftActionService Draft 확인·취소 및 Visit 저장 Service
+     * @param draftActionService Draft 저장·수정·취소 처리 Service
      * @param commandParser Postback Data Parser
      * @param messageFactory 저장된 Draft 기반 Push Message Factory
      * @param menuMessageFactory Follow와 메뉴 이동용 Flex Message Factory
@@ -123,9 +124,14 @@ public class LineWebhookEventHandlerImpl
     }
 
     private void handleTextMessage(LineWebhookEventWorkItem workItem) {
-        LineVisitDraftEntity draft =
+        LineVisitDraftResult result =
                 lineVisitDraftService.getOrCreate(workItem);
-        LinePushRequest request = messageFactory.create(draft);
+        LinePushRequest request = result.hasDraft()
+                ? messageFactory.create(result.draft())
+                : messageFactory.createNotice(
+                        workItem.lineUserId(),
+                        result.notice()
+                );
         push(
                 workItem,
                 LineMessagePurpose.DRAFT_RESULT,
@@ -201,6 +207,33 @@ public class LineWebhookEventHandlerImpl
             LineWebhookEventWorkItem workItem,
             LineReportGenerateCommand command
     ) {
+        Optional<LinePushRequest> existing =
+                reportInteractionService.findExistingResult(
+                        workItem.lineUserId(),
+                        workItem.webhookEventId(),
+                        command
+                );
+        if (existing.isPresent()) {
+            push(
+                    workItem,
+                    LineMessagePurpose.REPORT_RESULT,
+                    existing.get()
+            );
+            return;
+        }
+        Optional<LinePushRequest> unavailable =
+                reportInteractionService.findUnavailableMessage(
+                        workItem.lineUserId(),
+                        command
+                );
+        if (unavailable.isPresent()) {
+            push(
+                    workItem,
+                    LineMessagePurpose.REPORT_RESULT,
+                    unavailable.get()
+            );
+            return;
+        }
         push(
                 workItem,
                 LineMessagePurpose.REPORT_GENERATING,

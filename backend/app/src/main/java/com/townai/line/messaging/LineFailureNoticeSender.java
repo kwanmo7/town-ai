@@ -17,7 +17,7 @@ import java.util.UUID;
 public class LineFailureNoticeSender {
 
     private static final String FAILURE_MESSAGE =
-            "방문 기록을 처리하지 못했습니다. "
+            "요청을 처리하지 못했습니다. "
                     + "잠시 후 내용을 다시 보내주세요.";
 
     private final LinePushClient pushClient;

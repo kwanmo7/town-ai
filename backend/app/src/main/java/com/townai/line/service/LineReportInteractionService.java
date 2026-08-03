@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -158,6 +160,27 @@ public class LineReportInteractionService {
     }
 
     /**
+     * mutable한 Area·Visit 사전 검증보다 먼저 기존 Report 결과를 복원한다.
+     *
+     * @param lineUserId 수신 사용자
+     * @param webhookEventId Report 생성 원본 이벤트 ID
+     * @param command 원래 Report 생성 명령
+     * @return 기존 Report가 있으면 동일한 완료 메시지
+     */
+    public Optional<LinePushRequest> findExistingResult(
+            String lineUserId,
+            String webhookEventId,
+            LineReportGenerateCommand command
+    ) {
+        return reportService.findBySourceWebhookEventId(webhookEventId)
+                .map(report -> messageFactory.createResult(
+                        lineUserId,
+                        report,
+                        targetLabel(command)
+                ));
+    }
+
+    /**
      * Report 생성 시작 안내를 만든다.
      *
      * @param lineUserId 수신 사용자
@@ -169,6 +192,44 @@ public class LineReportInteractionService {
             ReportType reportType
     ) {
         return messageFactory.createGenerating(lineUserId, reportType);
+    }
+
+    /**
+     * Report 생성 안내와 AI 호출 전에 현재 분석 가능한 Visit을 확인한다.
+     *
+     * <p>LINE의 오래된 선택 메시지를 다시 누른 경우도 있으므로 전체 유형뿐 아니라
+     * AREA·COMPARE 선택 ID도 현재 활성 Area와 Visit 기준으로 재검증한다. 최종적인
+     * 생성 규칙은 Report Service에서 다시 검증한다.</p>
+     *
+     * @param lineUserId 수신 사용자
+     * @param command Report 생성 명령
+     * @return 생성 불가 안내. 생성 가능하면 빈 Optional
+     */
+    public Optional<LinePushRequest> findUnavailableMessage(
+            String lineUserId,
+            LineReportGenerateCommand command
+    ) {
+        List<LineReportAreaOption> options = reportAreaOptions();
+        if (command.reportType() == ReportType.SUMMARY
+                || command.reportType() == ReportType.ALL) {
+            return options.isEmpty()
+                    ? Optional.of(messageFactory.createUnavailable(
+                            lineUserId,
+                            "아직 등록된 방문 기록이 없습니다."
+                    ))
+                    : Optional.empty();
+        }
+
+        Set<Long> availableAreaIds = options.stream()
+                .map(LineReportAreaOption::areaId)
+                .collect(Collectors.toSet());
+        if (!availableAreaIds.containsAll(command.areaIds())) {
+            return Optional.of(messageFactory.createUnavailable(
+                    lineUserId,
+                    "선택한 지역에 분석 가능한 방문 기록이 없습니다."
+            ));
+        }
+        return Optional.empty();
     }
 
     private List<LineReportAreaOption> reportAreaOptions() {

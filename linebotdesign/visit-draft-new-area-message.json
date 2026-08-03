@@ -1,0 +1,192 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "direction": "ltr",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#176B5B",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "방문 기록 초안",
+        "color": "#FFFFFF",
+        "size": "xl",
+        "weight": "bold"
+      },
+      {
+        "type": "text",
+        "text": "신규 지역의 위치를 확인한 후 저장해주세요.",
+        "color": "#D8F3EA",
+        "size": "sm",
+        "margin": "sm",
+        "wrap": true
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "box",
+        "layout": "horizontal",
+        "contents": [
+          {
+            "type": "text",
+            "text": "지역",
+            "color": "#777777",
+            "size": "sm",
+            "flex": 2
+          },
+          {
+            "type": "text",
+            "text": "센터미나미 (신규)",
+            "weight": "bold",
+            "align": "end",
+            "wrap": true,
+            "flex": 4
+          }
+        ]
+      },
+      {
+        "type": "box",
+        "layout": "horizontal",
+        "contents": [
+          {
+            "type": "text",
+            "text": "위치",
+            "color": "#777777",
+            "size": "sm",
+            "flex": 2
+          },
+          {
+            "type": "text",
+            "text": "가나가와현 요코하마시",
+            "align": "end",
+            "wrap": true,
+            "flex": 4
+          }
+        ]
+      },
+      {
+        "type": "box",
+        "layout": "horizontal",
+        "contents": [
+          {
+            "type": "text",
+            "text": "가까운 역",
+            "color": "#777777",
+            "size": "sm",
+            "flex": 2
+          },
+          {
+            "type": "text",
+            "text": "센터미나미역",
+            "align": "end",
+            "wrap": true,
+            "flex": 4
+          }
+        ]
+      },
+      {
+        "type": "box",
+        "layout": "horizontal",
+        "contents": [
+          {
+            "type": "text",
+            "text": "방문일",
+            "color": "#777777",
+            "size": "sm",
+            "flex": 2
+          },
+          {
+            "type": "text",
+            "text": "2026-07-25",
+            "align": "end",
+            "flex": 4
+          }
+        ]
+      },
+      {
+        "type": "separator",
+        "margin": "md"
+      },
+      {
+        "type": "text",
+        "text": "분위기 8 · 생활 인프라 8 · 청결도 8",
+        "color": "#333333",
+        "wrap": true
+      },
+      {
+        "type": "text",
+        "text": "넓은 집 가능성 7 · 접근성 7",
+        "color": "#333333",
+        "wrap": true
+      },
+      {
+        "type": "separator",
+        "margin": "md"
+      },
+      {
+        "type": "text",
+        "text": "확인사항",
+        "color": "#A66A00",
+        "size": "sm",
+        "weight": "bold"
+      },
+      {
+        "type": "text",
+        "text": "• 등록되지 않은 지역입니다. 위치를 확인한 뒤 저장하면 지역과 방문 기록이 함께 등록됩니다.",
+        "color": "#333333",
+        "size": "sm",
+        "wrap": true
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "horizontal",
+    "spacing": "md",
+    "paddingAll": "16px",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "height": "sm",
+        "color": "#176B5B",
+        "action": {
+          "type": "postback",
+          "label": "저장",
+          "displayText": "저장",
+          "data": "action=confirm&draftId=10"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "수정",
+          "displayText": "수정",
+          "data": "action=edit&draftId=10"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "취소",
+          "displayText": "취소",
+          "data": "action=cancel&draftId=10"
+        }
+      }
+    ]
+  }
+}

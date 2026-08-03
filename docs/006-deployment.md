@@ -271,7 +271,7 @@ LINE Webhook
 → line_webhook_event Commit
 → asia-northeast1의 line-events Queue에 Task 생성
 → Cloud Run 내부 처리 Endpoint 호출
-→ Visit Draft 생성 또는 확인·취소 처리
+→ Visit Draft 생성 또는 저장·수정·취소 처리
 → LINE Push Message 전송
 ```
 

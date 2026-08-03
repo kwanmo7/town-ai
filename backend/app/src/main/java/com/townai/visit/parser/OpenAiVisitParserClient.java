@@ -14,14 +14,14 @@ import java.nio.charset.StandardCharsets;
 /**
  * Visit Parser Prompt와 strict JSON Schema로 OpenAI Responses API를 호출하는 Adapter이다.
  *
- * <p>Prompt와 Schema는 {@code prompts/visit-parser/v1}의 버전 고정 Resource를
+ * <p>Prompt와 Schema는 {@code prompts/visit-parser/v2}의 버전 고정 Resource를
  * 사용한다. 교정 요청이면 기존 System Prompt 뒤에 검증 실패 사유를 추가하되,
  * 입력 데이터와 전체 JSON 반환 규칙은 그대로 유지한다.</p>
  */
 @Component
 public class OpenAiVisitParserClient implements VisitParserAiClient {
 
-    private static final String PROMPT_BASE_PATH = "prompts/visit-parser/v1";
+    private static final String PROMPT_BASE_PATH = "prompts/visit-parser/v2";
 
     private final OpenAiResponsesClient responsesClient;
     private final ObjectMapper objectMapper;
@@ -49,8 +49,10 @@ public class OpenAiVisitParserClient implements VisitParserAiClient {
             return responsesClient.generateStructured(
                     loadInstructions(correctionInstruction),
                     input,
-                    "visit_parser_v1",
-                    loadSchema()
+                    input.existingDraft() == null
+                            ? "visit_parser_v2"
+                            : "visit_parser_revision_v2",
+                    loadSchema(input)
             ).output();
         } catch (ApiException exception) {
             throw exception;
@@ -70,9 +72,12 @@ public class OpenAiVisitParserClient implements VisitParserAiClient {
                 + "\n원래 입력과 위의 모든 규칙을 그대로 지키며 전체 JSON을 다시 반환하십시오.";
     }
 
-    private JsonNode loadSchema() throws IOException {
+    private JsonNode loadSchema(VisitParserInput input) throws IOException {
+        String schemaName = input.existingDraft() == null
+                ? "output-schema.json"
+                : "revision-output-schema.json";
         try (var inputStream = new ClassPathResource(
-                PROMPT_BASE_PATH + "/output-schema.json"
+                PROMPT_BASE_PATH + "/" + schemaName
         ).getInputStream()) {
             return objectMapper.readTree(inputStream);
         }

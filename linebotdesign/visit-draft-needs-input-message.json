@@ -46,7 +46,7 @@
       },
       {
         "type": "text",
-        "text": "누락된 내용을 포함해 전체 평가를 다시 보내주세요.",
+        "text": "누락되거나 바꿀 내용만 보내주세요. 기존 값은 그대로 유지됩니다.",
         "size": "sm",
         "color": "#777777",
         "wrap": true
@@ -66,10 +66,9 @@
         "color": "#A66A00",
         "action": {
           "type": "postback",
-          "label": "다시 입력하기",
-          "displayText": "다시 입력하기",
-          "data": "action=visit-input&draftId=11",
-          "inputOption": "openKeyboard"
+          "label": "내용 보완하기",
+          "displayText": "내용 보완하기",
+          "data": "action=edit&draftId=11"
         }
       },
       {

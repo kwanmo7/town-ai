@@ -1,6 +1,7 @@
 package com.townai.line.repository;
 
 import com.townai.line.entity.LineVisitDraftEntity;
+import com.townai.line.entity.LineVisitDraftStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -30,10 +32,53 @@ public interface LineVisitDraftRepository
     );
 
     /**
-     * 확인·취소 Transaction 동안 Draft와 연결 결과를 다른 요청이 변경하지 못하게
+     * 사용자가 가장 최근에 수정 입력을 요청한 유효 Draft를 조회한다.
+     *
+     * @param lineUserId Draft 소유 LINE User ID
+     * @param status 수정 입력 대기 상태
+     * @param currentTime 만료 시각의 제외 하한
+     * @return Area Snapshot까지 포함한 최신 수정 대상 Draft
+     */
+    @EntityGraph(attributePaths = "area")
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<LineVisitDraftEntity>
+            findFirstByLineUserIdAndStatusAndExpiresAtAfterOrderByUpdatedAtDescIdDesc(
+                    String lineUserId,
+                    LineVisitDraftStatus status,
+                    Instant currentTime
+            );
+
+    /**
+     * 한 사용자가 이미 열어 둔 수정 대기 Draft를 잠금과 함께 조회한다.
+     *
+     * @param lineUserId Draft 소유 LINE User ID
+     * @param status 수정 입력 대기 상태
+     * @return 현재 수정 입력을 기다리는 Draft 목록
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<LineVisitDraftEntity> findAllByLineUserIdAndStatus(
+            String lineUserId,
+            LineVisitDraftStatus status
+    );
+
+    /**
+     * 한 사용자의 수정 대기·처리 Draft를 잠금과 함께 조회한다.
+     *
+     * @param lineUserId Draft 소유 LINE User ID
+     * @param statuses 조회할 수정 상태
+     * @return 선택한 상태에 해당하는 Draft
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<LineVisitDraftEntity> findAllByLineUserIdAndStatusIn(
+            String lineUserId,
+            List<LineVisitDraftStatus> statuses
+    );
+
+    /**
+     * 저장·수정·취소 Transaction 동안 Draft와 연결 결과를 다른 요청이 변경하지 못하게
      * 잠근다.
      *
-     * @param draftId 확인 또는 취소할 Draft ID
+     * @param draftId 처리할 Draft ID
      * @return Area와 기존 확인 Visit을 포함한 잠긴 Draft
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)

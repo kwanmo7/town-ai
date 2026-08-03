@@ -9,7 +9,7 @@ import java.util.List;
  * <p>AI가 입력만으로 확정할 수 없는 값은 {@code null}이며, 그 이유가
  * {@code warnings}에 포함된다. 이 객체 자체는 DB에 저장되지 않는다.</p>
  *
- * @param area 명확히 식별된 활성 Area. 확정할 수 없으면 {@code null}
+ * @param area 식별된 기존 Area 또는 신규 등록 후보. 확정할 수 없으면 {@code null}
  * @param visitDate 해석된 방문일. 확정할 수 없으면 {@code null}
  * @param atmosphereScore 분위기 점수 후보
  * @param infraScore 생활 인프라 점수 후보
