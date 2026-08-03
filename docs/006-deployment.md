@@ -445,7 +445,9 @@ GitHub Repository
 
 ### CI
 
-Pull Request와 `main` Branch Push에서 실행한다.
+`main`을 대상으로 하는 모든 Pull Request에서 실행한다. Required Status Check가
+경로 필터 때문에 건너뛰어 병합이 막히는 상황을 피하기 위해 CI에는 `paths` 필터를
+두지 않는다. 수동 점검이 필요하면 `workflow_dispatch`로 실행할 수 있다.
 
 ```text
 Backend Test
@@ -482,7 +484,10 @@ Region          : asia-northeast1
 배포 흐름:
 
 ```text
-main Push
+Feature Branch Push
+→ Pull Request
+→ Backend CI 성공
+→ main Merge
 → Developer Connect
 → Cloud Build Trigger
 → backend/Dockerfile Image Build
@@ -495,7 +500,8 @@ main Push
 - Cloud Build Service Account에는 Build, Artifact Registry Push, Cloud Run 배포에 필요한 최소 권한만 부여한다.
 - Cloud Run Runtime Service Account와 Cloud Build Service Account를 분리한다.
 - 배포 중 실패하면 기존 Cloud Run Revision과 기존 Frontend 배포를 유지한다.
-- `main` Branch에는 GitHub Actions의 `Backend CI` 성공을 요구하는 Branch Protection 적용을 권장한다.
+- `main` Branch에는 GitHub Actions의 `Backend CI / Test, build and validate image`
+  성공을 요구하는 Branch Ruleset을 적용한다.
 - 현재 Cloud Run Endpoint는 Placeholder Revision이므로 실제 Backend 최초 배포 후 Health Endpoint를 다시 검증한다.
 
 ## DB Migration

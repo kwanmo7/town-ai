@@ -48,7 +48,8 @@
      - 현재 개발 PC에는 Docker Engine이 없어 실제 Image Build는 후속 검증
    - [O] GitHub Actions Backend CI Workflow 구현
      - Java 25, Gradle Test·Build, Javadoc 및 Docker Image Build 검증
-     - Pull Request와 `main` Push에서 Backend 관련 경로가 변경될 때 실행
+     - `main` 대상 모든 Pull Request와 수동 실행에서 검증
+     - Required Status Check 누락 방지를 위해 경로 필터를 사용하지 않음
    - [O] Developer Connect·Cloud Build 기반 Backend CD 실제 배포 검증
      - GitHub Actions CD와 중복 구성하지 않음
      - Build Type은 Dockerfile, Source Location은 `backend/Dockerfile` 사용
