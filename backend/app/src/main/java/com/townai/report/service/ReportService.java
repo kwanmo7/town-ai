@@ -22,6 +22,18 @@ public interface ReportService {
     ReportResponse create(ReportCreateRequest request);
 
     /**
+     * LINE Task 재처리에도 같은 Report를 반환하도록 멱등 생성한다.
+     *
+     * @param request Report 유형과 생성 대상
+     * @param sourceWebhookEventId 생성을 요청한 LINE Webhook Event ID
+     * @return 새로 생성했거나 기존에 생성된 Report 메타데이터
+     */
+    ReportResponse createForLine(
+            ReportCreateRequest request,
+            String sourceWebhookEventId
+    );
+
+    /**
      * 선택적인 유형 조건으로 Report 목록을 조회한다.
      *
      * @param reportType 선택적인 Report 유형 문자열

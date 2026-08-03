@@ -35,12 +35,17 @@ CREATE TABLE `report` (
     `prompt_version` VARCHAR(30) NOT NULL COMMENT 'AI 프롬프트 버전',
     `storage_path` VARCHAR(255) NULL
         COMMENT 'Report ID 선점 Transaction 안에서만 임시 NULL 허용',
+    `source_webhook_event_id` VARCHAR(64) NULL
+        COMMENT 'LINE Report 생성 요청 webhookEventId',
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일',
     `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일',
 
     CONSTRAINT `PK_REPORT`
         PRIMARY KEY (`id`),
+
+    CONSTRAINT `UK_REPORT_SOURCE_WEBHOOK_EVENT`
+        UNIQUE (`source_webhook_event_id`),
 
     CONSTRAINT `CHK_REPORT_TYPE`
         CHECK (`report_type` IN ('SUMMARY', 'ALL', 'AREA', 'COMPARE'))
@@ -100,7 +105,7 @@ CREATE TABLE `visit` (
 CREATE TABLE `line_webhook_event` (
     `webhook_event_id` VARCHAR(64) NOT NULL COMMENT 'LINE webhookEventId',
     `line_user_id` VARCHAR(64) NOT NULL COMMENT 'LINE User ID',
-    `event_type` VARCHAR(20) NOT NULL COMMENT 'TEXT_MESSAGE / POSTBACK',
+    `event_type` VARCHAR(20) NOT NULL COMMENT 'FOLLOW / TEXT_MESSAGE / POSTBACK',
     `message_text` TEXT NULL COMMENT '텍스트 메시지 입력',
     `postback_data` VARCHAR(255) NULL COMMENT '확인 또는 취소 Postback Data',
     `status` VARCHAR(20) NOT NULL
@@ -119,10 +124,16 @@ CREATE TABLE `line_webhook_event` (
         PRIMARY KEY (`webhook_event_id`),
 
     CONSTRAINT `CHK_LINE_WEBHOOK_EVENT_TYPE`
-        CHECK (`event_type` IN ('TEXT_MESSAGE', 'POSTBACK')),
+        CHECK (`event_type` IN ('FOLLOW', 'TEXT_MESSAGE', 'POSTBACK')),
 
     CONSTRAINT `CHK_LINE_WEBHOOK_EVENT_PAYLOAD`
         CHECK (
+            (
+                `event_type` = 'FOLLOW'
+                AND `message_text` IS NULL
+                AND `postback_data` IS NULL
+            )
+            OR
             (
                 `event_type` = 'TEXT_MESSAGE'
                 AND `message_text` IS NOT NULL

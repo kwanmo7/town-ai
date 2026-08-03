@@ -77,7 +77,7 @@ public record LineWebhookRequest(
     }
 
     /**
-     * 확인·취소 동작을 전달하는 Postback 정보이다.
+     * 메뉴 이동 또는 업무 동작을 전달하는 Postback 정보이다.
      *
      * @param data Backend가 해석할 Postback Data
      */

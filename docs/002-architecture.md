@@ -60,6 +60,8 @@ Cloud Tasks
 ```text
 최초 친구 추가
 → LINE Official Account Greeting Message
+→ Follow Webhook 비동기 처리
+→ 메인 메뉴 Flex Message Push
 → 기본 Rich Menu 표시
 
 등록 선택

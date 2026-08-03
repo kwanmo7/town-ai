@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
  * 검증된 Webhook 요청에서 Town AI V1이 처리할 이벤트만 선별한다.
  *
  * <p>허용된 개인 사용자의 Active 1:1 대화에서 발생한 Text Message와
- * 확인·취소 Postback만 내부 Payload로 변환한다. 다른 사용자, Group·Room,
+ * Follow Event와 지원하는 메뉴·Draft Postback만 내부 Payload로 변환한다. 다른 사용자, Group·Room,
  * Standby Channel, Text가 아닌 Message와 지원하지 않는 이벤트는 정보 노출 없이
  * 무시한다.</p>
  */
@@ -27,7 +27,14 @@ public class LineWebhookEventSelector {
     private static final int MAX_LINE_USER_ID_LENGTH = 64;
     private static final int MAX_POSTBACK_DATA_LENGTH = 255;
     private static final Pattern SUPPORTED_POSTBACK = Pattern.compile(
-            "^action=(?:confirm|cancel)&draftId=[1-9][0-9]*$"
+            "^(?:action=(?:confirm|cancel)&draftId=[1-9][0-9]*"
+                    + "|action=menu&target=(?:main|visit-register|report)"
+                    + "|action=report-type&reportType=(?:AREA|COMPARE|SUMMARY|ALL)"
+                    + "|action=compare-toggle&areaId=[1-9][0-9]*"
+                    + "(?:&selectedAreaIds=[1-9][0-9]*(?:,[1-9][0-9]*)*)?"
+                    + "|action=report-generate&reportType=AREA&areaId=[1-9][0-9]*"
+                    + "|action=report-generate&reportType=COMPARE&areaIds="
+                    + "[1-9][0-9]*(?:,[1-9][0-9]*){1,4})$"
     );
 
     private final String allowedUserId;
@@ -69,10 +76,24 @@ public class LineWebhookEventSelector {
         }
 
         return switch (event.type()) {
+            case "follow" -> selectFollow(event);
             case "message" -> selectTextMessage(event);
             case "postback" -> selectPostback(event);
             default -> Optional.empty();
         };
+    }
+
+    private Optional<LineWebhookEventPayload> selectFollow(
+            LineWebhookRequest.Event event
+    ) {
+        return Optional.of(new LineWebhookEventPayload(
+                event.webhookEventId(),
+                event.source().userId(),
+                LineWebhookEventType.FOLLOW,
+                null,
+                null,
+                Instant.ofEpochMilli(event.timestamp())
+        ));
     }
 
     private boolean hasSupportedCommonFields(

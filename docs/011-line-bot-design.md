@@ -155,27 +155,20 @@ DB ID와 GCS 내부 Object 경로는 사용자 메시지에 표시하지 않는�
 
 ## 8. Backend 반영 범위
 
-현재 Backend는 자연어 Text Message 수신, Draft 생성, Flex Message 초안 표시와
-`confirm`·`cancel` Postback을 지원한다. 고정 메뉴와 안내 화면을 생성하는 Flex
-Factory도 구현했지만 아직 Webhook Handler에는 연결하지 않았다. 디자인을 모두 실제
-적용하려면 다음 변경이 필요하다.
+Backend는 Follow, 자연어 Text Message와 메뉴·Draft·Report Postback을 처리한다.
+메인 메뉴, 등록 안내, Draft, Report 유형·대상 선택과 생성 결과 화면을 동적 Flex
+Message로 만들며 COMPARE는 2~5개 선택을 검증한다. LINE Report는 Webhook Event
+ID를 UNIQUE 멱등 Key로 저장해 Cloud Tasks 재처리 시 기존 결과를 재사용한다.
 
-1. Webhook Selector가 메뉴와 Report Postback을 허용하도록 확장
-2. Postback 정규식 Parser를 Key 기반 Command Parser로 교체
-3. 메뉴·Report Type·Area 선택 Command와 Handler 구현
-4. Area 목록 및 Visit 존재 여부 조회 Use Case 추가
-5. 비교 선택 상태 처리 및 2~5개 검증
-6. LINE용 Report 생성 흐름과 완료 Push 구현
-7. Rich Menu 생성·이미지 업로드·기본 메뉴 설정
-8. 안전한 Report 보기·다운로드 URL 구현
+남은 적용 작업은 다음과 같다.
 
-Flex Message 공통 모델, Draft 화면 Factory와 고정 메뉴 Factory는 구현을 완료했다.
-메뉴 Factory의 버튼은 1~3번이 완료되기 전까지 실제 사용자 흐름에 연결하지 않는다.
+1. Rich Menu 생성·이미지 업로드·기본 메뉴 설정
+2. 추측 가능한 Report ID를 보호할 인증 또는 만료 URL 정책 구현
+3. 실제 모바일에서 전체 버튼과 오래된 메시지 재클릭 검증
 
 V1 Welcome Message는 LINE Official Account Manager의 Greeting Message로
-설정하고 기본 Rich Menu를 함께 사용한다. 따라서 단순한 Welcome 처리를 위해
-Backend에 Follow Event 저장 흐름을 추가하지 않는다. 향후 사용자별 Onboarding이
-필요해질 때 Follow Event 처리를 별도로 검토한다.
+설정한다. Backend는 이어서 수신한 Follow Event를 저장·비동기 처리하고 메인 메뉴
+Flex Message를 Push한다. 차단 해제에서도 같은 흐름을 멱등하게 처리한다.
 
 ## 9. 검증 기준
 

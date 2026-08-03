@@ -37,10 +37,14 @@ Spring Boot 시작
 ```text
 backend/app/src/main/resources/db/migration/V1__initialize_schema.sql
 backend/app/src/main/resources/db/migration/V2__make_line_draft_warnings_required.sql
+backend/app/src/main/resources/db/migration/V3__support_line_follow_event.sql
+backend/app/src/main/resources/db/migration/V4__add_line_report_idempotency_key.sql
 ```
 
 V1은 초기 스키마를 생성하고, V2는 기존 Draft의 `warnings`가 `NULL`이면 빈 JSON
 배열로 정규화한 뒤 해당 Column을 `NOT NULL`로 변경한다.
+V3는 LINE `FOLLOW` Event 제약을 추가하고, V4는 LINE Report 재처리용
+`source_webhook_event_id` UNIQUE Key를 추가한다.
 
 최초 실행 후에는 다음과 같은 이력이 저장된다.
 

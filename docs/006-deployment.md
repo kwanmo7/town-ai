@@ -160,16 +160,17 @@ town-ai:
     type: ${REPORT_STORAGE_TYPE:local}
     local-directory: ${REPORT_LOCAL_DIRECTORY:./data/reports}
     bucket-name: ${GCS_BUCKET_NAME:}
-    line:
-      event-dispatcher: ${LINE_EVENT_DISPATCHER:local}
-      messaging-api-base-url: ${LINE_MESSAGING_API_BASE_URL:https://api.line.me}
-      messaging-api-connect-timeout: ${LINE_MESSAGING_API_CONNECT_TIMEOUT:5s}
-      messaging-api-read-timeout: ${LINE_MESSAGING_API_READ_TIMEOUT:15s}
-      local-task-target-url: ${LINE_LOCAL_TASK_TARGET_URL:http://localhost:8080/internal/tasks/line-events}
-      cloud-tasks-project-id: ${GCP_PROJECT_ID:}
-      cloud-tasks-location: ${GCP_REGION:asia-northeast1}
-      cloud-tasks-queue: ${LINE_CLOUD_TASKS_QUEUE:line-events}
-      cloud-tasks-target-url: ${LINE_CLOUD_TASKS_TARGET_URL:}
+  line:
+    event-dispatcher: ${LINE_EVENT_DISPATCHER:local}
+    messaging-api-base-url: ${LINE_MESSAGING_API_BASE_URL:https://api.line.me}
+    messaging-api-connect-timeout: ${LINE_MESSAGING_API_CONNECT_TIMEOUT:5s}
+    messaging-api-read-timeout: ${LINE_MESSAGING_API_READ_TIMEOUT:15s}
+    report-base-url: ${LINE_REPORT_BASE_URL:http://localhost:8080}
+    local-task-target-url: ${LINE_LOCAL_TASK_TARGET_URL:http://localhost:8080/internal/tasks/line-events}
+    cloud-tasks-project-id: ${GCP_PROJECT_ID:}
+    cloud-tasks-location: ${GCP_REGION:asia-northeast1}
+    cloud-tasks-queue: ${LINE_CLOUD_TASKS_QUEUE:line-events}
+    cloud-tasks-target-url: ${LINE_CLOUD_TASKS_TARGET_URL:}
     cloud-tasks-oidc-audience: ${LINE_CLOUD_TASKS_OIDC_AUDIENCE:}
     cloud-tasks-service-account: ${LINE_CLOUD_TASKS_SERVICE_ACCOUNT:}
 ```
@@ -198,6 +199,7 @@ LINE_EVENT_DISPATCHER
 LINE_MESSAGING_API_BASE_URL
 LINE_MESSAGING_API_CONNECT_TIMEOUT
 LINE_MESSAGING_API_READ_TIMEOUT
+LINE_REPORT_BASE_URL
 LINE_LOCAL_TASK_TARGET_URL
 LINE_CLOUD_TASKS_QUEUE
 LINE_CLOUD_TASKS_TARGET_URL

@@ -81,6 +81,35 @@ public class ReportPersistenceService {
             String markdown,
             List<AreaEntity> targetAreas
     ) {
+        return persist(
+                reportType,
+                model,
+                promptVersion,
+                markdown,
+                targetAreas,
+                null
+        );
+    }
+
+    /**
+     * LINE 요청의 멱등성 Key를 포함해 Report를 저장한다.
+     *
+     * @param reportType 생성한 Report 유형
+     * @param model 실제 사용된 OpenAI 모델
+     * @param promptVersion 적용한 Prompt 버전
+     * @param markdown 검증과 조립을 마친 최종 Markdown
+     * @param targetAreas 생성 당시 분석 대상 Area
+     * @param sourceWebhookEventId LINE Webhook Event ID
+     * @return Storage 경로가 확정된 Report Entity
+     */
+    public ReportEntity persist(
+            ReportType reportType,
+            String model,
+            String promptVersion,
+            String markdown,
+            List<AreaEntity> targetAreas,
+            String sourceWebhookEventId
+    ) {
         AtomicReference<String> attemptedStoragePath = new AtomicReference<>();
         try {
             ReportEntity result = transactionTemplate.execute(status -> {
@@ -88,6 +117,7 @@ public class ReportPersistenceService {
                         .reportType(reportType)
                         .model(model)
                         .promptVersion(promptVersion)
+                        .sourceWebhookEventId(sourceWebhookEventId)
                         .build();
                 reportRepository.saveAndFlush(report);
 

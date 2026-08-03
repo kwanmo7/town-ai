@@ -23,7 +23,9 @@ import java.time.Instant;
  *
  * <p>본문은 DB에 중복 저장하지 않고 {@link #storagePath}가 가리키는 Storage 객체에
  * 보관한다. Report ID를 파일명에 사용하기 위해 메타데이터 Row를 먼저 생성하므로,
- * 생성 Transaction 중에는 Storage 경로가 일시적으로 {@code null}일 수 있다.</p>
+ * 생성 Transaction 중에는 Storage 경로가 일시적으로 {@code null}일 수 있다.
+ * LINE에서 생성한 Report는 원본 Webhook Event ID를 선택적 UNIQUE 멱등 Key로
+ * 보존한다.</p>
  */
 @Entity
 @Table(name = "report")
@@ -51,6 +53,9 @@ public class ReportEntity {
     @Column(name = "storage_path", length = 255)
     private String storagePath;
 
+    @Column(name = "source_webhook_event_id", unique = true, length = 64)
+    private String sourceWebhookEventId;
+
     @CreationTimestamp(source = SourceType.DB)
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -60,10 +65,16 @@ public class ReportEntity {
     private Instant updatedAt;
 
     @Builder
-    private ReportEntity(ReportType reportType, String model, String promptVersion) {
+    private ReportEntity(
+            ReportType reportType,
+            String model,
+            String promptVersion,
+            String sourceWebhookEventId
+    ) {
         this.reportType = reportType;
         this.model = model;
         this.promptVersion = promptVersion;
+        this.sourceWebhookEventId = sourceWebhookEventId;
     }
 
     /**

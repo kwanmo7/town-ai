@@ -145,7 +145,8 @@ class LineMessagingApiClientTest {
                         token,
                         baseUrl,
                         Duration.ofSeconds(2),
-                        Duration.ofSeconds(2)
+                        Duration.ofSeconds(2),
+                        "http://localhost:8080"
                 )
         );
     }
