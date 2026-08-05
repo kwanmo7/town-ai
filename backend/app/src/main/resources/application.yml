@@ -56,7 +56,7 @@ town-ai:
     messaging-api-base-url: ${LINE_MESSAGING_API_BASE_URL:https://api.line.me}
     messaging-api-connect-timeout: ${LINE_MESSAGING_API_CONNECT_TIMEOUT:5s}
     messaging-api-read-timeout: ${LINE_MESSAGING_API_READ_TIMEOUT:15s}
-    report-base-url: ${LINE_REPORT_BASE_URL:http://localhost:8080}
+    report-base-url: ${LINE_REPORT_BASE_URL:${LINE_CLOUD_TASKS_OIDC_AUDIENCE:http://localhost:8080}}
     event-dispatcher: ${LINE_EVENT_DISPATCHER:local}
     local-task-target-url: ${LINE_LOCAL_TASK_TARGET_URL:http://localhost:8080/internal/tasks/line-events}
     cloud-tasks-project-id: ${GCP_PROJECT_ID:}

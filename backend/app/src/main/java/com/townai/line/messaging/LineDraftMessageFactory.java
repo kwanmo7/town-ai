@@ -4,9 +4,12 @@ import com.townai.line.entity.LineVisitDraftEntity;
 import com.townai.line.entity.LineVisitDraftStatus;
 import org.springframework.stereotype.Component;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import static com.townai.line.messaging.LineFlexComponents.box;
 import static com.townai.line.messaging.LineFlexComponents.button;
@@ -31,6 +34,21 @@ public class LineDraftMessageFactory {
     private static final String WARNING_LIGHT_COLOR = "#FFF0D5";
     private static final String LABEL_COLOR = "#777777";
     private static final String TEXT_COLOR = "#333333";
+    private static final Set<String> HIDDEN_LOCATION_VALUES =
+            Set.of(
+                    "null",
+                    "none",
+                    "unknown",
+                    "없음",
+                    "미입력",
+                    "미확정",
+                    "미상",
+                    "불명",
+                    "광역권",
+                    "도도부현",
+                    "시구정촌",
+                    "-"
+            );
 
     /**
      * LINE Visit Draft 메시지 Factory를 생성한다.
@@ -70,6 +88,70 @@ public class LineDraftMessageFactory {
         return new LinePushRequest(
                 lineUserId,
                 List.of(LinePushRequest.TextMessage.of(notice))
+        );
+    }
+
+    /**
+     * Visit 저장 완료와 다음 이동 경로를 하나의 Flex Message로 안내한다.
+     *
+     * <p>저장 직후 전체 메인 메뉴를 다시 Push해 대화가 길어지는 대신, 사용자가
+     * 계속 등록하거나 메인 메뉴로 돌아갈 수 있는 명시적인 버튼을 제공한다.</p>
+     *
+     * @param lineUserId 메시지를 받을 LINE User ID
+     * @param detail 저장된 Visit을 식별할 결과 문구
+     * @return 계속 등록과 메인 메뉴 버튼이 있는 저장 완료 메시지
+     */
+    public LinePushRequest createSaveResult(
+            String lineUserId,
+            String detail
+    ) {
+        Map<String, Object> body = box("vertical", List.of(
+                text("방문 기록 저장 완료")
+                        .property("size", "xl")
+                        .property("weight", "bold")
+                        .property("color", PRIMARY_COLOR)
+                        .build(),
+                text(detail)
+                        .property("size", "sm")
+                        .property("color", TEXT_COLOR)
+                        .property("wrap", true)
+                        .build()
+        )).property("spacing", "md")
+                .property("paddingAll", "20px")
+                .build();
+        Map<String, Object> footer = box("horizontal", List.of(
+                button(
+                        "primary",
+                        PRIMARY_COLOR,
+                        postback(
+                                "계속 등록",
+                                "action=menu&target=visit-register",
+                                "방문 기록 등록"
+                        )
+                ),
+                button(
+                        "secondary",
+                        null,
+                        postback(
+                                "메인 메뉴",
+                                "action=menu&target=main",
+                                "메뉴"
+                        )
+                )
+        )).property("spacing", "md")
+                .property("paddingAll", "16px")
+                .build();
+        Map<String, Object> bubble = LineFlexObjectBuilder.type("bubble")
+                .property("size", "mega")
+                .property("body", body)
+                .property("footer", footer)
+                .build();
+        return new LinePushRequest(
+                lineUserId,
+                List.of(LineFlexMessage.of(
+                        "방문 기록을 저장했습니다.",
+                        bubble
+                ))
         );
     }
 
@@ -351,12 +433,23 @@ public class LineDraftMessageFactory {
     private String areaLocation(LineVisitDraftEntity draft) {
         String prefecture = draft.getAreaPrefecture();
         String city = draft.getAreaCity();
-        if (!hasText(prefecture) && !hasText(city)) {
-            return null;
-        }
-        return java.util.stream.Stream.of(prefecture, city)
-                .filter(this::hasText)
+        String location = java.util.stream.Stream.of(prefecture, city)
+                .filter(this::isDisplayableLocation)
                 .collect(java.util.stream.Collectors.joining(" "));
+        return location.isBlank() ? null : location;
+    }
+
+    private boolean isDisplayableLocation(String value) {
+        if (!hasText(value)) {
+            return false;
+        }
+        String normalized = Normalizer.normalize(
+                        value,
+                        Normalizer.Form.NFKC
+                )
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", "");
+        return !HIDDEN_LOCATION_VALUES.contains(normalized);
     }
 
     private boolean hasText(String value) {

@@ -69,6 +69,31 @@ public class VisitDraftOutputValidator {
             "city",
             "station"
     );
+    private static final Set<String> NULL_LIKE_AREA_VALUES = Set.of(
+            "null",
+            "none",
+            "unknown",
+            "없음",
+            "미입력",
+            "미확정",
+            "미상",
+            "불명",
+            "-"
+    );
+    private static final Set<String> GENERIC_PREFECTURE_VALUES = Set.of(
+            "광역권",
+            "도도부현",
+            "현",
+            "도",
+            "부"
+    );
+    private static final Set<String> GENERIC_CITY_VALUES = Set.of(
+            "시구정촌",
+            "행정구역",
+            "도시",
+            "시",
+            "구"
+    );
 
     private final ObjectMapper objectMapper;
 
@@ -349,12 +374,31 @@ public class VisitDraftOutputValidator {
         if (value.isEmpty()) {
             throw invalid("Parser Area " + fieldName + "이 빈 문자열입니다.");
         }
+        if (isAreaPlaceholder(fieldName, value)) {
+            return null;
+        }
         if (value.length() > maximumLength) {
             throw invalid(
                     "Parser Area " + fieldName + "이 최대 길이를 초과했습니다."
             );
         }
         return value;
+    }
+
+    private boolean isAreaPlaceholder(
+            String fieldName,
+            String value
+    ) {
+        String normalized = normalizePlaceText(value);
+        if (NULL_LIKE_AREA_VALUES.contains(normalized)) {
+            return true;
+        }
+        return switch (fieldName) {
+            case "prefecture" ->
+                    GENERIC_PREFECTURE_VALUES.contains(normalized);
+            case "city" -> GENERIC_CITY_VALUES.contains(normalized);
+            default -> false;
+        };
     }
 
     private LocalDate parseVisitDate(

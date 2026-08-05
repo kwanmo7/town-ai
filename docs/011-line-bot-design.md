@@ -169,11 +169,19 @@ ID를 UNIQUE 멱등 Key로 저장해 Cloud Tasks 재처리 시 기존 결과를 
 사용자는 기본적으로 지역명만 입력할 수 있으며, Parser가 위치를 명확히 특정할 수
 있으면 도도부현·시구정촌·인접 역을 보완한다. 보완된 위치는 저장 전에 Draft에서
 사용자가 확인하고, 동명 지역처럼 모호한 경우에만 위치 추가 입력을 요구한다.
+최초 Parser 결과에 신규 Area의 도도부현 또는 시구정촌이 없으면 Backend가 위치
+보완 요청을 한 번 더 수행한다. `광역권`, 문자열 `null` 같은 자리표시자는 위치로
+표시하거나 저장하지 않는다. 보완 출력에서는 같은 지역명의 위치만 사용하고 최초
+검증이 끝난 방문일·점수·메모는 Backend가 그대로 보존한다.
 Draft의 수정 버튼은 수정 대기 상태가 저장된 뒤 입력 안내를 보낸다. 사용자는 안내를
 확인하고 `접근성 8로 수정`, `방문일은 7월 26일`, `메모에 공원이 가까웠다고 추가`
 같은 부분 입력을 보낸다. 수정 Text Message는 AI 호출 전에 원본 Draft를 점유하며,
 Backend는 Parser의 `changedFields`만 기존 값에 병합한다. 사용자는 새 Draft를 다시
 확인한 뒤 저장한다.
+
+Visit 저장 완료 화면은 `계속 등록`과 `메인 메뉴` 버튼을 제공한다. 저장 직후 전체
+메인 메뉴를 자동으로 다시 보내 대화가 길어지는 대신 사용자가 다음 동작을 직접
+선택한다.
 
 남은 적용 작업은 다음과 같다.
 
@@ -184,6 +192,9 @@ Backend는 Parser의 `changedFields`만 기존 값에 병합한다. 사용자는
 V1 Welcome Message는 LINE Official Account Manager의 Greeting Message로
 설정한다. Backend는 이어서 수신한 Follow Event를 저장·비동기 처리하고 메인 메뉴
 Flex Message를 Push한다. 차단 해제에서도 같은 흐름을 멱등하게 처리한다.
+Webhook 처리와 별도로 같은 메시지가 중복되지 않도록 Official Account Manager의
+`자동 응답 메시지`는 끄고, `Greeting Message`와 `Webhook`만 켠다. 채팅 입력에 대한
+응답은 Backend Messaging API가 전담한다.
 
 ## 9. 검증 기준
 
@@ -193,6 +204,9 @@ Flex Message를 Push한다. 차단 해제에서도 같은 흐름을 멱등하게
 - Postback Data가 LINE 300자 및 Backend 저장 길이 이내인지 확인
 - Rich Menu 이미지가 JSON 영역, 형식, 해상도 및 1MB 제한과 일치하는지 확인
 - LINE 모바일 단말에서 Rich Menu와 모든 버튼 확인
+- 저장 완료 화면의 `계속 등록`과 `메인 메뉴` 이동 확인
+- Production `LINE_REPORT_BASE_URL`이 Cloud Run HTTPS Origin인지 확인하고 Report
+  보기·다운로드 버튼이 `localhost`가 아닌 공개 URL을 여는지 확인
 - 오래된 메시지 재클릭과 Cloud Tasks 재시도에서 중복 Visit·Report가 생성되지
   않는지 확인
 - 활성 Visit 0건에서 SUMMARY·ALL이 생성 중 화면이나 AI 호출로 넘어가지 않는지 확인
@@ -205,3 +219,4 @@ Flex Message를 Push한다. 차단 해제에서도 같은 흐름을 멱등하게
 - [Rich Menu API](https://developers.line.biz/en/reference/messaging-api/nojs/#rich-menu)
 - [Flex Message Simulator](https://developers.line.biz/flex-simulator/)
 - [LINE Webhook Event](https://developers.line.biz/en/docs/messaging-api/receiving-messages/)
+- [LINE Bot 구축과 자동 응답 설정](https://developers.line.biz/en/docs/messaging-api/building-bot/)

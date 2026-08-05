@@ -88,6 +88,7 @@ class LineVisitDraftActionServiceTest {
                 "방문 기록을 저장했습니다. Visit ID: 100",
                 result.message()
         );
+        assertEquals(true, result.visitSaved());
         assertEquals(LineVisitDraftStatus.CONFIRMED, draft.getStatus());
         assertEquals(visit, draft.getConfirmedVisit());
         verify(visitService).create(any());
@@ -113,6 +114,7 @@ class LineVisitDraftActionServiceTest {
                 "방문 기록을 저장했습니다. Visit ID: 100",
                 result.message()
         );
+        assertEquals(true, result.visitSaved());
         verify(visitService, never()).create(any());
     }
 
@@ -293,6 +295,7 @@ class LineVisitDraftActionServiceTest {
                 "방문 기록을 저장했습니다. Visit ID: 100",
                 result.message()
         );
+        assertEquals(true, result.visitSaved());
         assertEquals(createdArea, draft.getArea());
         assertEquals(false, draft.isAreaRegistrationRequired());
         verify(areaService).create(any());

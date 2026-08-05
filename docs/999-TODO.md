@@ -36,10 +36,12 @@
        - [O] LINE용 Report 생성 결과 Push 및 Webhook Event 기반 중복 방지
        - [O] 활성 Visit 0건의 SUMMARY·ALL 생성 사전 차단
        - [O] Draft 저장 전 자연어 부분 수정 및 누락값 병합
-     - [ ] LINE 화면 Production 마무리
-       - 안전한 Report 보기·다운로드 URL
+    - [ ] LINE 화면 Production 마무리
+       - [O] `LINE_REPORT_BASE_URL`과 Cloud Tasks OIDC Audience를 사용한 공개 Cloud Run Report 링크
+       - 추측 가능한 Report ID를 보호할 인증 또는 만료 URL
        - 실제 모바일 Rich Menu와 오래된 메시지 재클릭 검증
-       - Flyway V5~V7 배포 후 신규 Area·Visit 동시 등록, Draft 부분 수정·경합 처리와 빈 Report 차단 재검증
+       - [O] Flyway V5~V7 배포 후 신규 Area·Visit 동시 등록과 Draft 부분 수정 검증
+       - 위치 자동 보완, 저장 완료 메뉴와 Report 링크 수정 배포 후 모바일 재검증
      - [O] Production용 GCS Report Storage 구현체
      - [O] Local MySQL 기반 전체 API 통합 검증
        - 격리된 `town_ai_integration` Database에 당시 Flyway V1·V2 적용
@@ -61,7 +63,8 @@
      - `town-ai-api` 실제 Backend 배포 및 Liveness·Readiness `UP` 확인
    - [ ] 실제 외부 서비스 및 Production GCP 통합 검증
      - [O] Cloud Run, Cloud SQL, 실제 OpenAI AREA Report와 GCS 저장·조회·삭제
-     - [ ] LINE Messaging API, Cloud Tasks와 OIDC
+     - [O] LINE Messaging API, Cloud Tasks와 OIDC
+     - [ ] 위치 보완·저장 완료 메뉴·Report 공개 URL 수정본 Production 재검증
      - 검증 결과: `010-production-gcp-integration.md`
 5. [ ] ERD PNG/XLSX 최종 동기화
 

@@ -30,6 +30,7 @@ import java.util.Queue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -188,6 +189,40 @@ class VisitDraftServiceImplTest {
     }
 
     @Test
+    void enrichesNewAreaLocationWhenUserOmitsAdministrativeNames() {
+        FakeVisitParserAiClient aiClient = new FakeVisitParserAiClient(
+                newAreaOutput("광역권", "null", "unknown"),
+                newAreaOutput(
+                        "가나가와현",
+                        "요코하마시 쓰즈키구",
+                        "센터미나미역"
+                ).replace(
+                        "\"atmosphereScore\": 8",
+                        "\"atmosphereScore\": 1"
+                ).replace(
+                        "\"memo\": \"방문 메모\"",
+                        "\"memo\": \"모델이 임의로 변경한 메모\""
+                )
+        );
+        VisitDraftService service = service(aiClient);
+
+        VisitDraftResponse result = service.create(new VisitDraftRequest(
+                "센터미나미를 방문했어. 다섯 점수는 모두 입력했어."
+        ));
+
+        assertEquals("가나가와현", result.area().prefecture());
+        assertEquals("요코하마시 쓰즈키구", result.area().city());
+        assertEquals("센터미나미역", result.area().station());
+        assertEquals(8, result.atmosphereScore());
+        assertEquals("방문 메모", result.memo());
+        assertEquals(2, aiClient.inputs.size());
+        assertTrue(
+                aiClient.correctionInstructions.get(1)
+                        .contains("도도부현")
+        );
+    }
+
+    @Test
     void providesExistingDraftWhenParsingPartialRevision() {
         FakeVisitParserAiClient aiClient = new FakeVisitParserAiClient(
                 completeOutput(1L, "센터미나미")
@@ -278,6 +313,32 @@ class VisitDraftServiceImplTest {
                   "warnings": []
                 }
                 """.formatted(areaId, areaName);
+    }
+
+    private String newAreaOutput(
+            String prefecture,
+            String city,
+            String station
+    ) {
+        return """
+                {
+                  "area": {
+                    "id": null,
+                    "name": "센터미나미",
+                    "prefecture": "%s",
+                    "city": "%s",
+                    "station": "%s"
+                  },
+                  "visitDate": "2026-07-24",
+                  "atmosphereScore": 8,
+                  "infraScore": 8,
+                  "cleanScore": 8,
+                  "sizeScore": 7,
+                  "accessScore": 7,
+                  "memo": "방문 메모",
+                  "warnings": ["새 지역의 위치 정보를 확인해주세요."]
+                }
+                """.formatted(prefecture, city, station);
     }
 
     private static class FakeVisitParserAiClient implements VisitParserAiClient {
