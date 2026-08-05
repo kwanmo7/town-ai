@@ -36,10 +36,12 @@
        - [O] LINE용 Report 생성 결과 Push 및 Webhook Event 기반 중복 방지
        - [O] 활성 Visit 0건의 SUMMARY·ALL 생성 사전 차단
        - [O] Draft 저장 전 자연어 부분 수정 및 누락값 병합
-     - [ ] LINE 화면 Production 마무리
-       - 안전한 Report 보기·다운로드 URL
+    - [ ] LINE 화면 Production 마무리
+       - [O] `LINE_REPORT_BASE_URL`과 Cloud Tasks OIDC Audience를 사용한 공개 Cloud Run Report 링크
+       - 추측 가능한 Report ID를 보호할 인증 또는 만료 URL
        - 실제 모바일 Rich Menu와 오래된 메시지 재클릭 검증
-       - Flyway V5~V7 배포 후 신규 Area·Visit 동시 등록, Draft 부분 수정·경합 처리와 빈 Report 차단 재검증
+       - [O] Flyway V5~V7 배포 후 신규 Area·Visit 동시 등록과 Draft 부분 수정 검증
+       - 위치 자동 보완, 저장 완료 메뉴와 Report 링크 수정 배포 후 모바일 재검증
      - [O] Production용 GCS Report Storage 구현체
      - [O] Local MySQL 기반 전체 API 통합 검증
        - 격리된 `town_ai_integration` Database에 당시 Flyway V1·V2 적용
@@ -61,7 +63,8 @@
      - `town-ai-api` 실제 Backend 배포 및 Liveness·Readiness `UP` 확인
    - [ ] 실제 외부 서비스 및 Production GCP 통합 검증
      - [O] Cloud Run, Cloud SQL, 실제 OpenAI AREA Report와 GCS 저장·조회·삭제
-     - [ ] LINE Messaging API, Cloud Tasks와 OIDC
+     - [O] LINE Messaging API, Cloud Tasks와 OIDC
+     - [ ] 위치 보완·저장 완료 메뉴·Report 공개 URL 수정본 Production 재검증
      - 검증 결과: `010-production-gcp-integration.md`
 5. [ ] ERD PNG/XLSX 최종 동기화
 
@@ -75,8 +78,8 @@
 - [O] Report Type은 Enum 사용
   - 반영 문서: `004-api.md`
 - [O] Prompt Version은 기능별 독립 증가 형식 사용
-  - 현재 값: `summary-v1`, `all-v1`, `area-v1`, `compare-v1`, `visit-parser-v2`
-  - `visit-parser-v2`는 미등록 Area 후보와 위치 확인 규칙을 추가
+  - 현재 값: `summary-v1`, `all-v1`, `area-v1`, `compare-v1`, `visit-parser-v1`
+  - `visit-parser-v1`은 기존 Area 매칭, 미등록 Area 후보와 위치 확인 및 Draft 부분 수정을 지원
   - DB 컬럼은 `VARCHAR(30)` 사용
   - 반영 문서: `003-erd.md`, `004-api.md`, `ERD/town-ai-v1.sql`
 - [O] PK 및 Timestamp 생성 정책 확정

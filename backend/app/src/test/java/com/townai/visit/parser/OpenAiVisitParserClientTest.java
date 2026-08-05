@@ -31,7 +31,7 @@ class OpenAiVisitParserClientTest {
         when(responsesClient.generateStructured(
                 anyString(),
                 any(),
-                eq("visit_parser_v2"),
+                eq("visit_parser_v1"),
                 any(JsonNode.class)
         )).thenReturn(new OpenAiResponse("test-model", "{\"warnings\":[]}"));
         OpenAiVisitParserClient client = new OpenAiVisitParserClient(
@@ -51,7 +51,7 @@ class OpenAiVisitParserClientTest {
         verify(responsesClient).generateStructured(
                 instructions.capture(),
                 eq(input),
-                eq("visit_parser_v2"),
+                eq("visit_parser_v1"),
                 schema.capture()
         );
         assertEquals("{\"warnings\":[]}", result);
@@ -70,7 +70,7 @@ class OpenAiVisitParserClientTest {
         when(responsesClient.generateStructured(
                 anyString(),
                 any(),
-                eq("visit_parser_revision_v2"),
+                eq("visit_parser_revision_v1"),
                 any(JsonNode.class)
         )).thenReturn(new OpenAiResponse("test-model", "{}"));
         OpenAiVisitParserClient client = new OpenAiVisitParserClient(
@@ -101,7 +101,7 @@ class OpenAiVisitParserClientTest {
         verify(responsesClient).generateStructured(
                 anyString(),
                 eq(input),
-                eq("visit_parser_revision_v2"),
+                eq("visit_parser_revision_v1"),
                 schema.capture()
         );
         assertTrue(schema.getValue().path("properties")

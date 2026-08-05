@@ -370,8 +370,10 @@ class LineWebhookEventHandlerImplTest {
         );
         LineDraftActionResult result = new LineDraftActionResult(
                 LineMessagePurpose.CONFIRM_RESULT,
-                "방문 기록을 저장했습니다. Visit ID: 100"
+                "방문 기록을 저장했습니다. Visit ID: 100",
+                true
         );
+        LinePushRequest saveResult = textRequest("저장 완료와 메뉴");
         UUID retryKey = UUID.fromString(
                 "123e4567-e89b-52d3-a456-426614174000"
         );
@@ -379,6 +381,10 @@ class LineWebhookEventHandlerImplTest {
                 .thenReturn(command);
         when(actionService.execute(command, "user-1"))
                 .thenReturn(result);
+        when(messageFactory.createSaveResult(
+                "user-1",
+                result.message()
+        )).thenReturn(saveResult);
         when(retryKeyFactory.create(
                 "event-2",
                 LineMessagePurpose.CONFIRM_RESULT
@@ -386,17 +392,7 @@ class LineWebhookEventHandlerImplTest {
 
         handler.handle(workItem);
 
-        org.mockito.ArgumentCaptor<LinePushRequest> requestCaptor =
-                org.mockito.ArgumentCaptor.forClass(
-                        LinePushRequest.class
-                );
-        verify(pushClient).push(requestCaptor.capture(), eq(retryKey));
-        LinePushRequest.TextMessage message =
-                (LinePushRequest.TextMessage) requestCaptor
-                        .getValue()
-                        .messages()
-                        .getFirst();
-        assertEquals(result.message(), message.text());
+        verify(pushClient).push(saveResult, retryKey);
     }
 
     private LineWebhookEventWorkItem textWorkItem() {

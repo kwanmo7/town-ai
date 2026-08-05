@@ -107,10 +107,7 @@ public class LineVisitDraftActionService {
 
     private LineDraftActionResult confirm(LineVisitDraftEntity draft) {
         return switch (draft.getStatus()) {
-            case CONFIRMED -> result(
-                    LineDraftAction.CONFIRM,
-                    confirmedMessage(draft)
-            );
+            case CONFIRMED -> savedResult(confirmedMessage(draft));
             case CANCELLED -> result(
                     LineDraftAction.CONFIRM,
                     "이미 취소된 방문 기록 초안입니다."
@@ -218,8 +215,7 @@ public class LineVisitDraftActionService {
         );
         VisitEntity visit = visitRepository.getReferenceById(created.id());
         draft.confirm(visit);
-        return result(
-                LineDraftAction.CONFIRM,
+        return savedResult(
                 "방문 기록을 저장했습니다. Visit ID: " + created.id()
         );
     }
@@ -385,6 +381,14 @@ public class LineVisitDraftActionService {
             case CANCEL -> LineMessagePurpose.CANCEL_RESULT;
         };
         return new LineDraftActionResult(purpose, message);
+    }
+
+    private LineDraftActionResult savedResult(String message) {
+        return new LineDraftActionResult(
+                LineMessagePurpose.CONFIRM_RESULT,
+                message,
+                true
+        );
     }
 
     private String revisionInstruction() {

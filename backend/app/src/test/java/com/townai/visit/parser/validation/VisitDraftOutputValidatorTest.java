@@ -66,6 +66,33 @@ class VisitDraftOutputValidatorTest {
     }
 
     @Test
+    void convertsLiteralNullAndGenericLocationPlaceholdersToNull() {
+        VisitDraftResponse result = validator.validate("""
+                {
+                  "area": {
+                    "id": null,
+                    "name": "센터미나미",
+                    "prefecture": "광역권",
+                    "city": "null",
+                    "station": "unknown"
+                  },
+                  "visitDate": "2026-08-03",
+                  "atmosphereScore": 8,
+                  "infraScore": 8,
+                  "cleanScore": 8,
+                  "sizeScore": 7,
+                  "accessScore": 7,
+                  "memo": null,
+                  "warnings": ["위치 정보를 확인해주세요."]
+                }
+                """, input("센터미나미 방문"));
+
+        assertNull(result.area().prefecture());
+        assertNull(result.area().city());
+        assertNull(result.area().station());
+    }
+
+    @Test
     void mergesOnlyFieldsDeclaredByRevisionOutput() {
         VisitDraftResponse existing = new VisitDraftResponse(
                 new VisitDraftAreaResponse(

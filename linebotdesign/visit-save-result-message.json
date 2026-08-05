@@ -9,14 +9,14 @@
     "contents": [
       {
         "type": "text",
-        "text": "방문 기록을 저장했습니다",
+        "text": "방문 기록 저장 완료",
         "size": "xl",
         "weight": "bold",
         "color": "#176B5B"
       },
       {
         "type": "text",
-        "text": "센터미나미 · 2026-07-28",
+        "text": "방문 기록을 저장했습니다. Visit ID: 2",
         "color": "#555555",
         "wrap": true
       }
@@ -46,7 +46,7 @@
         "height": "sm",
         "action": {
           "type": "postback",
-          "label": "메뉴",
+          "label": "메인 메뉴",
           "displayText": "메뉴",
           "data": "action=menu&target=main"
         }

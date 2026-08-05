@@ -68,10 +68,32 @@ GET /api/reports/1 → 404 REPORT_NOT_FOUND
 Visit과 Report는 삭제됐으며 Area ID 1은 Soft Delete 정책에 따라 DB 이력으로만
 남고 일반 목록에서는 제외된다.
 
+## LINE 및 Report 링크 추가 검증
+
+2026-08-05 실제 LINE 모바일 대화에서 다음 흐름을 확인했다.
+
+- LINE Webhook 수신, Cloud Tasks 전달과 OIDC 인증
+- 신규 Area 후보 Draft 생성과 자연어 부분 수정
+- 신규 Area와 Visit 동시 저장
+- LINE에서 AREA·ALL Report 생성과 GCS 객체 저장
+- Cloud Run `GET /api/reports/2/content`, `/download` 응답 `200`
+- Cloud Run `GET /api/reports/3/content`, `/download` 응답 `200`
+
+GCS 객체와 Cloud Run 조회 Endpoint는 정상이지만 LINE 완료 메시지의 Report Base
+URL이 Local 기본값을 사용할 수 있는 설정 문제를 확인했다. `LINE_REPORT_BASE_URL`을
+공개 Cloud Run Origin으로 지정하고, 값이 없으면 이미 검증된
+`LINE_CLOUD_TASKS_OIDC_AUDIENCE`를 재사용하도록 수정했다. 수정본 배포 후 LINE
+내장 브라우저에서 보기·다운로드를 다시 확인한다.
+
+LINE 화면에서 `광역권 null` 같은 AI 자리표시자 노출과 Visit 저장 후 이동 버튼이
+없는 문제도 확인했다. 자리표시자 무효화, 신규 Area 위치 Best-effort 보완과 저장
+완료 메뉴 버튼을 반영했으며 수정본 배포 후 모바일에서 재검증한다.
+
 ## 남은 Production 검증
 
-- 실제 LINE Messaging API Webhook 수신과 Push
-- Cloud Tasks Queue 전달과 OIDC 인증
+- 수정본의 LINE Report 보기·다운로드 링크
+- 행정구역을 생략한 신규 Area 위치 자동 보완
+- Visit 저장 완료 후 계속 등록·메인 메뉴 이동
 - SUMMARY, COMPARE, ALL을 포함한 반복 Prompt 품질 평가
 - 무료 Cloud SQL 평가 종료 전 장기 운영 사양과 비용 확정
 - 장애로 남을 수 있는 고아 GCS 객체의 운영 정리 정책

@@ -14,14 +14,14 @@ import java.nio.charset.StandardCharsets;
 /**
  * Visit Parser Prompt와 strict JSON Schema로 OpenAI Responses API를 호출하는 Adapter이다.
  *
- * <p>Prompt와 Schema는 {@code prompts/visit-parser/v2}의 버전 고정 Resource를
+ * <p>Prompt와 Schema는 {@code prompts/visit-parser/v1}의 버전 고정 Resource를
  * 사용한다. 교정 요청이면 기존 System Prompt 뒤에 검증 실패 사유를 추가하되,
  * 입력 데이터와 전체 JSON 반환 규칙은 그대로 유지한다.</p>
  */
 @Component
 public class OpenAiVisitParserClient implements VisitParserAiClient {
 
-    private static final String PROMPT_BASE_PATH = "prompts/visit-parser/v2";
+    private static final String PROMPT_BASE_PATH = "prompts/visit-parser/v1";
 
     private final OpenAiResponsesClient responsesClient;
     private final ObjectMapper objectMapper;
@@ -50,8 +50,8 @@ public class OpenAiVisitParserClient implements VisitParserAiClient {
                     loadInstructions(correctionInstruction),
                     input,
                     input.existingDraft() == null
-                            ? "visit_parser_v2"
-                            : "visit_parser_revision_v2",
+                            ? "visit_parser_v1"
+                            : "visit_parser_revision_v1",
                     loadSchema(input)
             ).output();
         } catch (ApiException exception) {

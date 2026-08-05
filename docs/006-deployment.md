@@ -165,7 +165,7 @@ town-ai:
     messaging-api-base-url: ${LINE_MESSAGING_API_BASE_URL:https://api.line.me}
     messaging-api-connect-timeout: ${LINE_MESSAGING_API_CONNECT_TIMEOUT:5s}
     messaging-api-read-timeout: ${LINE_MESSAGING_API_READ_TIMEOUT:15s}
-    report-base-url: ${LINE_REPORT_BASE_URL:http://localhost:8080}
+    report-base-url: ${LINE_REPORT_BASE_URL:${LINE_CLOUD_TASKS_OIDC_AUDIENCE:http://localhost:8080}}
     local-task-target-url: ${LINE_LOCAL_TASK_TARGET_URL:http://localhost:8080/internal/tasks/line-events}
     cloud-tasks-project-id: ${GCP_PROJECT_ID:}
     cloud-tasks-location: ${GCP_REGION:asia-northeast1}
@@ -206,6 +206,18 @@ LINE_CLOUD_TASKS_TARGET_URL
 LINE_CLOUD_TASKS_OIDC_AUDIENCE
 LINE_CLOUD_TASKS_SERVICE_ACCOUNT
 ```
+
+`LINE_REPORT_BASE_URL`은 LINE의 `리포트 보기`와 `Markdown 다운로드` 버튼에
+사용할 공개 Cloud Run Origin이다. Production 값은 다음과 같이 설정한다.
+
+```text
+LINE_REPORT_BASE_URL=https://town-ai-api-574086886148.asia-northeast1.run.app
+```
+
+값을 생략하면 `LINE_CLOUD_TASKS_OIDC_AUDIENCE`를 같은 공개 Origin으로 사용하고,
+두 값이 모두 없을 때만 Local 기본값 `http://localhost:8080`을 사용한다. 운영에서는
+링크 설정을 명확히 확인할 수 있도록 `LINE_REPORT_BASE_URL`을 직접 지정하는 것을
+권장한다. Bucket 내부 `gs://` URI나 GCS 객체 경로는 LINE 링크로 노출하지 않는다.
 
 Local에서는 `DB_URL`을 생략해 `DB_HOST`, `DB_PORT`, `DB_NAME`으로 구성한
 일반 TCP JDBC URL을 사용한다.

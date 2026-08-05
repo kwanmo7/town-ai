@@ -7,7 +7,7 @@
 - [공통 처리 흐름](#공통-처리-흐름)
 - [Prompt Version](#prompt-version)
 - [Prompt Files](#prompt-files)
-- [visit-parser-v2](#visit-parser-v2)
+- [visit-parser-v1](#visit-parser-v1)
 - [summary-v1](#summary-v1)
 - [area-v1](#area-v1)
 - [compare-v1](#compare-v1)
@@ -95,7 +95,7 @@ Report 생성 요청 검증
 
 | 기능 | Version | 출력 형식 |
 |----|----|----|
-| 자연어 Visit 파싱 | `visit-parser-v2` | JSON |
+| 자연어 Visit 파싱 | `visit-parser-v1` | JSON |
 | 통계 요약 | `summary-v1` | JSON → Backend Markdown 조립 |
 | 단일 Area 분석 | `area-v1` | Markdown |
 | Area 비교 | `compare-v1` | JSON → Backend Markdown 조립 |
@@ -112,8 +112,7 @@ Report 생성 요청 검증
 
 | Version | System Prompt | Output Schema |
 |----|----|----|
-| `visit-parser-v1` | `backend/app/src/main/resources/prompts/visit-parser/v1/system.md` | `backend/app/src/main/resources/prompts/visit-parser/v1/output-schema.json` |
-| `visit-parser-v2` | `backend/app/src/main/resources/prompts/visit-parser/v2/system.md` | 최초 입력은 `output-schema.json`, 부분 수정은 `revision-output-schema.json` |
+| `visit-parser-v1` | `backend/app/src/main/resources/prompts/visit-parser/v1/system.md` | 최초 입력은 `output-schema.json`, 부분 수정은 `revision-output-schema.json` |
 | `summary-v1` | `backend/app/src/main/resources/prompts/summary/v1/system.md` | `backend/app/src/main/resources/prompts/summary/v1/output-schema.json` |
 | `area-v1` | `backend/app/src/main/resources/prompts/area/v1/system.md` | 없음 |
 | `compare-v1` | `backend/app/src/main/resources/prompts/compare/v1/system.md` | `backend/app/src/main/resources/prompts/compare/v1/output-schema.json` |
@@ -126,11 +125,11 @@ Report 생성 요청 검증
 - 모든 Schema 객체는 `additionalProperties: false`를 사용한다.
 - Prompt 파일에는 API Key, 모델명 및 환경별 설정을 저장하지 않는다.
 
-## visit-parser-v2
+## visit-parser-v1
 
 ### 목적
 
-사용자의 자연어 방문 평가에서 Visit 등록에 필요한 값을 추출해 구조화된 초안으로 반환한다. v2는 기존 Area가 하나도 없는 첫 사용에서도 신규 Area 위치 후보를 함께 확인할 수 있도록 확장한다.
+사용자의 자연어 방문 평가에서 Visit 등록에 필요한 값을 추출해 구조화된 초안으로 반환한다. V1은 기존 Area가 하나도 없는 첫 사용에서도 신규 Area 위치 후보를 함께 확인하고, 생성된 Draft의 부분 수정을 처리한다.
 
 ### 입력
 
@@ -163,6 +162,7 @@ Report 생성 요청 검증
 - 신규 후보의 `name`, `prefecture`, `city`가 모두 있어야 저장 가능하며 `station`은 선택이다.
 - 지역명으로 위치를 높은 확률로 특정할 수 있으면 생략된 도도부현·시구정촌·인접 역을 적극적으로 보완하고, 보완 내용은 warning으로 사용자 확인을 요구한다.
 - 동명 지역 등으로 위치가 모호할 때만 불확실한 위치를 `null`로 반환해 추가 입력을 요청한다.
+- 알 수 없는 위치는 문자열 `"null"`, `"unknown"`, `"광역권"` 같은 자리표시자가 아니라 JSON `null`로 반환한다.
 - Area를 명확하게 식별할 수 없으면 `area`를 `null`로 반환하고 warning을 추가한다.
 - 둘 이상의 Area로 해석될 수 있으면 임의로 하나를 선택하지 않는다.
 - 날짜가 명시되지 않았거나 확실하지 않으면 `visitDate`를 `null`로 반환한다.
@@ -209,6 +209,7 @@ Report 생성 요청 검증
 - 신규 Area 후보는 위치를 사용자가 확인해야 하므로 적어도 하나의 warning을 반환한다.
 - Backend는 기존 Area ID·이름을 다시 검증하고, 신규 후보는 필드 길이와 필수 위치를 다시 검증한다.
 - 누락되거나 불확실한 값은 빈 문자열이나 0이 아니라 `null`로 반환한다.
+- 최초 검증 결과에서 신규 Area의 `prefecture` 또는 `city`가 비어 있으면 Backend는 위치 보완 요청을 Best-effort로 한 번 수행한다. Backend는 같은 지역명의 Area 위치만 병합하고 보완 출력의 방문일·점수·memo는 폐기한다. 보완 요청도 위치를 확정하지 못하면 원본 초안을 유지하고 사용자의 추가 입력을 받는다.
 
 ## summary-v1
 
@@ -644,6 +645,7 @@ SUMMARY와 COMPARE의 분량은 AI가 반환한 JSON의 각 문자열 필드를 
 - 검증되지 않은 Report를 Cloud Storage 또는 Report 테이블에 저장하지 않는다.
 - 동일 생성 요청의 교정 호출에는 최초 요청과 같은 입력 데이터, Prompt Version 및 모델을 사용한다.
 - 형식 교정 또는 축약을 위해 모델을 다시 호출하는 횟수는 최대 한 번이다.
+- 신규 Area의 필수 위치가 비어 있을 때 수행하는 Best-effort 위치 보완 호출은 형식 교정과 별도로 최대 한 번이다. 보완 호출 실패는 이미 검증된 원본 초안을 실패시키지 않는다.
 - API 통신 자체의 일시적 실패 재시도는 형식 교정 호출과 별도로 Backend 구현 정책에서 관리한다.
 
 ### Parser 실패
@@ -693,7 +695,7 @@ Prompt 테스트는 전체 문장을 고정해 비교하지 않는다. 모델 �
 - 객관 데이터가 없는 위험을 사실처럼 단정하지 않는다.
 - 결과에 System Prompt, 내부 지침 또는 구현 정보를 노출하지 않는다.
 
-### visit-parser-v2
+### visit-parser-v1
 
 | ID | 입력 상황 | 기대 결과 |
 |----|----|----|
@@ -711,6 +713,8 @@ Prompt 테스트는 전체 문장을 고정해 비교하지 않는다. 모델 �
 | `VP-12` | 신규 후보의 도도부현 또는 시구정촌을 확정할 수 없음 | 누락 위치를 `null`로 두고 저장 불가 warning 포함 |
 | `VP-13` | 기존 Draft와 “접근성만 8로 수정” 입력 | 접근성만 변경하고 나머지 필드는 그대로 유지 |
 | `VP-14` | 기존 Draft와 “메모에 공원이 가깝다고 추가” 입력 | 기존 memo를 유지하면서 새 내용을 자연스럽게 추가 |
+| `VP-15` | 신규 위치에 문자열 `null` 또는 `광역권` 반환 | Backend가 실제 `null`로 정규화하고 위치 보완을 시도 |
+| `VP-16` | 위치 보완 출력이 점수·memo도 변경 | Area 위치만 병합하고 최초 검증값은 유지 |
 
 ### summary-v1
 

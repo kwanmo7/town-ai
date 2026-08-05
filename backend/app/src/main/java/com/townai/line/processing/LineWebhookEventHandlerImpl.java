@@ -171,12 +171,15 @@ public class LineWebhookEventHandlerImpl
                 draftCommand,
                 workItem.lineUserId()
         );
-        LinePushRequest request = new LinePushRequest(
-                workItem.lineUserId(),
-                java.util.List.of(
-                        LinePushRequest.TextMessage.of(result.message())
+        LinePushRequest request = result.visitSaved()
+                ? messageFactory.createSaveResult(
+                        workItem.lineUserId(),
+                        result.message()
                 )
-        );
+                : messageFactory.createNotice(
+                        workItem.lineUserId(),
+                        result.message()
+                );
         push(workItem, result.purpose(), request);
     }
 

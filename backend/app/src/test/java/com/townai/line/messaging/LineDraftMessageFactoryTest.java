@@ -127,6 +127,60 @@ class LineDraftMessageFactoryTest {
         );
     }
 
+    @Test
+    void createsSaveResultWithContinueAndMainMenuActions()
+            throws JacksonException {
+        LinePushRequest request = factory.createSaveResult(
+                "user-1",
+                "방문 기록을 저장했습니다. Visit ID: 100"
+        );
+
+        String json = objectMapper.writeValueAsString(request);
+
+        assertTrue(json.contains("방문 기록을 저장했습니다"));
+        assertTrue(json.contains("Visit ID: 100"));
+        assertTrue(json.contains("action=menu&target=visit-register"));
+        assertTrue(json.contains("action=menu&target=main"));
+    }
+
+    @Test
+    void hidesLiteralNullAndGenericLocationPlaceholders()
+            throws JacksonException {
+        VisitDraftResponse response = new VisitDraftResponse(
+                new VisitDraftAreaResponse(
+                        null,
+                        "센터미나미",
+                        "광역권",
+                        "null",
+                        null
+                ),
+                LocalDate.parse("2026-07-24"),
+                8,
+                8,
+                8,
+                7,
+                7,
+                "방문 메모",
+                List.of("위치 정보를 확인해주세요.")
+        );
+        LineVisitDraftEntity draft = LineVisitDraftEntity.create(
+                "event-placeholder",
+                "user-1",
+                null,
+                true,
+                response,
+                response.warnings(),
+                Instant.parse("2026-07-25T10:00:00Z")
+        );
+        ReflectionTestUtils.setField(draft, "id", 12L);
+
+        String json = objectMapper.writeValueAsString(factory.create(draft));
+
+        assertFalse(json.contains("광역권"));
+        assertFalse(json.contains("\"text\":\"null\""));
+        assertFalse(json.contains("\"text\":\"위치\""));
+    }
+
     private LineVisitDraftEntity completeDraft() {
         AreaEntity area = AreaEntity.builder()
                 .name("센터미나미")

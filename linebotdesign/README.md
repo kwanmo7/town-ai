@@ -35,7 +35,8 @@ JSON은 실제 데이터 대신 예시 값을 사용한 디자인 샘플이며, 
 → 입력 안내
 → 자연어 입력
 → 기존 Area 또는 신규 Area 후보 Draft 확인 또는 재입력
-→ 저장 또는 취소
+→ 저장 완료
+→ 계속 등록 또는 메인 메뉴
 
 리포트 조회
 → Report Type 선택
@@ -47,6 +48,10 @@ JSON은 실제 데이터 대신 예시 값을 사용한 디자인 샘플이며, 
 LINE은 사용자가 채팅방을 단순히 열었을 때 Webhook을 보내지 않는다. Welcome
 Message는 최초 친구 추가 또는 차단 해제 시에만 사용하고, 이후 기능 진입점은
 기본 Rich Menu와 메시지의 메뉴 버튼으로 제공한다.
+
+LINE Official Account Manager에서는 Greeting Message와 Webhook을 켜고 자동 응답
+메시지는 끈다. 자동 응답과 Backend Webhook 응답을 함께 사용하면 사진처럼 안내와
+메인 메뉴가 중복 전송될 수 있다.
 
 ## Flex Message 확인
 
