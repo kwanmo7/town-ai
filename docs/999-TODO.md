@@ -78,8 +78,8 @@
 - [O] Report Type은 Enum 사용
   - 반영 문서: `004-api.md`
 - [O] Prompt Version은 기능별 독립 증가 형식 사용
-  - 현재 값: `summary-v1`, `all-v1`, `area-v1`, `compare-v1`, `visit-parser-v2`
-  - `visit-parser-v2`는 미등록 Area 후보와 위치 확인 규칙을 추가
+  - 현재 값: `summary-v1`, `all-v1`, `area-v1`, `compare-v1`, `visit-parser-v1`
+  - `visit-parser-v1`은 기존 Area 매칭, 미등록 Area 후보와 위치 확인 및 Draft 부분 수정을 지원
   - DB 컬럼은 `VARCHAR(30)` 사용
   - 반영 문서: `003-erd.md`, `004-api.md`, `ERD/town-ai-v1.sql`
 - [O] PK 및 Timestamp 생성 정책 확정

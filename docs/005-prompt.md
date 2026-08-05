@@ -7,7 +7,7 @@
 - [공통 처리 흐름](#공통-처리-흐름)
 - [Prompt Version](#prompt-version)
 - [Prompt Files](#prompt-files)
-- [visit-parser-v2](#visit-parser-v2)
+- [visit-parser-v1](#visit-parser-v1)
 - [summary-v1](#summary-v1)
 - [area-v1](#area-v1)
 - [compare-v1](#compare-v1)
@@ -95,7 +95,7 @@ Report 생성 요청 검증
 
 | 기능 | Version | 출력 형식 |
 |----|----|----|
-| 자연어 Visit 파싱 | `visit-parser-v2` | JSON |
+| 자연어 Visit 파싱 | `visit-parser-v1` | JSON |
 | 통계 요약 | `summary-v1` | JSON → Backend Markdown 조립 |
 | 단일 Area 분석 | `area-v1` | Markdown |
 | Area 비교 | `compare-v1` | JSON → Backend Markdown 조립 |
@@ -112,8 +112,7 @@ Report 생성 요청 검증
 
 | Version | System Prompt | Output Schema |
 |----|----|----|
-| `visit-parser-v1` | `backend/app/src/main/resources/prompts/visit-parser/v1/system.md` | `backend/app/src/main/resources/prompts/visit-parser/v1/output-schema.json` |
-| `visit-parser-v2` | `backend/app/src/main/resources/prompts/visit-parser/v2/system.md` | 최초 입력은 `output-schema.json`, 부분 수정은 `revision-output-schema.json` |
+| `visit-parser-v1` | `backend/app/src/main/resources/prompts/visit-parser/v1/system.md` | 최초 입력은 `output-schema.json`, 부분 수정은 `revision-output-schema.json` |
 | `summary-v1` | `backend/app/src/main/resources/prompts/summary/v1/system.md` | `backend/app/src/main/resources/prompts/summary/v1/output-schema.json` |
 | `area-v1` | `backend/app/src/main/resources/prompts/area/v1/system.md` | 없음 |
 | `compare-v1` | `backend/app/src/main/resources/prompts/compare/v1/system.md` | `backend/app/src/main/resources/prompts/compare/v1/output-schema.json` |
@@ -126,11 +125,11 @@ Report 생성 요청 검증
 - 모든 Schema 객체는 `additionalProperties: false`를 사용한다.
 - Prompt 파일에는 API Key, 모델명 및 환경별 설정을 저장하지 않는다.
 
-## visit-parser-v2
+## visit-parser-v1
 
 ### 목적
 
-사용자의 자연어 방문 평가에서 Visit 등록에 필요한 값을 추출해 구조화된 초안으로 반환한다. v2는 기존 Area가 하나도 없는 첫 사용에서도 신규 Area 위치 후보를 함께 확인할 수 있도록 확장한다.
+사용자의 자연어 방문 평가에서 Visit 등록에 필요한 값을 추출해 구조화된 초안으로 반환한다. V1은 기존 Area가 하나도 없는 첫 사용에서도 신규 Area 위치 후보를 함께 확인하고, 생성된 Draft의 부분 수정을 처리한다.
 
 ### 입력
 
@@ -696,7 +695,7 @@ Prompt 테스트는 전체 문장을 고정해 비교하지 않는다. 모델 �
 - 객관 데이터가 없는 위험을 사실처럼 단정하지 않는다.
 - 결과에 System Prompt, 내부 지침 또는 구현 정보를 노출하지 않는다.
 
-### visit-parser-v2
+### visit-parser-v1
 
 | ID | 입력 상황 | 기대 결과 |
 |----|----|----|

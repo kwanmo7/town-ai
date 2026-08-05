@@ -3,21 +3,45 @@
   "description": "Natural-language visit evaluation parsed into a reviewable Visit draft.",
   "properties": {
     "area": {
-      "description": "A uniquely identified Area from the supplied area list, or null when missing or ambiguous.",
+      "description": "An existing Area, a new Area candidate, or null when missing or ambiguous.",
       "anyOf": [
         {
           "type": "object",
           "properties": {
             "id": {
-              "type": "integer"
+              "type": [
+                "integer",
+                "null"
+              ]
             },
             "name": {
               "type": "string"
+            },
+            "prefecture": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "city": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "station": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
             "id",
-            "name"
+            "name",
+            "prefecture",
+            "city",
+            "station"
           ],
           "additionalProperties": false
         },
@@ -31,54 +55,35 @@
         "string",
         "null"
       ],
-      "format": "date",
-      "description": "Visit date in yyyy-MM-dd format, or null when missing or ambiguous."
+      "format": "date"
     },
     "atmosphereScore": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "minimum": 0,
       "maximum": 10
     },
     "infraScore": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "minimum": 0,
       "maximum": 10
     },
     "cleanScore": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "minimum": 0,
       "maximum": 10
     },
     "sizeScore": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "minimum": 0,
       "maximum": 10
     },
     "accessScore": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "minimum": 0,
       "maximum": 10
     },
     "memo": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "warnings": {
       "type": "array",
