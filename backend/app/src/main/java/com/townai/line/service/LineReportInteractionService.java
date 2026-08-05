@@ -142,12 +142,7 @@ public class LineReportInteractionService {
             String webhookEventId,
             LineReportGenerateCommand command
     ) {
-        ReportCreateRequest request = new ReportCreateRequest();
-        request.setReportType(command.reportType().name());
-        if (command.reportType() == ReportType.AREA
-                || command.reportType() == ReportType.COMPARE) {
-            request.setAreaIds(command.areaIds());
-        }
+        ReportCreateRequest request = createRequest(command);
         ReportResponse report = reportService.createForLine(
                 request,
                 webhookEventId
@@ -174,6 +169,28 @@ public class LineReportInteractionService {
     ) {
         return reportService.findBySourceWebhookEventId(webhookEventId)
                 .map(report -> messageFactory.createResult(
+                        lineUserId,
+                        report,
+                        targetLabel(command)
+                ));
+    }
+
+    /**
+     * 현재 Report 입력과 Prompt 버전이 같은 기존 결과 화면을 복원한다.
+     *
+     * <p>동일 Webhook 재시도뿐 아니라 사용자가 같은 Report를 다시 요청한 경우에도
+     * AI를 호출하지 않고 기존 GCS 파일을 안내한다.</p>
+     *
+     * @param lineUserId 수신 사용자
+     * @param command 현재 Report 조회 명령
+     * @return 현재 데이터와 일치하는 기존 Report 완료 메시지
+     */
+    public Optional<LinePushRequest> findReusableResult(
+            String lineUserId,
+            LineReportGenerateCommand command
+    ) {
+        return reportService.findReusable(createRequest(command))
+                .map(report -> messageFactory.createReusableResult(
                         lineUserId,
                         report,
                         targetLabel(command)
@@ -278,5 +295,17 @@ public class LineReportInteractionService {
         return command.areaIds().stream()
                 .map(id -> areaNames.getOrDefault(id, "Area " + id))
                 .collect(Collectors.joining(", "));
+    }
+
+    private ReportCreateRequest createRequest(
+            LineReportGenerateCommand command
+    ) {
+        ReportCreateRequest request = new ReportCreateRequest();
+        request.setReportType(command.reportType().name());
+        if (command.reportType() == ReportType.AREA
+                || command.reportType() == ReportType.COMPARE) {
+            request.setAreaIds(command.areaIds());
+        }
+        return request;
     }
 }

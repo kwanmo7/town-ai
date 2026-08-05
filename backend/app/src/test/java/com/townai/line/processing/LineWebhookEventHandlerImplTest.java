@@ -296,6 +296,47 @@ class LineWebhookEventHandlerImplTest {
     }
 
     @Test
+    void pushesReusableReportWithoutGeneratingMessage() {
+        LineWebhookEventWorkItem workItem = postbackWorkItem(
+                "event-summary-reuse",
+                "action=report-type&reportType=SUMMARY"
+        );
+        LineReportTypeCommand command = new LineReportTypeCommand(
+                ReportType.SUMMARY
+        );
+        LineReportGenerateCommand generateCommand =
+                new LineReportGenerateCommand(
+                        ReportType.SUMMARY,
+                        List.of()
+                );
+        LinePushRequest reusable = textRequest("재사용 Report");
+        UUID resultKey = UUID.randomUUID();
+        when(commandParser.parse(workItem.postbackData()))
+                .thenReturn(command);
+        when(reportInteractionService.findReusableResult(
+                "user-1",
+                generateCommand
+        )).thenReturn(Optional.of(reusable));
+        when(retryKeyFactory.create(
+                "event-summary-reuse",
+                LineMessagePurpose.REPORT_RESULT
+        )).thenReturn(resultKey);
+
+        handler.handle(workItem);
+
+        verify(pushClient).push(reusable, resultKey);
+        verify(reportInteractionService, never()).createGenerating(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.any()
+        );
+        verify(reportInteractionService, never()).generate(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
+    @Test
     void createsDraftAndPushesDeterministicResult() {
         LineWebhookEventWorkItem workItem = textWorkItem();
         LineVisitDraftEntity draft = mock(LineVisitDraftEntity.class);

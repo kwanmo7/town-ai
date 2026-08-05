@@ -45,6 +45,15 @@ public interface ReportService {
     );
 
     /**
+     * 현재 DB 입력과 Prompt 버전이 같은 기존 Report를 조회한다.
+     *
+     * @param request Report 유형과 조회 대상
+     * @return 새 AI 호출 없이 재사용할 수 있는 Report
+     * @throws ApiException 현재 대상이나 Visit 데이터가 유효하지 않은 경우
+     */
+    Optional<ReportResponse> findReusable(ReportCreateRequest request);
+
+    /**
      * 선택적인 유형 조건으로 Report 목록을 조회한다.
      *
      * @param reportType 선택적인 Report 유형 문자열

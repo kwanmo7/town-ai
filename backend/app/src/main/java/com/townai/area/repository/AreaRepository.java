@@ -2,7 +2,10 @@ package com.townai.area.repository;
 
 import com.townai.area.entity.AreaEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -77,5 +80,36 @@ public interface AreaRepository extends JpaRepository<AreaEntity, Long> {
             String city,
             String name,
             Long id
+    );
+
+    /**
+     * 기준 시각 이후 Area 생성·수정·논리 삭제 여부를 확인한다.
+     *
+     * @param since Report 생성 시각
+     * @return 전체 Report 입력을 무효화할 Area 변경이 있으면 {@code true}
+     */
+    @Query("""
+            SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END
+            FROM AreaEntity a
+            WHERE a.updatedAt > :since OR a.deletedAt > :since
+            """)
+    boolean existsChangedAfter(@Param("since") Instant since);
+
+    /**
+     * 선택된 Area 중 기준 시각 이후 변경된 Row가 있는지 확인한다.
+     *
+     * @param areaIds 선택된 Area ID
+     * @param since Report 생성 시각
+     * @return AREA·COMPARE 입력을 무효화할 변경이 있으면 {@code true}
+     */
+    @Query("""
+            SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END
+            FROM AreaEntity a
+            WHERE a.id IN :areaIds
+              AND (a.updatedAt > :since OR a.deletedAt > :since)
+            """)
+    boolean existsChangedAfterForAreaIds(
+            @Param("areaIds") List<Long> areaIds,
+            @Param("since") Instant since
     );
 }

@@ -173,6 +173,48 @@ class LineReportInteractionServiceTest {
     }
 
     @Test
+    void restoresReusableReportForDifferentWebhookEvent() {
+        LineReportGenerateCommand command = new LineReportGenerateCommand(
+                ReportType.SUMMARY,
+                List.of()
+        );
+        ReportResponse report = new ReportResponse(
+                10L,
+                ReportType.SUMMARY,
+                "test-model",
+                "summary-v1",
+                Instant.parse("2026-08-03T01:02:03Z")
+        );
+        LinePushRequest expected = textRequest("기존 Report");
+        when(reportService.findReusable(
+                org.mockito.ArgumentMatchers.any()
+        )).thenReturn(Optional.of(report));
+        when(messageFactory.createReusableResult(
+                "user-1",
+                report,
+                "전체 지역"
+        )).thenReturn(expected);
+
+        Optional<LinePushRequest> result = service.findReusableResult(
+                "user-1",
+                command
+        );
+
+        assertEquals(Optional.of(expected), result);
+        ArgumentCaptor<ReportCreateRequest> requestCaptor =
+                ArgumentCaptor.forClass(ReportCreateRequest.class);
+        verify(reportService).findReusable(requestCaptor.capture());
+        assertEquals(
+                "SUMMARY",
+                requestCaptor.getValue().getReportType()
+        );
+        verify(reportService, never()).createForLine(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyString()
+        );
+    }
+
+    @Test
     void returnsUnavailableMessageWhenOverallReportHasNoVisits() {
         when(areaService.findAll()).thenReturn(List.of());
         when(visitRepository.findAllForActiveAreas()).thenReturn(List.of());

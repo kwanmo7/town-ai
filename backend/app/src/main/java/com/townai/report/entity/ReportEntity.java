@@ -47,6 +47,9 @@ public class ReportEntity {
     @Column(name = "prompt_version", nullable = false, length = 30)
     private String promptVersion;
 
+    @Column(name = "source_fingerprint", length = 64)
+    private String sourceFingerprint;
+
     /**
      * ID 선점 Transaction 안에서만 임시로 null일 수 있다.
      */
@@ -69,12 +72,26 @@ public class ReportEntity {
             ReportType reportType,
             String model,
             String promptVersion,
+            String sourceFingerprint,
             String sourceWebhookEventId
     ) {
         this.reportType = reportType;
         this.model = model;
         this.promptVersion = promptVersion;
+        this.sourceFingerprint = sourceFingerprint;
         this.sourceWebhookEventId = sourceWebhookEventId;
+    }
+
+    /**
+     * Migration 이전에 생성된 Report에 현재 입력 지문을 연결한다.
+     *
+     * <p>생성 이후 원본 데이터가 변경되지 않았고 대상 Area가 동일한 경우에만
+     * 호출한다. 새 Report는 Builder에서 지문을 바로 설정한다.</p>
+     *
+     * @param sourceFingerprint Prompt 입력과 버전으로 계산한 SHA-256 지문
+     */
+    public void assignSourceFingerprint(String sourceFingerprint) {
+        this.sourceFingerprint = sourceFingerprint;
     }
 
     /**

@@ -6,9 +6,12 @@ import com.townai.report.dto.ReportCreateRequest;
 import com.townai.report.dto.ReportResponse;
 import com.townai.report.generation.ReportContentGenerator;
 import com.townai.report.generation.ReportDataAssembler;
+import com.townai.report.generation.ReportGenerationData;
 import com.townai.report.persistence.ReportPersistenceService;
 import com.townai.report.repository.ReportAreaRepository;
 import com.townai.report.repository.ReportRepository;
+import com.townai.report.reuse.ReportReuseService;
+import com.townai.report.reuse.ReportSourceFingerprint;
 import com.townai.report.service.impl.ReportServiceImpl;
 import com.townai.report.storage.ReportStorage;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +51,12 @@ class ReportServiceImplTest {
     @Mock
     private ReportStorage reportStorage;
 
+    @Mock
+    private ReportSourceFingerprint sourceFingerprint;
+
+    @Mock
+    private ReportReuseService reuseService;
+
     private ReportService reportService;
 
     @BeforeEach
@@ -58,7 +67,9 @@ class ReportServiceImplTest {
                 persistenceService,
                 reportRepository,
                 reportAreaRepository,
-                reportStorage
+                reportStorage,
+                sourceFingerprint,
+                reuseService
         );
     }
 
@@ -118,6 +129,44 @@ class ReportServiceImplTest {
                 contentGenerator,
                 persistenceService
         );
+    }
+
+    @Test
+    void reusesSameReportInputForNewLineWebhookEvent() {
+        ReportCreateRequest request = new ReportCreateRequest();
+        request.setReportType("SUMMARY");
+        ReportGenerationData data = new ReportGenerationData(
+                ReportType.SUMMARY,
+                java.util.List.of(),
+                new Object()
+        );
+        ReportEntity report = ReportEntity.builder()
+                .reportType(ReportType.SUMMARY)
+                .model("test-model")
+                .promptVersion("summary-v1")
+                .sourceFingerprint("a".repeat(64))
+                .build();
+        ReflectionTestUtils.setField(report, "id", 10L);
+        ReflectionTestUtils.setField(
+                report,
+                "createdAt",
+                Instant.parse("2026-08-03T01:02:03Z")
+        );
+        when(reportRepository.findBySourceWebhookEventId("event-2"))
+                .thenReturn(Optional.empty());
+        when(dataAssembler.prepare(request)).thenReturn(data);
+        when(sourceFingerprint.calculate(data))
+                .thenReturn("a".repeat(64));
+        when(reuseService.findReusable(data, "a".repeat(64)))
+                .thenReturn(Optional.of(report));
+
+        ReportResponse result = reportService.createForLine(
+                request,
+                "event-2"
+        );
+
+        assertEquals(10L, result.id());
+        verifyNoInteractions(contentGenerator, persistenceService);
     }
 
     @Test

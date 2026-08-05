@@ -84,6 +84,7 @@ class ReportPersistenceServiceTest {
                         ReportType.SUMMARY,
                         "test-model",
                         "summary-v1",
+                        "a".repeat(64),
                         "# report",
                         List.of()
                 )

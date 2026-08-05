@@ -202,6 +202,44 @@ public class LineReportMessageFactory {
             ReportResponse report,
             String targetLabel
     ) {
+        return createResultCard(
+                lineUserId,
+                report,
+                targetLabel,
+                "리포트 생성 완료",
+                "리포트 생성이 완료되었습니다."
+        );
+    }
+
+    /**
+     * 현재 입력과 같은 기존 Report를 새 AI 호출 없이 안내한다.
+     *
+     * @param lineUserId 수신 사용자
+     * @param report 재사용하는 기존 Report
+     * @param targetLabel 분석 대상 표시 문구
+     * @return 기존 Report 조회 메시지
+     */
+    public LinePushRequest createReusableResult(
+            String lineUserId,
+            ReportResponse report,
+            String targetLabel
+    ) {
+        return createResultCard(
+                lineUserId,
+                report,
+                targetLabel,
+                "기존 리포트",
+                "기존 리포트를 불러왔습니다."
+        );
+    }
+
+    private LinePushRequest createResultCard(
+            String lineUserId,
+            ReportResponse report,
+            String targetLabel,
+            String title,
+            String altText
+    ) {
         String reportPath = "/api/reports/" + report.id();
         Map<String, Object> body = box("vertical", List.of(
                 keyValue("종류", reportTypeLabel(report.reportType())),
@@ -227,14 +265,15 @@ public class LineReportMessageFactory {
                         null,
                         uri("Markdown 다운로드", reportBaseUrl + reportPath + "/download")
                 ),
-                menuButton("다른 리포트 조회", "report")
+                menuButton("다른 리포트 조회", "report"),
+                menuButton("메인 메뉴", "main")
         )).property("spacing", "sm")
                 .property("paddingAll", "16px")
                 .build();
         return request(
                 lineUserId,
-                "리포트 생성이 완료되었습니다.",
-                bubble(header("리포트 생성 완료"), body, footer)
+                altText,
+                bubble(header(title), body, footer)
         );
     }
 
