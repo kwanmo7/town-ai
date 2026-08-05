@@ -14,6 +14,8 @@ import com.townai.report.generation.ReportGenerationData;
 import com.townai.report.persistence.ReportPersistenceService;
 import com.townai.report.repository.ReportAreaRepository;
 import com.townai.report.repository.ReportRepository;
+import com.townai.report.reuse.ReportReuseService;
+import com.townai.report.reuse.ReportSourceFingerprint;
 import com.townai.report.service.ReportService;
 import com.townai.report.storage.ReportStorage;
 import com.townai.report.storage.ReportStorageException;
@@ -44,6 +46,8 @@ public class ReportServiceImpl implements ReportService {
     private final ReportRepository reportRepository;
     private final ReportAreaRepository reportAreaRepository;
     private final ReportStorage reportStorage;
+    private final ReportSourceFingerprint sourceFingerprint;
+    private final ReportReuseService reuseService;
 
     /**
      * Report Use Case 조정 Service를 생성한다.
@@ -54,6 +58,8 @@ public class ReportServiceImpl implements ReportService {
      * @param reportRepository Report 메타데이터 Repository
      * @param reportAreaRepository 생성 대상 Area 연결 Repository
      * @param reportStorage Markdown 본문 저장소
+     * @param sourceFingerprint Report 입력 SHA-256 계산기
+     * @param reuseService 기존 Report 재사용 판단 Service
      */
     public ReportServiceImpl(
             ReportDataAssembler dataAssembler,
@@ -61,7 +67,9 @@ public class ReportServiceImpl implements ReportService {
             ReportPersistenceService persistenceService,
             ReportRepository reportRepository,
             ReportAreaRepository reportAreaRepository,
-            ReportStorage reportStorage
+            ReportStorage reportStorage,
+            ReportSourceFingerprint sourceFingerprint,
+            ReportReuseService reuseService
     ) {
         this.dataAssembler = dataAssembler;
         this.contentGenerator = contentGenerator;
@@ -69,6 +77,8 @@ public class ReportServiceImpl implements ReportService {
         this.reportRepository = reportRepository;
         this.reportAreaRepository = reportAreaRepository;
         this.reportStorage = reportStorage;
+        this.sourceFingerprint = sourceFingerprint;
+        this.reuseService = reuseService;
     }
 
     @Override
@@ -90,10 +100,16 @@ public class ReportServiceImpl implements ReportService {
         return reportRepository
                 .findBySourceWebhookEventId(sourceWebhookEventId)
                 .map(ReportResponse::from)
-                .orElseGet(() -> createInternal(
-                        request,
-                        sourceWebhookEventId
-                ));
+                .orElseGet(() -> {
+                    ReportGenerationData data = dataAssembler.prepare(request);
+                    String fingerprint = sourceFingerprint.calculate(data);
+                    return findReusablePrepared(data, fingerprint)
+                            .orElseGet(() -> generateAndPersist(
+                                    data,
+                                    fingerprint,
+                                    sourceWebhookEventId
+                            ));
+                });
     }
 
     @Override
@@ -109,12 +125,30 @@ public class ReportServiceImpl implements ReportService {
                 .map(ReportResponse::from);
     }
 
+    @Override
+    public Optional<ReportResponse> findReusable(
+            ReportCreateRequest request
+    ) {
+        ReportGenerationData data = dataAssembler.prepare(request);
+        String fingerprint = sourceFingerprint.calculate(data);
+        return findReusablePrepared(data, fingerprint);
+    }
+
     private ReportResponse createInternal(
             ReportCreateRequest request,
             String sourceWebhookEventId
     ) {
-        long startedAt = System.nanoTime();
         ReportGenerationData data = dataAssembler.prepare(request);
+        String fingerprint = sourceFingerprint.calculate(data);
+        return generateAndPersist(data, fingerprint, sourceWebhookEventId);
+    }
+
+    private ReportResponse generateAndPersist(
+            ReportGenerationData data,
+            String fingerprint,
+            String sourceWebhookEventId
+    ) {
+        long startedAt = System.nanoTime();
         try {
             GeneratedReportContent content = contentGenerator.generate(data);
             ReportEntity report = sourceWebhookEventId == null
@@ -122,6 +156,7 @@ public class ReportServiceImpl implements ReportService {
                             data.reportType(),
                             content.model(),
                             content.promptVersion(),
+                            fingerprint,
                             content.markdown(),
                             data.targetAreas()
                     )
@@ -129,6 +164,7 @@ public class ReportServiceImpl implements ReportService {
                             data.reportType(),
                             content.model(),
                             content.promptVersion(),
+                            fingerprint,
                             content.markdown(),
                             data.targetAreas(),
                             sourceWebhookEventId
@@ -149,6 +185,21 @@ public class ReportServiceImpl implements ReportService {
             );
             throw exception;
         }
+    }
+
+    private Optional<ReportResponse> findReusablePrepared(
+            ReportGenerationData data,
+            String fingerprint
+    ) {
+        Optional<ReportResponse> reusable = reuseService
+                .findReusable(data, fingerprint)
+                .map(ReportResponse::from);
+        reusable.ifPresent(report -> log.info(
+                "Existing Report reused. reportId={}, type={}",
+                report.id(),
+                report.reportType()
+        ));
+        return reusable;
     }
 
     @Override

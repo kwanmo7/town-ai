@@ -237,6 +237,19 @@ public class LineWebhookEventHandlerImpl
             );
             return;
         }
+        Optional<LinePushRequest> reusable =
+                reportInteractionService.findReusableResult(
+                        workItem.lineUserId(),
+                        command
+                );
+        if (reusable.isPresent()) {
+            push(
+                    workItem,
+                    LineMessagePurpose.REPORT_RESULT,
+                    reusable.get()
+            );
+            return;
+        }
         push(
                 workItem,
                 LineMessagePurpose.REPORT_GENERATING,

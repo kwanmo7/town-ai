@@ -36,4 +36,30 @@ public interface ReportRepository extends JpaRepository<ReportEntity, Long> {
     Optional<ReportEntity> findBySourceWebhookEventId(
             String sourceWebhookEventId
     );
+
+    /**
+     * 현재 Prompt 입력과 완전히 같은 최신 Report를 조회한다.
+     *
+     * @param reportType Report 유형
+     * @param promptVersion 현재 Prompt 버전
+     * @param sourceFingerprint 현재 Prompt 입력 지문
+     * @return 재사용 가능한 최신 Report
+     */
+    Optional<ReportEntity> findFirstByReportTypeAndPromptVersionAndSourceFingerprintOrderByCreatedAtDescIdDesc(
+            ReportType reportType,
+            String promptVersion,
+            String sourceFingerprint
+    );
+
+    /**
+     * 지문 컬럼 도입 전에 생성된 같은 유형·Prompt 버전 Report를 조회한다.
+     *
+     * @param reportType Report 유형
+     * @param promptVersion 현재 Prompt 버전
+     * @return 지문이 없는 Report. 최근 생성 순
+     */
+    List<ReportEntity> findAllByReportTypeAndPromptVersionAndSourceFingerprintIsNullOrderByCreatedAtDescIdDesc(
+            ReportType reportType,
+            String promptVersion
+    );
 }

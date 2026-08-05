@@ -92,6 +92,30 @@ class LineReportMessageFactoryTest {
         assertTrue(json.contains(
                 "https://town-ai.example.com/api/reports/10/download"
         ));
+        assertTrue(json.contains("action=menu&amp;target=main")
+                || json.contains("action=menu&target=main"));
         assertTrue(json.contains("2026-08-03"));
+    }
+
+    @Test
+    void labelsReusedReportAsExisting() throws JacksonException {
+        ReportResponse report = new ReportResponse(
+                10L,
+                ReportType.ALL,
+                "gpt-test",
+                "all-v1",
+                Instant.parse("2026-08-03T01:02:03Z")
+        );
+
+        String json = objectMapper.writeValueAsString(
+                factory.createReusableResult(
+                        "user-1",
+                        report,
+                        "전체 지역"
+                )
+        );
+
+        assertTrue(json.contains("기존 리포트"));
+        assertTrue(json.contains("기존 리포트를 불러왔습니다."));
     }
 }

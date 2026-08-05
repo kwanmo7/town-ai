@@ -33,6 +33,8 @@ CREATE TABLE `report` (
         COMMENT 'SUMMARY / ALL / AREA / COMPARE',
     `model` VARCHAR(50) NOT NULL COMMENT 'AI 모델',
     `prompt_version` VARCHAR(30) NOT NULL COMMENT 'AI 프롬프트 버전',
+    `source_fingerprint` CHAR(64) NULL
+        COMMENT 'Report 모델, Prompt 버전과 입력의 SHA-256 지문',
     `storage_path` VARCHAR(255) NULL
         COMMENT 'Report ID 선점 Transaction 안에서만 임시 NULL 허용',
     `source_webhook_event_id` VARCHAR(64) NULL
@@ -46,6 +48,13 @@ CREATE TABLE `report` (
 
     CONSTRAINT `UK_REPORT_SOURCE_WEBHOOK_EVENT`
         UNIQUE (`source_webhook_event_id`),
+
+    INDEX `IX_REPORT_REUSE` (
+        `report_type`,
+        `prompt_version`,
+        `source_fingerprint`,
+        `created_at`
+    ),
 
     CONSTRAINT `CHK_REPORT_TYPE`
         CHECK (`report_type` IN ('SUMMARY', 'ALL', 'AREA', 'COMPARE'))

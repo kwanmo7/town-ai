@@ -120,6 +120,17 @@
           "displayText": "리포트 조회",
           "data": "action=menu&target=report"
         }
+      },
+      {
+        "type": "button",
+        "style": "link",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "메인 메뉴",
+          "displayText": "메인 메뉴",
+          "data": "action=menu&target=main"
+        }
       }
     ]
   }

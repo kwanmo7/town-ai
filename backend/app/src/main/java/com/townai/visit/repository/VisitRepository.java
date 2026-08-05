@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -86,5 +87,25 @@ public interface VisitRepository extends JpaRepository<VisitEntity, Long> {
             """)
     List<VisitEntity> findAllByAreaIdsForReport(
             @Param("areaIds") List<Long> areaIds
+    );
+
+    /**
+     * 기준 시각 이후 생성 또는 수정된 Visit이 있는지 확인한다.
+     *
+     * @param since Report 생성 시각
+     * @return 전체 Report 입력을 무효화할 Visit 변경이 있으면 {@code true}
+     */
+    boolean existsByUpdatedAtAfter(Instant since);
+
+    /**
+     * 선택된 Area에서 기준 시각 이후 생성 또는 수정된 Visit을 확인한다.
+     *
+     * @param areaIds AREA·COMPARE 대상 Area ID
+     * @param since Report 생성 시각
+     * @return 선택 Report 입력을 무효화할 Visit 변경이 있으면 {@code true}
+     */
+    boolean existsByArea_IdInAndUpdatedAtAfter(
+            List<Long> areaIds,
+            Instant since
     );
 }

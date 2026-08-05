@@ -69,6 +69,7 @@ public class ReportPersistenceService {
      * @param reportType 생성한 Report 유형
      * @param model 실제 사용된 OpenAI 모델
      * @param promptVersion 적용한 Prompt 버전
+     * @param sourceFingerprint 생성 입력과 Prompt 버전의 SHA-256 지문
      * @param markdown 검증과 조립을 마친 최종 Markdown
      * @param targetAreas 생성 당시 분석 대상 Area. 요청 표시 순서
      * @return Storage 경로가 확정된 Report Entity
@@ -78,6 +79,7 @@ public class ReportPersistenceService {
             ReportType reportType,
             String model,
             String promptVersion,
+            String sourceFingerprint,
             String markdown,
             List<AreaEntity> targetAreas
     ) {
@@ -85,6 +87,7 @@ public class ReportPersistenceService {
                 reportType,
                 model,
                 promptVersion,
+                sourceFingerprint,
                 markdown,
                 targetAreas,
                 null
@@ -97,6 +100,7 @@ public class ReportPersistenceService {
      * @param reportType 생성한 Report 유형
      * @param model 실제 사용된 OpenAI 모델
      * @param promptVersion 적용한 Prompt 버전
+     * @param sourceFingerprint 생성 입력과 Prompt 버전의 SHA-256 지문
      * @param markdown 검증과 조립을 마친 최종 Markdown
      * @param targetAreas 생성 당시 분석 대상 Area
      * @param sourceWebhookEventId LINE Webhook Event ID
@@ -106,6 +110,7 @@ public class ReportPersistenceService {
             ReportType reportType,
             String model,
             String promptVersion,
+            String sourceFingerprint,
             String markdown,
             List<AreaEntity> targetAreas,
             String sourceWebhookEventId
@@ -117,6 +122,7 @@ public class ReportPersistenceService {
                         .reportType(reportType)
                         .model(model)
                         .promptVersion(promptVersion)
+                        .sourceFingerprint(sourceFingerprint)
                         .sourceWebhookEventId(sourceWebhookEventId)
                         .build();
                 reportRepository.saveAndFlush(report);

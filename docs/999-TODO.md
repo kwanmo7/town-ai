@@ -33,7 +33,9 @@
        - [O] Flex Message 공통 모델과 Serialization 구조
        - [O] Draft 확인 화면 및 고정 메뉴·안내 화면 Factory
        - [O] Follow·메뉴·Report Type·Area 선택 Postback 처리
-       - [O] LINE용 Report 생성 결과 Push 및 Webhook Event 기반 중복 방지
+     - [O] LINE용 Report 생성 결과 Push 및 Webhook Event 기반 중복 방지
+       - [O] Prompt 입력 SHA-256 지문 기반 기존 Report 재사용과 데이터 변경 시 재생성
+       - [O] Report 완료 화면의 메인 메뉴 이동
        - [O] 활성 Visit 0건의 SUMMARY·ALL 생성 사전 차단
        - [O] Draft 저장 전 자연어 부분 수정 및 누락값 병합
     - [ ] LINE 화면 Production 마무리

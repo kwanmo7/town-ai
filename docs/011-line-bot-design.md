@@ -40,7 +40,9 @@ Client이다. 모든 저장과 검증은 Backend가 담당하며 LINE 메시지�
 → AREA·COMPARE·SUMMARY·ALL 선택
 → 필요한 경우 Area 선택
 → 분석 가능한 Visit 존재 여부 확인
-→ 생성 가능한 경우에만 Report 생성 중 안내
+→ 현재 Prompt 입력과 같은 기존 Report 확인
+→ 있으면 기존 결과 카드
+→ 없으면 Report 생성 중 안내
 → OpenAI Report 생성 및 GCS 저장
 → Report 결과 카드
 → HTTPS 보기 또는 Markdown 다운로드
@@ -60,7 +62,7 @@ Client이다. 모든 저장과 검증은 Backend가 담당하며 LINE 메시지�
 | AREA 선택 | `report-area-list-message.json` | Area별 Report 생성 |
 | COMPARE 선택 | `report-compare-selection-message.json` | Area 2~5개 선택·생성 |
 | Report 생성 중 | `report-generating-message.json` | 비동기 처리 안내 |
-| Report 결과 | `report-result-message.json` | 보기·다운로드 |
+| Report 결과 | `report-result-message.json` | 보기·다운로드·리포트 조회·메인 메뉴 |
 | Area 없음 | `report-no-area-message.json` | Area 등록 필요 안내 |
 | Visit 없음 | `report-no-visits-message.json` | 방문 기록 등록 안내 |
 
@@ -143,8 +145,14 @@ Postback Data는 화면 상태 표현일 뿐 신뢰 가능한 권한 정보가 �
 
 ### 결과 전달
 
-사전 검증을 통과해 Report 생성 작업이 시작되면 진행 안내를 먼저 Push하고, 생성과 GCS 저장이
-완료되면 결과 Flex Message를 Push한다.
+사전 검증을 통과하면 Report Type, OpenAI 모델, Prompt Version, 대상 Area 순서와 실제 Prompt 입력의
+SHA-256 지문으로 기존 결과를 먼저 조회한다. 같은 지문이 있으면 생성 중 안내와 OpenAI
+호출 없이 `기존 리포트` 제목과 원래 생성일이 포함된 결과를 Push한다. 지문이 없을 때만 진행 안내를 먼저 Push하고 생성과
+GCS 저장이 완료되면 결과 Flex Message를 Push한다.
+
+AREA는 해당 Area의 실제 입력, COMPARE는 선택한 2~5개 Area의 순서와 입력을 기준으로
+재사용한다. SUMMARY와 ALL은 전체 입력을 기준으로 하므로 신규 Area·Visit 또는 기존
+데이터 변경이 있으면 새로 생성한다. Prompt Version 변경도 새 생성 조건이다.
 
 결과 카드에는 다음 정보만 표시한다.
 
@@ -153,6 +161,8 @@ Postback Data는 화면 상태 표현일 뿐 신뢰 가능한 권한 정보가 �
 - 생성일
 - Report 보기 버튼
 - Markdown 다운로드 버튼
+- 다른 리포트 조회 버튼
+- 메인 메뉴 버튼
 
 DB ID와 GCS 내부 Object 경로는 사용자 메시지에 표시하지 않는다. URL은 추측
 가능한 Report ID만으로 접근할 수 없도록 인증 또는 만료 정책을 Backend 구현 시
@@ -163,7 +173,8 @@ DB ID와 GCS 내부 Object 경로는 사용자 메시지에 표시하지 않는�
 Backend는 Follow, 자연어 Text Message와 메뉴·Draft·Report Postback을 처리한다.
 메인 메뉴, 등록 안내, Draft, Report 유형·대상 선택과 생성 결과 화면을 동적 Flex
 Message로 만들며 COMPARE는 2~5개 선택을 검증한다. LINE Report는 Webhook Event
-ID를 UNIQUE 멱등 Key로 저장해 Cloud Tasks 재처리 시 기존 결과를 재사용한다.
+ID를 UNIQUE 멱등 Key로 저장해 Cloud Tasks 재처리 시 기존 결과를 재사용한다. 서로 다른
+사용자 요청이라도 현재 Prompt 입력 지문이 같으면 기존 Report와 GCS 파일을 재사용한다.
 기존 Area가 없으면 Parser의 신규 위치 후보를 Draft에 보존하고, 사용자가 저장을
 확인한 시점에 Area와 Visit을 하나의 Transaction으로 생성한다.
 사용자는 기본적으로 지역명만 입력할 수 있으며, Parser가 위치를 명확히 특정할 수

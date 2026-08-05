@@ -640,6 +640,7 @@ V1에서 다음 항목을 기록한다.
 - OpenAI API 실패
 - Report Storage 실패
 - Report 생성 성공·실패 및 소요 시간
+- Report 입력 지문 일치에 따른 기존 결과 재사용
 - LINE Webhook 수신·Task 전달·Draft 처리 상태와 소요 시간
 - Cloud Tasks 재시도 횟수 및 최종 실패
 - Flyway Migration 시작·성공·실패
