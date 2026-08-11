@@ -1,0 +1,33 @@
+steps:
+  - id: Install Frontend dependencies
+    name: node:22-bookworm
+    dir: frontend
+    entrypoint: npm
+    args: ["ci"]
+
+  - id: Build Frontend
+    name: node:22-bookworm
+    dir: frontend
+    entrypoint: npm
+    args: ["run", "build"]
+
+  - id: Deploy Firebase Hosting live
+    name: node:22-bookworm
+    dir: frontend
+    entrypoint: npx
+    args:
+      - --yes
+      - firebase-tools@15.26.0
+      - deploy
+      - --only
+      - hosting
+      - --project
+      - "$PROJECT_ID"
+      - --message
+      - "Commit $SHORT_SHA"
+      - --non-interactive
+
+timeout: 900s
+
+options:
+  logging: CLOUD_LOGGING_ONLY
