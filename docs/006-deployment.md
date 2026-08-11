@@ -100,7 +100,7 @@ Cloud SQL은 Backend 구현과 Local 검증이 끝난 후 실제 Production 운�
 - React는 Docker Image로 만들지 않는다.
 - `npm ci`, Test, Production Build 후 Firebase Hosting에 배포한다.
 - 별도의 Firebase Project를 만들지 않고 Town-AI Production GCP Project에 Firebase를 활성화한다.
-- Backend API URL은 Frontend Build 환경변수로 전달한다.
+- Frontend는 상대 경로 `/api`를 사용하고 Firebase Hosting Rewrite가 Cloud Run으로 전달한다.
 - Firebase Hosting의 CDN과 HTTPS를 사용한다.
 
 ### Region
@@ -153,7 +153,7 @@ town-ai:
   openai:
     api-key: ${OPENAI_API_KEY:}
     base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-    report-model: ${OPENAI_REPORT_MODEL:gpt-5.4-mini}
+    report-model: ${OPENAI_REPORT_MODEL:gpt-5.6-luna}
     connect-timeout: ${OPENAI_CONNECT_TIMEOUT:5s}
     read-timeout: ${OPENAI_READ_TIMEOUT:120s}
   report-storage:
@@ -472,13 +472,15 @@ Backend Test
 ```
 
 하나의 단계가 실패하면 CI 전체를 실패 처리한다.
-Frontend 구현 이후 같은 Workflow에 Frontend Test와 Production Build 검증을 추가한다.
+같은 Workflow에서 Frontend Lint, Unit Test, Production Build와 Desktop·Mobile Chromium
+E2E도 실행한다.
 
 ### CD
 
-Cloud Run에서 연결한 Developer Connect Repository와 Cloud Build Trigger를 사용한다.
+Cloud Run과 Firebase Hosting 모두 연결된 Developer Connect Repository와 Cloud Build
+Trigger를 사용한다.
 별도의 GitHub Actions `deploy.yml`과 Workload Identity Federation은 구성하지 않는다.
-두 개의 배포 경로가 같은 Cloud Run Service를 동시에 갱신하는 상황을 피하기 위함이다.
+GitHub Actions에는 GCP 장기 인증정보를 저장하지 않는다.
 
 Developer Connect Build 설정:
 
@@ -494,6 +496,24 @@ Region          : asia-northeast1
 
 `Source Location`에 `backend/Dockerfile`을 지정하면 해당 파일이 위치한
 `backend/` Directory가 Docker Build Context로 사용된다.
+
+Frontend는 다음 두 Cloud Build 설정을 사용한다.
+
+```text
+Pull Request → frontend/cloudbuild.preview.yaml
+             → pr-{PR_NUMBER} Preview Channel, 7일 후 만료
+
+main Push    → frontend/cloudbuild.production.yaml
+             → Firebase Hosting Live Channel
+```
+
+Firebase CLI는 애플리케이션 의존성에 포함하지 않고 Cloud Build의 Node.js 22 환경에서
+고정 버전으로 실행한다. Cloud Build Service Account에는 최소한 Firebase Hosting Admin과
+API Keys Viewer 역할이 필요하다.
+
+Firebase Hosting과 Preview Channel은 공개 URL이며 `/api/**` Rewrite는 실제 Production
+Cloud Run을 호출한다. 따라서 Web 관리 API에 사용자 인증과 단일 사용자 권한 검증을
+적용하기 전에는 Preview 및 Live Trigger를 활성화하지 않는다.
 
 배포 흐름:
 

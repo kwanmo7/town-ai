@@ -21,6 +21,18 @@ gradle-app.setting
 *.ipr
 out/
 
+# Frontend build and dependency artifacts
+**/node_modules/
+/frontend/dist/
+/frontend/coverage/
+/frontend/playwright-report/
+/frontend/test-results/
+/frontend/.firebase/
+/backend/data/
+/backend/app/data/
+firebase-debug.log
+firebase-debug.*.log
+
 # Local environment and secret files
 .env
 .env.*

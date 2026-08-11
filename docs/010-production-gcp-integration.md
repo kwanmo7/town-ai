@@ -82,18 +82,33 @@ Visit과 Report는 삭제됐으며 Area ID 1은 Soft Delete 정책에 따라 DB 
 GCS 객체와 Cloud Run 조회 Endpoint는 정상이지만 LINE 완료 메시지의 Report Base
 URL이 Local 기본값을 사용할 수 있는 설정 문제를 확인했다. `LINE_REPORT_BASE_URL`을
 공개 Cloud Run Origin으로 지정하고, 값이 없으면 이미 검증된
-`LINE_CLOUD_TASKS_OIDC_AUDIENCE`를 재사용하도록 수정했다. 수정본 배포 후 LINE
-내장 브라우저에서 보기·다운로드를 다시 확인한다.
+`LINE_CLOUD_TASKS_OIDC_AUDIENCE`를 재사용하도록 수정했다.
 
 LINE 화면에서 `광역권 null` 같은 AI 자리표시자 노출과 Visit 저장 후 이동 버튼이
 없는 문제도 확인했다. 자리표시자 무효화, 신규 Area 위치 Best-effort 보완과 저장
-완료 메뉴 버튼을 반영했으며 수정본 배포 후 모바일에서 재검증한다.
+완료 메뉴 버튼을 반영했다. 두 수정 사항의 재검증 결과는 다음 절에 기록한다.
+
+### LINE 수정본 재검증
+
+2026-08-11 수정본을 Production에 배포하고 실제 LINE 모바일 대화에서 다시
+사용해 다음 흐름이 정상 동작함을 확인했다.
+
+- 행정구역 일부를 생략한 자연어 입력의 Area 위치 보완과 Visit 저장
+- Draft 확인·부분 수정·저장·취소와 저장 완료 후 메인 메뉴 이동
+- Report 결과의 `리포트 보기`와 `Markdown 다운로드` 공개 HTTPS 링크
+- 입력 데이터와 Prompt 조건이 바뀌지 않은 기존 Report 재사용
+- 새 Area 또는 Visit 등 분석 입력이 변경된 경우 새 Report 생성
+- Report 완료 화면에서 다른 Report 조회와 메인 메뉴 이동
+
+따라서 LINE Webhook, Cloud Tasks·OIDC, OpenAI Parser·Report 생성, Cloud SQL,
+GCS 저장 및 Cloud Run 공개 Report Endpoint로 이어지는 Production 핵심 흐름은
+실제 모바일 사용 기준으로 검증 완료했다. Report 재사용은 Report Type, Prompt
+Version, Model, 대상 Area와 Prompt 입력을 기반으로 만든 SHA-256 지문을 사용한다.
 
 ## 남은 Production 검증
 
-- 수정본의 LINE Report 보기·다운로드 링크
-- 행정구역을 생략한 신규 Area 위치 자동 보완
-- Visit 저장 완료 후 계속 등록·메인 메뉴 이동
 - SUMMARY, COMPARE, ALL을 포함한 반복 Prompt 품질 평가
 - 무료 Cloud SQL 평가 종료 전 장기 운영 사양과 비용 확정
 - 장애로 남을 수 있는 고아 GCS 객체의 운영 정리 정책
+- 추측 가능한 Report ID를 보호할 인증 또는 만료 URL 정책
+- 오래된 LINE 메시지의 장기 재클릭 동작

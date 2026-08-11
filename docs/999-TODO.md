@@ -38,12 +38,16 @@
        - [O] Report 완료 화면의 메인 메뉴 이동
        - [O] 활성 Visit 0건의 SUMMARY·ALL 생성 사전 차단
        - [O] Draft 저장 전 자연어 부분 수정 및 누락값 병합
-    - [ ] LINE 화면 Production 마무리
+    - [ ] LINE Production 연동 및 후속 보안 강화
        - [O] `LINE_REPORT_BASE_URL`과 Cloud Tasks OIDC Audience를 사용한 공개 Cloud Run Report 링크
-       - 추측 가능한 Report ID를 보호할 인증 또는 만료 URL
-       - 실제 모바일 Rich Menu와 오래된 메시지 재클릭 검증
+       - [O] 실제 모바일 Rich Menu와 등록·수정·Report 조회 흐름 검증
+       - [O] 행정구역 일부를 생략한 신규 Area 위치 보완 검증
+       - [O] Visit 저장 완료 후 계속 등록·메인 메뉴 이동 검증
+       - [O] 입력이 같은 기존 Report 재사용과 데이터 변경 시 재생성 검증
+       - [O] Report 보기·Markdown 다운로드 공개 URL 검증
+       - [ ] 추측 가능한 Report ID를 보호할 인증 또는 만료 URL
+       - [ ] 오래된 메시지의 장기 재클릭 검증
        - [O] Flyway V5~V7 배포 후 신규 Area·Visit 동시 등록과 Draft 부분 수정 검증
-       - 위치 자동 보완, 저장 완료 메뉴와 Report 링크 수정 배포 후 모바일 재검증
      - [O] Production용 GCS Report Storage 구현체
      - [O] Local MySQL 기반 전체 API 통합 검증
        - 격리된 `town_ai_integration` Database에 당시 Flyway V1·V2 적용
@@ -63,12 +67,46 @@
      - GitHub Actions CD와 중복 구성하지 않음
      - Build Type은 Dockerfile, Source Location은 `backend/Dockerfile` 사용
      - `town-ai-api` 실제 Backend 배포 및 Liveness·Readiness `UP` 확인
-   - [ ] 실제 외부 서비스 및 Production GCP 통합 검증
+   - [O] 실제 외부 서비스 및 Production GCP 통합 검증
      - [O] Cloud Run, Cloud SQL, 실제 OpenAI AREA Report와 GCS 저장·조회·삭제
      - [O] LINE Messaging API, Cloud Tasks와 OIDC
-     - [ ] 위치 보완·저장 완료 메뉴·Report 공개 URL 수정본 Production 재검증
+     - [O] 위치 보완·저장 완료 메뉴·Report 공개 URL 수정본 Production 재검증
+     - [O] 기존 Report 재사용과 분석 입력 변경 시 재생성 Production 검증
      - 검증 결과: `010-production-gcp-integration.md`
-5. [ ] ERD PNG/XLSX 최종 동기화
+5. [ ] Frontend 구현 및 Production 배포
+   - [O] React·TypeScript·Vite 프로젝트와 공통 반응형 Layout 구성
+   - [O] Backend API Client와 Loading·Error·Empty 공통 상태 구성
+   - [O] Dashboard, Area·Visit·Report 목록과 Markdown Report 조회 구현
+   - [O] Local Vite Proxy와 Firebase Hosting Cloud Run Rewrite 설정
+   - [O] Frontend Lint·Test·Production Build를 기존 GitHub Actions CI에 연결
+   - [O] Area 등록·수정·Soft Delete UI와 API Validation 오류 표시
+   - [O] Visit 등록·수정·삭제 UI
+     - [O] 자연어 Draft 기반 Visit 등록
+     - [O] 기존 Visit 수정·삭제
+   - [O] 자연어 Visit Draft 입력·점수 선택·확인 UI
+   - [O] Report 유형·대상 선택, 생성·삭제 및 목록 필터 UI
+     - [O] 유형별 대상 검증, 동기 생성 상태와 생성 완료 후 상세 화면 이동
+     - [O] 활성 Visit 0건 차단과 방문 기록 없는 Area 선택 방지
+     - [O] GFM 점수 표 렌더링과 ALL Structured Output 생성 안정화
+     - [O] 기존 Report 삭제와 목록 유형 필터
+   - [O] Statistics 상세·Top 5 화면과 Area별 통계 연결
+   - [O] 접근성·반응형 실제 브라우저 검증 및 주요 사용자 흐름 테스트 보강
+     - Desktop Chrome·Pixel 7에서 주요 6개 Route의 WCAG 심각 위반과 가로 넘침 검사
+     - Visit 수정·삭제, Report 필터·삭제, Top 5 Area 통계 조회 E2E 검증
+     - GitHub Actions에서 Chromium 설치 후 E2E 자동 실행
+   - [O] Firebase Hosting 설정과 Preview·Production Cloud Build 구성
+     - 정적 Asset Cache, SPA 및 `/api/**` Cloud Run Rewrite
+     - PR `pr-{번호}` 7일 Preview Channel과 main Live Channel 설정 파일
+   - [ ] 공개 Web 관리 API 인증과 단일 사용자 권한 제한
+     - Firebase Hosting과 Preview URL은 공개되므로 쓰기·삭제 API를 인증 없이 노출하지 않음
+     - LINE Webhook, Cloud Tasks OIDC, Health Check와 Web 관리 API의 접근 정책 분리
+     - 공개 Report 링크는 인증 또는 만료 URL 정책과 함께 정리
+     - 반영 문서: `004-api.md`, `006-deployment.md`, `012-frontend.md`
+   - [ ] Firebase 활성화, Hosting Preview와 Production 배포 검증
+     - Web 관리 API 인증 적용 후 Developer Connect Trigger 활성화
+     - 검증 문서: `013-firebase-hosting-deployment.md`
+   - 반영 문서: `012-frontend.md`, `013-firebase-hosting-deployment.md`
+6. [ ] ERD PNG/XLSX 최종 동기화
 
 - ERD의 기준 스키마는 개발 중 `ERD/town-ai-v1.sql`로 관리한다.
 - `ERD/town-ai-v1.png`와 `ERD/town-ai-v1.xlsx`는 Backend 구현 이후 최종 스키마를 기준으로 갱신한다.
@@ -121,6 +159,8 @@
   - API는 UTC ISO 8601로 반환하고 Frontend에서 사용자 시간대로 변환
   - 반영 문서: `003-erd.md`, `004-api.md`, `006-deployment.md`, `ERD/town-ai-v1.sql`
 - [O] Area는 `deleted_at TIMESTAMP NULL`을 사용해 Soft Delete
+  - 기존 Visit Row는 보존하되 삭제된 Area의 Visit은 일반 목록·통계·Report에서 제외
+  - Local Seed Area는 전용 복구 스크립트로 `deleted_at`만 되돌릴 수 있음
   - 반영 문서: `003-erd.md`, `004-api.md`, `ERD/town-ai-v1.sql`
 - [O] Report와 생성 대상 Area는 `report_area` 연결 테이블로 관리
   - 복합 PK: `(report_id, area_id)`
@@ -188,6 +228,7 @@
   - 결정 후 수정할 문서: `004-api.md`, `006-deployment.md`
 - [ ] 실제 OpenAI API를 사용한 Report Prompt 품질 평가
   - `backend`에서 `.\gradlew.bat :app:promptEval` 실행
+  - 기본 모델 `gpt-5.6-luna` 기준으로 SUMMARY, AREA, COMPARE, ALL을 다시 평가
   - SUMMARY, AREA, COMPARE, ALL 결과의 사실성, 균형성, 실용성 및 가독성을 평가
   - 동일 Fixture를 최소 3회 실행해 모델 응답 편차 확인
   - Report별 평균 4.0 이상, 입력에 없는 사실 단정 0건을 합격 기준으로 사용

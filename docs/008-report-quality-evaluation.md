@@ -33,7 +33,7 @@ $env:OPENAI_API_KEY = "실제 API Key"
 Remove-Item Env:OPENAI_API_KEY
 ```
 
-기본 모델은 애플리케이션과 같은 `gpt-5.4-mini`다. 다른 모델을 비교할 때만 실행 전에 `OPENAI_REPORT_MODEL`을 설정한다.
+기본 모델은 애플리케이션과 같은 `gpt-5.6-luna`다. 다른 모델을 비교할 때만 실행 전에 `OPENAI_REPORT_MODEL`을 설정한다.
 
 ```powershell
 $env:OPENAI_REPORT_MODEL = "비교할 모델 ID"
@@ -90,6 +90,7 @@ backend/app/build/prompt-eval/
 - 입력 Area의 누락, 중복 및 순서
 - Structured Output JSON 파싱
 - SUMMARY·COMPARE 글자 수
+- ALL Structured Output의 Area ID·이름·순서와 필수 상세 필드
 - 확인 체크리스트 개수
 - Markdown 빈 결과와 코드 블록 출력
 

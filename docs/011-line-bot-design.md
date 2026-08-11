@@ -194,11 +194,13 @@ Visit 저장 완료 화면은 `계속 등록`과 `메인 메뉴` 버튼을 제�
 메인 메뉴를 자동으로 다시 보내 대화가 길어지는 대신 사용자가 다음 동작을 직접
 선택한다.
 
-남은 적용 작업은 다음과 같다.
+Production 적용 상태와 남은 작업은 다음과 같다.
 
-1. Rich Menu 생성·이미지 업로드·기본 메뉴 설정
-2. 추측 가능한 Report ID를 보호할 인증 또는 만료 URL 정책 구현
-3. 실제 모바일에서 전체 버튼과 오래된 메시지 재클릭 검증
+1. Rich Menu 생성·이미지 업로드·기본 메뉴 설정 완료
+2. 실제 모바일에서 등록·부분 수정·저장과 Report 조회 버튼 검증 완료
+3. 기존 Report 재사용과 분석 입력 변경 시 재생성 검증 완료
+4. 추측 가능한 Report ID를 보호할 인증 또는 만료 URL 정책 구현 필요
+5. 오래된 메시지의 장기 재클릭 검증 필요
 
 V1 Welcome Message는 LINE Official Account Manager의 Greeting Message로
 설정한다. Backend는 이어서 수신한 Follow Event를 저장·비동기 처리하고 메인 메뉴
@@ -208,6 +210,11 @@ Webhook 처리와 별도로 같은 메시지가 중복되지 않도록 Official 
 응답은 Backend Messaging API가 전담한다.
 
 ## 9. 검증 기준
+
+2026-08-11 Production 수정본을 실제 LINE 모바일 대화에서 사용해 Rich Menu,
+Visit 등록·부분 수정·저장, 공개 HTTPS Report 보기·다운로드, 기존 Report 재사용,
+데이터 변경 시 재생성과 메인 메뉴 복귀를 확인했다. 세부 기록은
+`010-production-gcp-integration.md`에서 관리한다.
 
 - 모든 JSON이 UTF-8로 파싱되는지 확인
 - Flex Message Simulator에서 Bubble·Carousel 표시 확인
