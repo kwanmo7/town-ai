@@ -71,7 +71,12 @@ public class VisitDraftServiceImpl implements VisitDraftService {
 
     @Override
     public VisitDraftResponse create(VisitDraftRequest request) {
-        return parse(createInput(request.text().strip(), null));
+        VisitDraftResponse parsed = parse(createInput(
+                request.text().strip(),
+                null,
+                toSelectedScores(request)
+        ));
+        return applyScoreOverrides(parsed, request);
     }
 
     @Override
@@ -81,7 +86,8 @@ public class VisitDraftServiceImpl implements VisitDraftService {
     ) {
         return parse(createInput(
                 request.text().strip(),
-                VisitParserInput.ExistingDraftInput.from(existingDraft)
+                VisitParserInput.ExistingDraftInput.from(existingDraft),
+                null
         ));
     }
 
@@ -220,6 +226,80 @@ public class VisitDraftServiceImpl implements VisitDraftService {
         return value != null && !value.isBlank();
     }
 
+    /**
+     * 명시적인 Web 선택값은 AI 출력보다 우선한다. 다섯 점수가 모두 전달된 경우
+     * Parser가 남긴 점수 누락 경고도 이미 해결된 것으로 제거한다.
+     */
+    private VisitDraftResponse applyScoreOverrides(
+            VisitDraftResponse parsed,
+            VisitDraftRequest request
+    ) {
+        if (!hasAnyScoreOverride(request)) {
+            return parsed;
+        }
+
+        List<String> warnings = hasAllScoreOverrides(request)
+                ? parsed.warnings().stream()
+                        .filter(warning -> !isMissingScoreWarning(warning))
+                        .toList()
+                : parsed.warnings();
+
+        return new VisitDraftResponse(
+                parsed.area(),
+                parsed.visitDate(),
+                override(request.atmosphereScore(), parsed.atmosphereScore()),
+                override(request.infraScore(), parsed.infraScore()),
+                override(request.cleanScore(), parsed.cleanScore()),
+                override(request.sizeScore(), parsed.sizeScore()),
+                override(request.accessScore(), parsed.accessScore()),
+                parsed.memo(),
+                warnings
+        );
+    }
+
+    private boolean hasAnyScoreOverride(VisitDraftRequest request) {
+        return request.atmosphereScore() != null
+                || request.infraScore() != null
+                || request.cleanScore() != null
+                || request.sizeScore() != null
+                || request.accessScore() != null;
+    }
+
+    private boolean hasAllScoreOverrides(VisitDraftRequest request) {
+        return request.atmosphereScore() != null
+                && request.infraScore() != null
+                && request.cleanScore() != null
+                && request.sizeScore() != null
+                && request.accessScore() != null;
+    }
+
+    private boolean isMissingScoreWarning(String warning) {
+        return warning != null
+                && (warning.contains("입력되지") || warning.contains("누락"))
+                && (warning.contains("점수")
+                || warning.contains("Score")
+                || warning.contains("score"));
+    }
+
+    private Integer override(Integer selected, Integer parsed) {
+        return selected != null ? selected : parsed;
+    }
+
+    private VisitParserInput.SelectedScoresInput toSelectedScores(
+            VisitDraftRequest request
+    ) {
+        if (!hasAnyScoreOverride(request)) {
+            return null;
+        }
+        return new VisitParserInput.SelectedScoresInput(
+                request.atmosphereScore(),
+                request.infraScore(),
+                request.cleanScore(),
+                request.sizeScore(),
+                request.accessScore()
+        );
+    }
+
     private VisitDraftResponse validate(
             String output,
             VisitParserInput input
@@ -234,7 +314,8 @@ public class VisitDraftServiceImpl implements VisitDraftService {
      */
     private VisitParserInput createInput(
             String text,
-            VisitParserInput.ExistingDraftInput existingDraft
+            VisitParserInput.ExistingDraftInput existingDraft,
+            VisitParserInput.SelectedScoresInput selectedScores
     ) {
         List<VisitParserInput.AreaInput> areas =
                 areaRepository.findAllByDeletedAtIsNullOrderByIdAsc()
@@ -251,7 +332,8 @@ public class VisitDraftServiceImpl implements VisitDraftService {
                 LocalDate.ofInstant(clock.instant(), userTimeZone),
                 text,
                 areas,
-                existingDraft
+                existingDraft,
+                selectedScores
         );
     }
 }

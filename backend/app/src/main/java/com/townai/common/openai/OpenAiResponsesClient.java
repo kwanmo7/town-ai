@@ -172,7 +172,22 @@ public class OpenAiResponsesClient {
     }
 
     private OpenAiResponse parseResponse(JsonNode response) {
-        if (response == null || !"completed".equals(response.path("status").asString(""))) {
+        if (response == null) {
+            log.error("OpenAI Responses API returned an empty response body.");
+            throw new ApiException(ErrorCode.OPENAI_API_ERROR);
+        }
+
+        String status = response.path("status").asString("");
+        if (!"completed".equals(status)) {
+            log.error(
+                    "OpenAI Responses API did not complete. "
+                            + "status={}, incompleteReason={}, errorCode={}, errorMessage={}",
+                    safeLogValue(status),
+                    safeLogValue(response.path("incomplete_details")
+                            .path("reason").asString("")),
+                    safeLogValue(response.path("error").path("code").asString("")),
+                    safeLogValue(response.path("error").path("message").asString(""))
+            );
             throw new ApiException(ErrorCode.OPENAI_API_ERROR);
         }
 
@@ -182,6 +197,10 @@ public class OpenAiResponsesClient {
             }
             for (JsonNode content : outputItem.path("content")) {
                 if ("refusal".equals(content.path("type").asString(""))) {
+                    log.error(
+                            "OpenAI Responses API refused the request. refusal={}",
+                            safeLogValue(content.path("refusal").asString(""))
+                    );
                     throw new ApiException(ErrorCode.OPENAI_API_ERROR);
                 }
                 if ("output_text".equals(content.path("type").asString(""))) {
@@ -193,6 +212,10 @@ public class OpenAiResponsesClient {
                 }
             }
         }
+        log.error(
+                "OpenAI Responses API completed without output text. model={}",
+                safeLogValue(response.path("model").asString(""))
+        );
         throw new ApiException(ErrorCode.OPENAI_API_ERROR);
     }
 

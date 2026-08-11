@@ -1,0 +1,114 @@
+{
+  "type": "object",
+  "description": "Structured all-area analysis that the backend converts into Markdown.",
+  "properties": {
+    "overallTrends": {
+      "type": "string"
+    },
+    "areaAnalyses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "areaId": {
+            "type": "integer"
+          },
+          "areaName": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "strengths": {
+            "type": "string"
+          },
+          "weaknesses": {
+            "type": "string"
+          },
+          "considerations": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "areaId",
+          "areaName",
+          "summary",
+          "strengths",
+          "weaknesses",
+          "considerations"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "criteriaCandidates": {
+      "$ref": "#/$defs/criteriaAnalysis"
+    },
+    "priorityCandidates": {
+      "$ref": "#/$defs/criteriaAnalysis"
+    },
+    "verificationChecklist": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "overall": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "overallTrends",
+    "areaAnalyses",
+    "criteriaCandidates",
+    "priorityCandidates",
+    "verificationChecklist",
+    "overall"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "criteriaAnalysis": {
+      "type": "object",
+      "properties": {
+        "atmosphere": {
+          "type": "string"
+        },
+        "infra": {
+          "type": "string"
+        },
+        "clean": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string"
+        },
+        "access": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "atmosphere",
+        "infra",
+        "clean",
+        "size",
+        "access"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

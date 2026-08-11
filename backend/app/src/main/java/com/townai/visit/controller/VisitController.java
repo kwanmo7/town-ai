@@ -25,8 +25,8 @@ import java.util.List;
 /**
  * Visit 생성, 조건 조회, 전체 수정과 물리 삭제를 노출하는 REST Controller이다.
  *
- * <p>목록의 날짜 범위는 양 끝 날짜를 모두 포함한다. Area 필터가 없으면 이력 보존을
- * 위해 논리 삭제된 Area의 기존 Visit도 조회할 수 있다.</p>
+ * <p>목록의 날짜 범위는 양 끝 날짜를 모두 포함하며, 논리 삭제된 Area의 Visit은
+ * DB에 보존하되 일반 목록에서 제외한다.</p>
  */
 @RestController
 @RequestMapping("/api/visits")

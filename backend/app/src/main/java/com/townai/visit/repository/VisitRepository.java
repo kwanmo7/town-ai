@@ -6,8 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,10 +30,10 @@ public interface VisitRepository extends JpaRepository<VisitEntity, Long> {
     Optional<VisitEntity> findById(Long id);
 
     /**
-     * 전달된 조건만 적용하고 방문일 및 ID 내림차순으로 조회한다.
+     * 활성 Area에 속한 Visit 중 전달된 조건과 일치하는 항목을 조회한다.
      *
-     * <p>삭제된 Area ID가 필터로 지정되면 빈 목록을 반환하지만, Area 필터가 없으면
-     * 원본 기록 보존을 위해 삭제된 Area의 기존 Visit도 조회한다.</p>
+     * <p>Area를 논리 삭제해도 Visit Row는 보존하지만 일반 목록에는 노출하지 않는다.
+     * 존재하지 않거나 삭제된 Area ID를 지정하면 빈 목록을 반환한다.</p>
      *
      * @param areaId 활성 Area 필터. {@code null}이면 전체 Area
      * @param fromDate 포함되는 방문일 하한
@@ -44,7 +44,8 @@ public interface VisitRepository extends JpaRepository<VisitEntity, Long> {
             SELECT v
             FROM VisitEntity v
             JOIN FETCH v.area a
-            WHERE (:areaId IS NULL OR (a.id = :areaId AND a.deletedAt IS NULL))
+            WHERE a.deletedAt IS NULL
+              AND (:areaId IS NULL OR a.id = :areaId)
               AND (:fromDate IS NULL OR v.visitDate >= :fromDate)
               AND (:toDate IS NULL OR v.visitDate <= :toDate)
             ORDER BY v.visitDate DESC, v.id DESC

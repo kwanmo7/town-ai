@@ -2,6 +2,7 @@ package com.townai.report.generation;
 
 import com.townai.common.error.ApiException;
 import com.townai.common.error.ErrorCode;
+import com.townai.report.generation.ReportDataAssembler.AllAreaInput;
 import com.townai.report.generation.ReportDataAssembler.AllInput;
 import com.townai.report.generation.ReportDataAssembler.AreaInput;
 import com.townai.report.generation.ReportDataAssembler.CompareAreaInput;
@@ -24,9 +25,9 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * AI 원본 출력을 유형별 계약으로 검증하고 저장 가능한 Markdown으로 변환한다.
  *
- * <p>SUMMARY·COMPARE는 Structured Output의 AI 문장과 Backend 계산 표를 조립한다.
- * AREA·ALL은 AI Markdown의 제목 순서, 대상 Area, 체크리스트와 사용자 전제를
- * 검증한다. 첫 출력이 형식 또는 분량 계약을 위반하면 같은 Prompt 입력으로 한 번만
+ * <p>SUMMARY·COMPARE·ALL은 Structured Output의 AI 문장과 Backend 소유 구조를
+ * Markdown으로 조립한다. AREA는 AI Markdown의 제목 순서와 사용자 전제를 검증한다.
+ * 첫 출력이 형식 또는 분량 계약을 위반하면 같은 Prompt 입력으로 한 번만
  * 교정 요청하며, 두 번째 실패는 외부 AI 오류로 변환한다.</p>
  */
 @Component
@@ -117,9 +118,9 @@ public class ReportContentGenerator {
                     cast(data.promptInput(), AreaInput.class),
                     aiResult.output()
             );
-            case ALL -> markdownValidator.validateAll(
+            case ALL -> renderAll(
                     cast(data.promptInput(), AllInput.class),
-                    aiResult.output()
+                    parse(aiResult.output(), AllAiOutput.class)
             );
         };
         markdownValidator.validateCommon(markdown);
@@ -200,6 +201,140 @@ public class ReportContentGenerator {
         markdown.append("\n## 종합 평가\n\n")
                 .append(output.overall().strip());
         return markdown.toString();
+    }
+
+    /**
+     * 검증된 ALL Structured Output을 고정된 Markdown 제목 구조로 조립한다.
+     */
+    private String renderAll(AllInput input, AllAiOutput output) {
+        validateAllOutput(input, output);
+
+        StringBuilder markdown = new StringBuilder();
+        markdown.append("# 전체 지역 분석 리포트\n\n")
+                .append("## 전체 경향\n\n")
+                .append(output.overallTrends().strip())
+                .append("\n\n## 지역별 분석\n");
+
+        for (AllAiOutput.AreaAnalysis analysis : output.areaAnalyses()) {
+            markdown.append("\n### ").append(analysis.areaName()).append("\n\n")
+                    .append("#### 평가 요약\n\n")
+                    .append(analysis.summary().strip()).append("\n\n")
+                    .append("#### 주요 장점\n\n")
+                    .append(analysis.strengths().strip()).append("\n\n")
+                    .append("#### 주요 단점\n\n")
+                    .append(analysis.weaknesses().strip()).append("\n\n")
+                    .append("#### 고려사항\n\n")
+                    .append(analysis.considerations().strip()).append("\n");
+        }
+
+        markdown.append("\n## 항목별 주요 후보\n");
+        appendCriteriaAnalysis(markdown, output.criteriaCandidates(), false);
+
+        markdown.append("\n## 우선순위별 후보\n");
+        appendCriteriaAnalysis(markdown, output.priorityCandidates(), true);
+
+        markdown.append("\n## 객관적으로 추가 확인할 사항\n\n");
+        for (AllAiOutput.VerificationItem item : output.verificationChecklist()) {
+            markdown.append("- **").append(item.category().strip()).append("**: ")
+                    .append(item.content().strip()).append("\n");
+        }
+
+        markdown.append("\n## 종합 평가\n\n")
+                .append(output.overall().strip());
+        return markdownValidator.validateAll(input, markdown.toString());
+    }
+
+    /**
+     * ALL 대상 Area의 ID·이름·순서와 모든 상세 필드 및 체크리스트를 검증한다.
+     */
+    private void validateAllOutput(AllInput input, AllAiOutput output) {
+        if (output == null
+                || output.areaAnalyses() == null
+                || output.criteriaCandidates() == null
+                || output.priorityCandidates() == null
+                || output.verificationChecklist() == null) {
+            throw invalid("ALL 필수 필드가 누락되었습니다.");
+        }
+        requireText(output.overallTrends(), "ALL 전체 경향이 비어 있습니다.");
+        requireText(output.overall(), "ALL 종합 평가가 비어 있습니다.");
+
+        if (output.areaAnalyses().size() != input.areas().size()) {
+            throw invalid("ALL 지역별 분석 개수가 입력 지역 수와 다릅니다.");
+        }
+        for (int index = 0; index < input.areas().size(); index++) {
+            AllAreaInput expected = input.areas().get(index);
+            AllAiOutput.AreaAnalysis actual = output.areaAnalyses().get(index);
+            if (actual == null
+                    || !expected.id().equals(actual.areaId())
+                    || !expected.name().equals(actual.areaName())) {
+                throw invalid("ALL 지역 ID, 이름 또는 순서가 입력과 다릅니다.");
+            }
+            requireText(actual.summary(), expected.name() + " 평가 요약이 비어 있습니다.");
+            requireText(actual.strengths(), expected.name() + " 주요 장점이 비어 있습니다.");
+            requireText(actual.weaknesses(), expected.name() + " 주요 단점이 비어 있습니다.");
+            requireText(actual.considerations(), expected.name() + " 고려사항이 비어 있습니다.");
+        }
+
+        validateCriteriaAnalysis(output.criteriaCandidates(), "항목별 주요 후보");
+        validateCriteriaAnalysis(output.priorityCandidates(), "우선순위별 후보");
+
+        int checklistSize = output.verificationChecklist().size();
+        if (checklistSize < 5 || checklistSize > 10) {
+            throw invalid("ALL 확인 체크리스트는 5개 이상 10개 이하여야 합니다.");
+        }
+        for (AllAiOutput.VerificationItem item : output.verificationChecklist()) {
+            if (item == null) {
+                throw invalid("ALL 확인 체크리스트에 빈 항목이 있습니다.");
+            }
+            requireText(item.category(), "ALL 확인 분류가 비어 있습니다.");
+            requireText(item.content(), "ALL 확인 내용이 비어 있습니다.");
+            markdownValidator.validateChecklistText(
+                    item.category() + ": " + item.content()
+            );
+        }
+    }
+
+    private void validateCriteriaAnalysis(
+            AllAiOutput.CriteriaAnalysis analysis,
+            String sectionName
+    ) {
+        requireText(analysis.atmosphere(), sectionName + " 분위기가 비어 있습니다.");
+        requireText(analysis.infra(), sectionName + " 생활 인프라가 비어 있습니다.");
+        requireText(analysis.clean(), sectionName + " 청결도가 비어 있습니다.");
+        requireText(analysis.size(), sectionName + " 넓은 집 가능성이 비어 있습니다.");
+        requireText(analysis.access(), sectionName + " 접근성이 비어 있습니다.");
+    }
+
+    private void appendCriteriaAnalysis(
+            StringBuilder markdown,
+            AllAiOutput.CriteriaAnalysis analysis,
+            boolean priorityHeading
+    ) {
+        appendAnalysis(
+                markdown,
+                priorityHeading ? "분위기 우선" : "분위기",
+                analysis.atmosphere()
+        );
+        appendAnalysis(
+                markdown,
+                priorityHeading ? "생활 인프라 우선" : "생활 인프라",
+                analysis.infra()
+        );
+        appendAnalysis(
+                markdown,
+                priorityHeading ? "청결도 우선" : "청결도",
+                analysis.clean()
+        );
+        appendAnalysis(
+                markdown,
+                priorityHeading ? "넓은 집 가능성 우선" : "넓은 집 가능성",
+                analysis.size()
+        );
+        appendAnalysis(
+                markdown,
+                priorityHeading ? "접근성 우선" : "접근성",
+                analysis.access()
+        );
     }
 
     /**

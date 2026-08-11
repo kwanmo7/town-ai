@@ -14,7 +14,6 @@ import com.townai.line.model.LineMenuCommand;
 import com.townai.line.model.LinePostbackCommand;
 import com.townai.line.model.LineReportGenerateCommand;
 import com.townai.line.model.LineReportTypeCommand;
-import com.townai.line.model.LineWebhookEventType;
 import com.townai.line.model.LineWebhookEventWorkItem;
 import com.townai.line.service.LineDraftActionResult;
 import com.townai.line.service.LineReportInteractionService;

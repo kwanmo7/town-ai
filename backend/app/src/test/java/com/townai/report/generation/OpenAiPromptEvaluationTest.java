@@ -52,7 +52,7 @@ class OpenAiPromptEvaluationTest {
 
     private static final String FIXTURE_BASE_PATH = "prompt-eval/fixtures/";
     private static final String DEFAULT_BASE_URL = "https://api.openai.com/v1";
-    private static final String DEFAULT_MODEL = "gpt-5.4-mini";
+    private static final String DEFAULT_MODEL = "gpt-5.6-luna";
 
     private ObjectMapper objectMapper;
     private ReportContentGenerator contentGenerator;
