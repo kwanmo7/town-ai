@@ -311,10 +311,12 @@ LINE Webhook
 ### Cloud Tasks
 
 - Queue 이름은 `line-events`, Region은 `asia-northeast1`을 사용한다.
+- 개인용 V1 처리량에 맞춰 `maxDispatchesPerSecond=1`, `maxConcurrentDispatches=1`로 제한한다.
 - 이벤트마다 `webhookEventId` 기반의 결정적 Task 이름을 사용해 중복 Task 생성을 방지한다.
 - 전달 방식은 At-least-once로 간주하고 최종 멱등성은 MySQL의 이벤트 PK와 Draft 상태 전환으로 보장한다.
 - 처리 시작 시 6분 Lease를 기록하고, Process 종료로 `PROCESSING`에 남은 이벤트는 Lease 만료 후 다음 시도가 다시 점유한다.
 - Cloud Tasks는 일시 오류에 지수 Backoff를 적용한다. Queue의 `maxAttempts`는 최초 전달을 포함한 전달 시도 횟수이며 초기값은 `5`로 설정한다.
+- Queue 재시도 설정은 `maxRetryDuration=3600s`, `minBackoff=5s`, `maxBackoff=300s`, `maxDoublings=5`를 사용한다.
 - 양수인 `maxRetryDuration`을 함께 설정하면 Cloud Tasks는 `maxAttempts`와 `maxRetryDuration` 조건을 모두 충족할 때 재시도를 중단하므로 실제 Endpoint 전달 시도는 5회를 초과할 수 있다.
 - 애플리케이션의 `attemptCount`는 Endpoint에 도달해 이벤트를 `PROCESSING`으로 점유한 경우에만 증가하며 Cloud Tasks의 전달 시도 횟수와 별도로 관리한다.
 - 재시도 기간은 LINE Push Message Retry Key의 유효 기간을 넘지 않도록 `24시간 미만`으로 제한한다.
@@ -528,7 +530,7 @@ main Push    → frontend/cloudbuild.production.yaml
              → Firebase Hosting Live Channel
 ```
 
-Firebase CLI는 애플리케이션 의존성에 포함하지 않고 Cloud Build의 Node.js 22 환경에서
+Firebase CLI는 애플리케이션 의존성에 포함하지 않고 Cloud Build의 Node.js 24.19.0 LTS 환경에서
 고정 버전으로 실행한다. Cloud Build Service Account에는 최소한 Firebase Hosting Admin과
 API Keys Viewer 역할이 필요하다.
 

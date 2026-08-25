@@ -82,6 +82,11 @@ public class LineWebhookServiceImpl implements LineWebhookService {
         } catch (DataAccessException
                  | TransactionException
                  | LineEventDispatchException exception) {
+            log.error(
+                    "LINE webhook event persistence or dispatch failed. exceptionType={}",
+                    exception.getClass().getSimpleName(),
+                    exception
+            );
             throw new ApiException(ErrorCode.LINE_EVENT_DISPATCH_ERROR);
         }
     }

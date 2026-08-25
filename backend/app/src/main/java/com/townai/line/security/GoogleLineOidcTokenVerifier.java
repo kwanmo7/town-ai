@@ -61,7 +61,8 @@ public class GoogleLineOidcTokenVerifier
                 throw new LineOidcTokenVerificationException();
             }
             return email;
-        } catch (TokenVerifier.VerificationException exception) {
+        } catch (TokenVerifier.VerificationException
+                 | IllegalArgumentException exception) {
             throw new LineOidcTokenVerificationException(exception);
         }
     }

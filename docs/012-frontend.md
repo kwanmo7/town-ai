@@ -10,7 +10,7 @@ Frontend는 누적 데이터를 자세히 조회·수정하는 관리 화면을 
 
 | 구분 | 기술 |
 | --- | --- |
-| UI | React 19, TypeScript |
+| UI | React 19.2.8, TypeScript |
 | Build | Vite 6 |
 | Routing | React Router 7 |
 | Markdown | react-markdown + remark-gfm |
@@ -19,8 +19,10 @@ Frontend는 누적 데이터를 자세히 조회·수정하는 관리 화면을 
 | Authentication | Firebase Authentication, Google Provider |
 | Backend | Spring Boot Cloud Run |
 
-개발 PC의 Node.js 20.14에서 실행할 수 있도록 Vite 6 계열을 사용한다. 의존성은
+개발·CI·Cloud Build는 Node.js 24.19.0 LTS로 통일하고 Vite 6 계열을 사용한다. 의존성은
 `package-lock.json`으로 고정하고 CI는 `npm ci`를 사용한다.
+React는 별도의 LTS 채널이 없으므로 공식 Latest 안정 채널의 고정 버전을 사용하며,
+현재 프로젝트 기준 버전은 19.2.8이다.
 
 ## 3. 연결 구조
 

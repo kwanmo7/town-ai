@@ -1,18 +1,18 @@
 steps:
   - id: Install Frontend dependencies
-    name: node:22-bookworm
+    name: node:24.19.0-bookworm
     dir: frontend
     entrypoint: npm
     args: ["ci"]
 
   - id: Build Frontend
-    name: node:22-bookworm
+    name: node:24.19.0-bookworm
     dir: frontend
     entrypoint: npm
     args: ["run", "build:firebase"]
 
   - id: Deploy Firebase Hosting preview
-    name: node:22-bookworm
+    name: node:24.19.0-bookworm
     dir: frontend
     entrypoint: bash
     env:
