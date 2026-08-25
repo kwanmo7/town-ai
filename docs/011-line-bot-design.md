@@ -199,7 +199,7 @@ Production 적용 상태와 남은 작업은 다음과 같다.
 1. Rich Menu 생성·이미지 업로드·기본 메뉴 설정 완료
 2. 실제 모바일에서 등록·부분 수정·저장과 Report 조회 버튼 검증 완료
 3. 기존 Report 재사용과 분석 입력 변경 시 재생성 검증 완료
-4. 추측 가능한 Report ID를 보호할 인증 또는 만료 URL 정책 구현 필요
+4. 추측 가능한 Report ID는 30일 만료 HMAC-SHA256 서명 URL로 보호
 5. 오래된 메시지의 장기 재클릭 검증 필요
 
 V1 Welcome Message는 LINE Official Account Manager의 Greeting Message로

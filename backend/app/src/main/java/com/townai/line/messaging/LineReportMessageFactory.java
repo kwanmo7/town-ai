@@ -4,6 +4,8 @@ import com.townai.line.config.LineMessagingProperties;
 import com.townai.line.model.LineReportAreaOption;
 import com.townai.report.dto.ReportResponse;
 import com.townai.report.entity.ReportType;
+import com.townai.report.link.ReportLinkAction;
+import com.townai.report.link.ReportSignedLinkService;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -28,19 +30,27 @@ public class LineReportMessageFactory {
     private static final String REPORT_COLOR = "#294C74";
     private final String reportBaseUrl;
     private final ZoneId userTimeZone;
+    private final ReportSignedLinkService signedLinkService;
 
     /**
      * Report 링크와 사용자 날짜 표시 설정을 적용한다.
      *
      * @param properties LINE Messaging과 Report 공개 URL 설정
      * @param userTimeZone 생성일을 표시할 사용자 시간대
+     * @param signedLinkService LINE 공개 링크 만료 시각과 서명 생성 Service
      */
     public LineReportMessageFactory(
             LineMessagingProperties properties,
-            ZoneId userTimeZone
+            ZoneId userTimeZone,
+            ReportSignedLinkService signedLinkService
     ) {
         this.reportBaseUrl = normalizeBaseUrl(properties.reportBaseUrl());
         this.userTimeZone = userTimeZone;
+        this.signedLinkService = signedLinkService;
+        if (properties.channelAccessToken() != null
+                && !properties.channelAccessToken().isBlank()) {
+            signedLinkService.ensureConfigured();
+        }
     }
 
     /**
@@ -240,7 +250,14 @@ public class LineReportMessageFactory {
             String title,
             String altText
     ) {
-        String reportPath = "/api/reports/" + report.id();
+        String contentPath = signedLinkService.createPath(
+                report.id(),
+                ReportLinkAction.CONTENT
+        );
+        String downloadPath = signedLinkService.createPath(
+                report.id(),
+                ReportLinkAction.DOWNLOAD
+        );
         Map<String, Object> body = box("vertical", List.of(
                 keyValue("종류", reportTypeLabel(report.reportType())),
                 keyValue("대상", targetLabel),
@@ -258,12 +275,12 @@ public class LineReportMessageFactory {
                 button(
                         "primary",
                         REPORT_COLOR,
-                        uri("리포트 보기", reportBaseUrl + reportPath + "/content")
+                        uri("리포트 보기", reportBaseUrl + contentPath)
                 ),
                 button(
                         "secondary",
                         null,
-                        uri("Markdown 다운로드", reportBaseUrl + reportPath + "/download")
+                        uri("Markdown 다운로드", reportBaseUrl + downloadPath)
                 ),
                 menuButton("다른 리포트 조회", "report"),
                 menuButton("메인 메뉴", "main")

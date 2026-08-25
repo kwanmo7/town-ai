@@ -39,6 +39,10 @@ management:
 
 town-ai:
   user-time-zone: ${USER_TIME_ZONE:Asia/Tokyo}
+  web-auth:
+    enabled: ${WEB_AUTH_ENABLED:false}
+    firebase-project-id: ${FIREBASE_PROJECT_ID:town-ai}
+    allowed-uid: ${FIREBASE_ALLOWED_UID:}
   openai:
     api-key: ${OPENAI_API_KEY:}
     base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
@@ -49,6 +53,9 @@ town-ai:
     type: ${REPORT_STORAGE_TYPE:local}
     local-directory: ${REPORT_LOCAL_DIRECTORY:./data/reports}
     bucket-name: ${GCS_BUCKET_NAME:}
+  report-link:
+    signing-secret: ${REPORT_LINK_SIGNING_SECRET:}
+    validity: ${REPORT_LINK_VALIDITY:30d}
   line:
     channel-secret: ${LINE_CHANNEL_SECRET:}
     channel-access-token: ${LINE_CHANNEL_ACCESS_TOKEN:}

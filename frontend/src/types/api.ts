@@ -6,6 +6,12 @@ export interface AreaSummary {
   station: string | null
 }
 
+export interface AuthenticatedUser {
+  uid: string
+  email: string | null
+  name: string | null
+}
+
 export interface AreaDetail extends AreaSummary {
   createdAt: string
   updatedAt: string

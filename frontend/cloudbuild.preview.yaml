@@ -9,7 +9,7 @@ steps:
     name: node:22-bookworm
     dir: frontend
     entrypoint: npm
-    args: ["run", "build"]
+    args: ["run", "build:firebase"]
 
   - id: Deploy Firebase Hosting preview
     name: node:22-bookworm

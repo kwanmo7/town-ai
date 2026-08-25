@@ -230,6 +230,114 @@ a:focus-visible {
   font-size: 12px;
 }
 
+.topbar__tools {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar__logout {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--muted);
+  background: var(--paper);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.topbar__logout:hover {
+  color: var(--green-800);
+  border-color: var(--green-700);
+}
+
+.auth-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 82% 8%, rgb(210 224 214 / 65%), transparent 24rem),
+    var(--canvas);
+}
+
+.auth-card {
+  width: min(440px, 100%);
+  padding: clamp(36px, 7vw, 54px);
+  border: 1px solid rgb(45 112 95 / 14%);
+  border-radius: 28px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.auth-card--loading {
+  color: var(--muted);
+}
+
+.auth-card__eyebrow {
+  display: block;
+  margin-bottom: 22px;
+  color: var(--green-700);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.auth-card__mark {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 20px;
+  place-items: center;
+  border-radius: 20px;
+  color: #f4f1e6;
+  background: var(--green-900);
+  font-family: Georgia, serif;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.auth-card h1 {
+  margin-bottom: 12px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 34px;
+}
+
+.auth-card > p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.auth-card__error {
+  margin: 24px 0 0;
+  padding: 13px 15px;
+  border: 1px solid #e8b7af;
+  border-radius: 12px;
+  color: #8a2f26;
+  background: #fff0ed;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.auth-card .auth-card__account {
+  margin: 16px 0 0;
+  font-size: 12px;
+}
+
+.auth-card__actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.auth-card__button {
+  width: 100%;
+  justify-content: center;
+}
+
 .main-content {
   width: min(1180px, calc(100% - 48px));
   margin: 0 auto;

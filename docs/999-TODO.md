@@ -45,7 +45,7 @@
        - [O] Visit 저장 완료 후 계속 등록·메인 메뉴 이동 검증
        - [O] 입력이 같은 기존 Report 재사용과 데이터 변경 시 재생성 검증
        - [O] Report 보기·Markdown 다운로드 공개 URL 검증
-       - [ ] 추측 가능한 Report ID를 보호할 인증 또는 만료 URL
+       - [O] 추측 가능한 Report ID를 보호할 30일 만료 HMAC-SHA256 URL
        - [ ] 오래된 메시지의 장기 재클릭 검증
        - [O] Flyway V5~V7 배포 후 신규 Area·Visit 동시 등록과 Draft 부분 수정 검증
      - [O] Production용 GCS Report Storage 구현체
@@ -99,8 +99,12 @@
      - PR `pr-{번호}` 7일 Preview Channel과 main Live Channel 설정 파일
    - [ ] 공개 Web 관리 API 인증과 단일 사용자 권한 제한
      - Firebase Hosting과 Preview URL은 공개되므로 쓰기·삭제 API를 인증 없이 노출하지 않음
-     - LINE Webhook, Cloud Tasks OIDC, Health Check와 Web 관리 API의 접근 정책 분리
-     - 공개 Report 링크는 인증 또는 만료 URL 정책과 함께 정리
+     - [O] Firebase Google 로그인 UI와 모든 관리 API의 ID Token 전달
+     - [O] Firebase Admin SDK Token 검증과 `FIREBASE_ALLOWED_UID` 단일 사용자 제한
+     - [O] LINE Webhook, Cloud Tasks OIDC, Health Check와 Web 관리 API의 접근 정책 분리
+     - [O] Cloud Run 허용 UID 일반 환경변수 설정
+     - [ ] 새 Backend Revision에서 실제 401·403·정상 접근 검증
+     - [O] Web Report Firebase 인증과 LINE Report 30일 만료 서명 URL 분리
      - 반영 문서: `004-api.md`, `006-deployment.md`, `012-frontend.md`
    - [ ] Firebase 활성화, Hosting Preview와 Production 배포 검증
      - Web 관리 API 인증 적용 후 Developer Connect Trigger 활성화

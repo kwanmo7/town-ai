@@ -38,6 +38,7 @@ firebase-debug.*.log
 .env.*
 *.env
 !.env.example
+!/frontend/.env.firebase
 /backend/app/src/main/resources/secret/
 
 # Eclipse Gradle plugin generated files

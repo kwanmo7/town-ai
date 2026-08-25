@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -23,17 +24,51 @@ export function ReportDetailPage() {
     },
     [reportId],
   )
+  const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
+
+  const download = async () => {
+    if (!data || isDownloading) {
+      return
+    }
+    setDownloadError(null)
+    setIsDownloading(true)
+    try {
+      const blob = await api.downloadReport(reportId)
+      const objectUrl = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = objectUrl
+      anchor.download = `${data.report.reportType.toLowerCase()}-report-${reportId}.md`
+      document.body.append(anchor)
+      anchor.click()
+      anchor.remove()
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0)
+    } catch (caught) {
+      setDownloadError(
+        caught instanceof Error ? caught.message : '리포트를 다운로드하지 못했습니다.',
+      )
+    } finally {
+      setIsDownloading(false)
+    }
+  }
 
   return (
     <div className="page-stack">
       <div className="detail-toolbar">
         <Link className="back-link" to="/reports">← 리포트 보관함</Link>
         {data && (
-          <a className="button button--secondary" href={`/api/reports/${reportId}/download`}>
-            Markdown 다운로드
-          </a>
+          <button
+            className="button button--secondary"
+            type="button"
+            disabled={isDownloading}
+            onClick={download}
+          >
+            {isDownloading ? '다운로드 중…' : 'Markdown 다운로드'}
+          </button>
         )}
       </div>
+
+      {downloadError && <p className="form-error" role="alert">{downloadError}</p>}
 
       {isLoading && <LoadingPanel label="리포트 본문을 불러오고 있습니다." />}
       {error && <ErrorPanel error={error} onRetry={reload} />}

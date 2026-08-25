@@ -16,6 +16,7 @@ Frontend는 누적 데이터를 자세히 조회·수정하는 관리 화면을 
 | Markdown | react-markdown + remark-gfm |
 | Test | Vitest, Testing Library, Playwright, axe-core |
 | Static Hosting | Firebase Hosting |
+| Authentication | Firebase Authentication, Google Provider |
 | Backend | Spring Boot Cloud Run |
 
 개발 PC의 Node.js 20.14에서 실행할 수 있도록 Vite 6 계열을 사용한다. 의존성은
@@ -42,7 +43,22 @@ Firebase Hosting Rewrite를 사용하므로 Browser에 Cloud Run 주소를 하�
 Local Proxy 대상은 기본적으로 `http://localhost:8080`이며 `.env.local`의
 `VITE_API_PROXY_TARGET`으로 변경할 수 있다. `.env.local`은 Git에 포함하지 않는다.
 
-## 4. 화면 구조
+## 4. 사용자 인증
+
+Local 기본 실행과 격리된 E2E는 `VITE_WEB_AUTH_ENABLED=false`로 기존 개발 흐름을
+유지한다. Firebase Preview와 Production Cloud Build는 이 값을 `true`로 주입한다.
+
+인증이 활성화되면 Google 로그인 전에는 관리 Route를 렌더링하지 않는다. 로그인 후
+Firebase Client SDK의 ID Token을 모든 API 요청에 Bearer Header로 전달하고,
+`GET /api/auth/me`가 허용된 단일 사용자임을 확인한 뒤 관리 화면을 표시한다. 다른 UID는
+권한 오류와 계정 전환 버튼을 표시한다. Firebase Web App의 API Key와 App ID는 공개 Client
+설정이며 Backend Secret이나 Service Account Key가 아니다.
+
+Report Markdown 다운로드도 단순 `<a>` 이동을 사용하지 않는다. 인증된 `fetch`로 Blob을
+받은 뒤 브라우저 다운로드를 시작해 Firebase ID Token이 누락되지 않도록 한다. LINE은
+Firebase 로그인 대신 Backend가 생성한 별도의 30일 만료 서명 URL을 사용한다.
+
+## 5. 화면 구조
 
 | Route | 화면 | 현재 범위 |
 | --- | --- | --- |
@@ -56,7 +72,7 @@ Local Proxy 대상은 기본적으로 `http://localhost:8080`이며 `.env.local`
 Desktop은 고정 Sidebar, Mobile은 하단 Navigation을 사용한다. 모든 조회 화면은
 Loading, Error, Empty 상태를 구분하고 API 오류의 사용자용 `message`를 표시한다.
 
-## 5. 디렉터리 원칙
+## 6. 디렉터리 원칙
 
 ```text
 src/
@@ -73,7 +89,7 @@ src/
 API 응답 Type은 Backend DTO와 같은 필드명을 사용한다. 화면 표시용 한글 이름과 날짜
 변환은 `lib`에서 관리하며, API Client는 HTTP 오류를 `ApiError`로 정규화한다.
 
-## 6. 구현 순서
+## 7. 구현 순서
 
 1. 조회 중심 공통 Layout과 Backend 연결
 2. Area CRUD Form 완료 후 Visit CRUD Form
@@ -130,7 +146,7 @@ Top 5의 Area 또는 Select Box에서 활성 Area를 선택하면
 `GET /api/areas/{areaId}/statistics`를 호출해 방문 횟수와 누적 평균을 표시한다. 빠르게
 대상을 바꾸더라도 마지막으로 선택한 Area 응답만 화면에 반영한다.
 
-## 7. 검증 명령
+## 8. 검증 명령
 
 ```bash
 npm run lint
@@ -158,7 +174,7 @@ E2E는 실제 Backend나 Production 데이터를 변경하지 않도록 Browser 
 실패한 실행의 Screenshot과 첫 재시도 Trace는 `test-results/`, HTML Report는
 `playwright-report/`에 생성하며 두 경로는 Git에서 제외한다.
 
-## 8. Firebase Hosting 배포
+## 9. Firebase Hosting 배포
 
 Vite가 생성하는 `dist/`를 Firebase Hosting에 배포한다. `/assets/**`에는 1년 Immutable
 Cache를 적용하고 `index.html`은 항상 새 배포를 확인하도록 Cache하지 않는다. `/api/**`는
@@ -176,6 +192,6 @@ npm run hosting:deploy
 `cloudbuild.preview.yaml`, `cloudbuild.production.yaml`을 사용한다. 실제 활성화와 IAM,
 검증 순서는 `013-firebase-hosting-deployment.md`를 따른다.
 
-Hosting URL과 Preview URL은 공개되고 `/api`가 실제 운영 Backend로 연결된다. 현재처럼
-Web 관리 API에 사용자 인증이 없으면 제3자가 데이터를 변경할 수 있으므로, 인증과 사용자
-제한을 적용하기 전에는 Preview와 Live 배포를 실행하지 않는다.
+Hosting URL과 Preview URL은 공개되고 `/api`가 실제 운영 Backend로 연결된다. 따라서
+Cloud Run에 Firebase 인증과 단일 UID 제한이 실제 배포되고 401·403·정상 접근을 확인한
+뒤 Preview와 Live 배포를 실행한다.

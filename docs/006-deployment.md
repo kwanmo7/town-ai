@@ -195,6 +195,9 @@ REPORT_LOCAL_DIRECTORY
 GCP_PROJECT_ID
 GCP_REGION
 GCS_BUCKET_NAME
+WEB_AUTH_ENABLED
+FIREBASE_PROJECT_ID
+FIREBASE_ALLOWED_UID
 LINE_EVENT_DISPATCHER
 LINE_MESSAGING_API_BASE_URL
 LINE_MESSAGING_API_CONNECT_TIMEOUT
@@ -218,6 +221,19 @@ LINE_REPORT_BASE_URL=https://town-ai-api-574086886148.asia-northeast1.run.app
 두 값이 모두 없을 때만 Local 기본값 `http://localhost:8080`을 사용한다. 운영에서는
 링크 설정을 명확히 확인할 수 있도록 `LINE_REPORT_BASE_URL`을 직접 지정하는 것을
 권장한다. Bucket 내부 `gs://` URI나 GCS 객체 경로는 LINE 링크로 노출하지 않는다.
+
+Production Web 인증은 다음 일반 환경변수를 사용한다.
+
+```text
+WEB_AUTH_ENABLED=true
+FIREBASE_PROJECT_ID=town-ai
+FIREBASE_ALLOWED_UID={Firebase Authentication 사용자 UID}
+```
+
+Firebase UID는 사용자를 식별하는 값이지만 인증 Credential이나 Secret은 아니다.
+Cloud Run에서는 Runtime Service Account의 Application Default Credentials로 Firebase
+Admin SDK를 초기화하며 Service Account JSON Key를 별도로 생성하거나 전달하지 않는다.
+인증을 활성화할 때 Project ID 또는 허용 UID가 비어 있으면 Backend가 기동에 실패한다.
 
 Local에서는 `DB_URL`을 생략해 `DB_HOST`, `DB_PORT`, `DB_NAME`으로 구성한
 일반 TCP JDBC URL을 사용한다.
@@ -252,6 +268,7 @@ DB_PASSWORD
 LINE_CHANNEL_SECRET
 LINE_CHANNEL_ACCESS_TOKEN
 LINE_ALLOWED_USER_ID
+REPORT_LINK_SIGNING_SECRET
 ```
 
 `.env`는 Git에 Commit하지 않는다. 저장소에는 실제 값이 없는 `.env.example`만 둘 수 있다.
@@ -266,6 +283,7 @@ DB_PASSWORD
 LINE_CHANNEL_SECRET
 LINE_CHANNEL_ACCESS_TOKEN
 LINE_ALLOWED_USER_ID
+REPORT_LINK_SIGNING_SECRET
 ```
 
 - Cloud Run에 전용 Service Account를 연결한다.
@@ -273,6 +291,9 @@ LINE_ALLOWED_USER_ID
 - Service Account JSON Key를 Docker Image, GitHub Secret 또는 환경변수로 전달하지 않는다.
 - Cloud Run은 연결된 Service Account의 Application Default Credentials로 GCP 서비스에 접근한다.
 - 사용하지 않는 과거 Secret Version은 파기해 활성 Version 수가 불필요하게 증가하지 않게 한다.
+- `REPORT_LINK_SIGNING_SECRET`은 32자 이상의 무작위 값으로 만들고 LINE Report URL의
+  HMAC-SHA256 서명에만 사용한다. 일반 환경변수나 Repository에 원문을 저장하지 않는다.
+- `REPORT_LINK_VALIDITY`는 일반 환경변수이며 기본값은 `30d`다.
 
 ## LINE 비동기 처리
 
@@ -514,6 +535,21 @@ API Keys Viewer 역할이 필요하다.
 Firebase Hosting과 Preview Channel은 공개 URL이며 `/api/**` Rewrite는 실제 Production
 Cloud Run을 호출한다. 따라서 Web 관리 API에 사용자 인증과 단일 사용자 권한 검증을
 적용하기 전에는 Preview 및 Live Trigger를 활성화하지 않는다.
+
+Frontend는 Google 로그인 후 Firebase ID Token을 `Authorization: Bearer`로 전달한다.
+Backend는 관리용 `/api/**`를 인증하고 다음 경로는 별도 신뢰 경계를 유지한다.
+
+```text
+/api/line/webhook                 LINE HMAC-SHA256 Signature
+/internal/tasks/line-events/**    Cloud Tasks OIDC
+/actuator/health/**               Cloud Run Probe 공개
+/api/public/reports/{id}/content  30일 만료 HMAC 서명
+/api/public/reports/{id}/download 30일 만료 HMAC 서명
+```
+
+Web이 사용하는 `/api/reports/{id}/content`, `/download`는 Firebase 인증을 요구한다.
+LINE 공개 링크는 Report ID, 접근 동작과 만료 시각을 함께 서명하며, 만료 후에는 LINE의
+리포트 조회 메뉴에서 기존 Report를 다시 선택해 새 링크를 발급받는다.
 
 배포 흐름:
 

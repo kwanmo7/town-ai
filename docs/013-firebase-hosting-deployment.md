@@ -30,10 +30,12 @@ Firebase Hosting과 Preview Channel URL은 공개된다. Preview도 `/api/**`를
 
 다음 조건을 충족하기 전에는 Preview 및 Live Trigger를 활성화하지 않는다.
 
-- Web 관리 API 요청의 사용자 인증
-- 허용된 단일 사용자만 관리 API를 호출하도록 권한 검증
-- LINE Webhook Signature, Cloud Tasks OIDC 및 Health Check 예외 경로 분리
-- LINE Report 공개 링크의 인증 또는 만료 URL 정책 확정
+- [x] Firebase Google 로그인 UI와 ID Token 전달
+- [x] Firebase Admin SDK 기반 ID Token 검증
+- [x] 허용된 단일 UID만 관리 API 호출 허용
+- [x] LINE Webhook Signature, Cloud Tasks OIDC 및 Health Check 예외 경로 분리
+- [x] LINE Report 공개 링크에 30일 만료 HMAC-SHA256 서명 적용
+- [ ] Preview에서 인증·권한·기존 LINE 흐름 회귀 검증
 
 ## 1. Firebase 활성화
 
@@ -42,8 +44,44 @@ Firebase Hosting과 Preview Channel URL은 공개된다. Preview도 `/api/**`를
 3. `Build > Hosting > Get started`에서 기본 Hosting Site를 생성한다.
 4. Repository에는 설정 파일이 이미 있으므로 Console 안내의 `firebase init`으로 덮어쓰지 않는다.
 5. 기본 Site ID와 `.firebaserc`의 Project ID가 `town-ai`인지 확인한다.
+6. `Security > Authentication`에서 Google Provider를 활성화한다.
+7. 최초 Google 로그인 후 Authentication 사용자 목록에서 본인 UID를 확인한다.
 
-## 2. Cloud Build 권한
+## 2. 인증 설정
+
+Cloud Run의 일반 환경변수에 다음 값을 설정한다.
+
+```text
+WEB_AUTH_ENABLED=true
+FIREBASE_PROJECT_ID=town-ai
+FIREBASE_ALLOWED_UID={본인 Firebase UID}
+REPORT_LINK_VALIDITY=30d
+```
+
+`FIREBASE_ALLOWED_UID`는 Secret Manager가 아닌 일반 환경변수로 관리한다. Cloud Run은
+연결된 Runtime Service Account의 ADC로 Firebase Admin SDK를 초기화한다. 별도 Service
+Account JSON Key를 생성하지 않는다.
+
+Secret Manager에 32자 이상의 무작위 값으로 `REPORT_LINK_SIGNING_SECRET`을 만들고 Cloud
+Run의 같은 이름 환경변수에 Secret Reference로 연결한다. 이 Secret은 LINE Report 공개
+링크 서명 전용이며 `LINE_CHANNEL_SECRET`과 공유하지 않는다.
+
+새 Revision 배포 후 기존 LINE 메시지에 들어 있던 서명 없는 `/api/reports/{id}` 링크는
+더 이상 열리지 않는다. LINE의 리포트 조회 메뉴에서 같은 기존 Report를 다시 선택하면
+AI를 재호출하지 않고 새로운 30일 서명 링크를 받을 수 있다.
+
+Local에서 인증 UI를 생략하려면 `frontend/.env.local`에 다음 값을 사용한다.
+
+```dotenv
+VITE_WEB_AUTH_ENABLED=false
+```
+
+실제 Firebase Token 검증을 Local에서 수행하려면 Backend도 `WEB_AUTH_ENABLED=true`로
+실행해야 한다. Firebase 공식 문서상 일반 `gcloud auth application-default login`의 최종
+사용자 Credential은 Firebase Authentication에 바로 사용할 수 없으므로, 실제 통합 검증은
+Cloud Run Preview Revision에서 우선 수행한다.
+
+## 3. Cloud Build 권한
 
 Frontend Trigger에서 사용할 Cloud Build Service Account에 다음 역할을 부여한다.
 
@@ -56,7 +94,7 @@ Firebase CLI 배포에는 두 역할이 모두 필요하다. 기존 Backend Buil
 재사용할 수 있지만 Runtime Service Account와는 분리한다. Cloud Run Rewrite 확인에서
 권한 오류가 발생할 때만 Cloud Run Viewer를 추가한다.
 
-## 3. Developer Connect Trigger
+## 4. Developer Connect Trigger
 
 ### Preview
 
@@ -87,7 +125,7 @@ Service Account   : Cloud Build 배포용 Service Account
 Production Trigger는 Web 인증이 구현되고 Preview 검증이 끝난 뒤 생성하거나 활성화한다.
 `main` Branch Ruleset은 기존 GitHub Actions CI 성공을 Merge 조건으로 유지한다.
 
-## 4. Local 명령
+## 5. Local 명령
 
 Node.js Application 의존성에는 Firebase CLI를 포함하지 않는다. 명령 실행 시 검증된 CLI
 버전을 일회성으로 사용한다.
@@ -104,10 +142,14 @@ npm run hosting:deploy
 - `hosting:preview`: `manual-preview` Channel에 1일간 배포
 - `hosting:deploy`: Live Channel 배포
 
+세 Hosting 명령과 Cloud Build는 `build:firebase`를 사용한다. 이 Build Mode는 추적 가능한
+`frontend/.env.firebase`에서 `VITE_WEB_AUTH_ENABLED=true`를 강제하므로 Local
+`.env.local` 설정과 관계없이 공개 배포에 로그인 화면이 포함된다.
+
 로컬 배포는 Google 계정 로그인 또는 Application Default Credentials가 필요하다. Secret,
 Refresh Token이나 Service Account JSON Key는 Repository에 저장하지 않는다.
 
-## 5. 검증 기준
+## 6. 검증 기준
 
 | 검증 항목 | 기대 결과 |
 | --- | --- |
@@ -119,15 +161,25 @@ Refresh Token이나 Service Account JSON Key는 Repository에 저장하지 않�
 | Preview Channel | PR별 URL 생성, 7일 만료 |
 | Live Channel | `town-ai.web.app`과 `town-ai.firebaseapp.com` 정상 표시 |
 | 권한 | 허용 사용자만 관리 API 호출 가능 |
+| 미로그인 API | `401 AUTHENTICATION_REQUIRED` |
+| 잘못된 Token | `401 INVALID_FIREBASE_TOKEN` |
+| 다른 Firebase UID | `403 WEB_ACCESS_DENIED` |
+| LINE Webhook | Firebase 인증과 관계없이 기존 Signature 검증 유지 |
+| Cloud Tasks | Firebase 인증과 관계없이 기존 OIDC 검증 유지 |
+| Web Report 본문·다운로드 | Firebase Bearer Token이 있어야 정상 응답 |
+| LINE Report 본문·다운로드 | 유효한 30일 HMAC 서명 URL만 정상 응답 |
+| 변조한 LINE Report URL | `401 INVALID_REPORT_LINK` |
+| 만료된 LINE Report URL | `410 REPORT_LINK_EXPIRED` |
 
 문제가 발생하면 Firebase Hosting Release History에서 직전 정상 Version으로 Rollback한다.
 
 ## 현재 확인 결과
 
-2026-08-12 기준 Local 환경에는 Firebase CLI 로그인과 Google Cloud ADC가 없으며,
-`town-ai.web.app`과 `town-ai.firebaseapp.com`은 모두 `404`를 반환한다. 설정 파일과 Cloud
-Build 배포 정의는 준비됐지만 Firebase 활성화, 사용자 인증 및 실제 Preview·Live 배포는
-아직 완료되지 않았다.
+2026-08-26 기준 기존 GCP Project에 Firebase가 활성화됐고 Web App 등록과 Google 로그인
+Provider 활성화를 완료했다. Frontend 로그인, Backend ID Token 검증, 단일 UID 제한과
+LINE·Cloud Tasks·Health 예외 경로, LINE Report 만료 서명 URL 구현 및 자동 테스트도
+완료했다. Cloud Run 인증 환경변수는 설정했으며 새 Backend Revision 배포 후 실제
+401·403·정상 접근, Preview·Live 배포와 Production 통합 검증은 아직 완료되지 않았다.
 
 ## 참고 문서
 
@@ -136,3 +188,6 @@ Build 배포 정의는 준비됐지만 Firebase 활성화, 사용자 인증 및 
 - [Firebase CLI 인증](https://firebase.google.com/docs/cli)
 - [Cloud Build Trigger](https://docs.cloud.google.com/build/docs/automating-builds/create-manage-triggers)
 - [Firebase Hosting IAM](https://firebase.google.com/docs/projects/iam/roles-predefined-product)
+- [Google 로그인](https://firebase.google.com/docs/auth/web/google-signin)
+- [Firebase ID Token 검증](https://firebase.google.com/docs/auth/admin/verify-id-tokens)
+- [Firebase Admin SDK 설정](https://firebase.google.com/docs/admin/setup)

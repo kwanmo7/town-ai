@@ -12,6 +12,29 @@ $env:REPORT_STORAGE_TYPE = "local"
 .\gradlew.bat :app:bootRun
 ```
 
+Local 기본값은 Web 관리 API 인증을 사용하지 않는다. 실제 Firebase ID Token 검증을
+활성화할 때는 다음 일반 환경변수가 추가로 필요하다.
+
+```powershell
+$env:WEB_AUTH_ENABLED = "true"
+$env:FIREBASE_PROJECT_ID = "town-ai"
+$env:FIREBASE_ALLOWED_UID = "본인 Firebase UID"
+```
+
+Cloud Run에서는 Runtime Service Account의 Application Default Credentials를 사용한다.
+Service Account JSON Key를 Repository나 Docker Image에 저장하지 않는다.
+
+LINE Report 결과 링크를 Local에서 생성하려면 32자 이상의 별도 HMAC Secret도 설정한다.
+
+```powershell
+$env:REPORT_LINK_SIGNING_SECRET = "로컬 전용 32자 이상 무작위 값"
+$env:REPORT_LINK_VALIDITY = "30d"
+```
+
+Production의 `REPORT_LINK_SIGNING_SECRET`은 Secret Manager에서 주입하고 Local 값과
+공유하지 않는다. 기존 Web Report 조회·다운로드는 Firebase 인증을 요구하고, LINE에는
+30일 만료 서명 URL을 전달한다.
+
 ## Local 테스트 데이터
 
 Backend 실행 후 다른 PowerShell에서 Local 전용 Seed 스크립트를 실행한다.

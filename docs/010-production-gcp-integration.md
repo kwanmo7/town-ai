@@ -76,8 +76,8 @@ Visit과 Report는 삭제됐으며 Area ID 1은 Soft Delete 정책에 따라 DB 
 - 신규 Area 후보 Draft 생성과 자연어 부분 수정
 - 신규 Area와 Visit 동시 저장
 - LINE에서 AREA·ALL Report 생성과 GCS 객체 저장
-- Cloud Run `GET /api/reports/2/content`, `/download` 응답 `200`
-- Cloud Run `GET /api/reports/3/content`, `/download` 응답 `200`
+- 당시 공개 상태였던 Cloud Run `GET /api/reports/2/content`, `/download` 응답 `200`
+- 당시 공개 상태였던 Cloud Run `GET /api/reports/3/content`, `/download` 응답 `200`
 
 GCS 객체와 Cloud Run 조회 Endpoint는 정상이지만 LINE 완료 메시지의 Report Base
 URL이 Local 기본값을 사용할 수 있는 설정 문제를 확인했다. `LINE_REPORT_BASE_URL`을
@@ -110,5 +110,5 @@ Version, Model, 대상 Area와 Prompt 입력을 기반으로 만든 SHA-256 지�
 - SUMMARY, COMPARE, ALL을 포함한 반복 Prompt 품질 평가
 - 무료 Cloud SQL 평가 종료 전 장기 운영 사양과 비용 확정
 - 장애로 남을 수 있는 고아 GCS 객체의 운영 정리 정책
-- 추측 가능한 Report ID를 보호할 인증 또는 만료 URL 정책
+- 구현된 Web Firebase 인증과 LINE 30일 만료 서명 URL의 Production 재검증
 - 오래된 LINE 메시지의 장기 재클릭 동작

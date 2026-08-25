@@ -89,8 +89,8 @@ Flex 디자인 JSON은 LINE Flex Message Simulator에 바로 붙여 넣을 수 �
 - Report ID, Type, 대상 Area 및 생성일
 - Report 조회·다운로드 URL
 
-Report URL은 현재 화면 확인용 주소다. Production 연동에서는 추측 가능한 Report
-ID만으로 접근할 수 없는 인증 또는 만료 URL 정책을 적용한다.
+Report URL은 화면 확인용 예시다. Backend는 실제 메시지를 만들 때 Report ID, 조회·
+다운로드 동작과 만료 시각을 HMAC-SHA256으로 서명한 30일 만료 URL로 교체한다.
 
 ## Postback 규칙
 

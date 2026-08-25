@@ -20,7 +20,12 @@ Vite 개발 서버의 `/api` 요청은 기본적으로 `http://localhost:8080`�
 
 ```dotenv
 VITE_API_PROXY_TARGET=http://localhost:8080
+VITE_WEB_AUTH_ENABLED=false
 ```
+
+Local 기본값은 인증을 사용하지 않는다. Firebase Google 로그인과 실제 Backend Token
+검증을 확인할 때만 Frontend의 `VITE_WEB_AUTH_ENABLED`와 Backend의
+`WEB_AUTH_ENABLED`를 함께 `true`로 설정한다.
 
 방문 기록은 `/visits`에서 자연어 설명과 다섯 점수를 입력하고, AI 초안의 지역·날짜·
 메모를 확인한 뒤 저장한다. 점수는 Select Box의 사용자 선택값을 그대로 사용한다.
@@ -64,7 +69,13 @@ npm run hosting:preview
 npm run hosting:deploy
 ```
 
-Firebase Hosting과 Preview URL은 공개되며 `/api`는 실제 Production Backend로 연결된다.
-따라서 Web 관리 API 인증과 단일 사용자 권한 제한을 적용하기 전에는 Preview 및 Live
-배포를 실행하지 않는다. 활성화, IAM과 Developer Connect Trigger 설정은
+Firebase Hosting Build에서는 Google 로그인 화면을 활성화하며 ID Token을 `/api` 요청에
+Bearer Header로 전달한다. Markdown 다운로드도 인증된 API 요청으로 파일을 받아 저장한다.
+Preview와 Live URL은 공개되므로 Cloud Run에
+`WEB_AUTH_ENABLED=true`, `FIREBASE_PROJECT_ID=town-ai`, `FIREBASE_ALLOWED_UID`를 먼저
+설정해야 한다. 활성화, IAM과 Developer Connect Trigger 설정은
 `../docs/013-firebase-hosting-deployment.md`를 따른다.
+
+`build:firebase`는 추적 가능한 `.env.firebase`의 공개 Boolean 설정으로 인증 UI를 항상
+활성화한다. 따라서 개발자의 `.env.local` 값과 관계없이 Preview와 Live Build에 로그인
+화면이 포함된다.

@@ -9,16 +9,18 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:firebase": "tsc -b && vite build --mode firebase",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
-    "hosting:serve": "npm run build && npx --yes firebase-tools@15.26.0 serve --only hosting --project town-ai",
-    "hosting:preview": "npm run build && npx --yes firebase-tools@15.26.0 hosting:channel:deploy manual-preview --project town-ai --expires 1d",
-    "hosting:deploy": "npm run build && npx --yes firebase-tools@15.26.0 deploy --only hosting --project town-ai"
+    "hosting:serve": "npm run build:firebase && npx --yes firebase-tools@15.26.0 serve --only hosting --project town-ai",
+    "hosting:preview": "npm run build:firebase && npx --yes firebase-tools@15.26.0 hosting:channel:deploy manual-preview --project town-ai --expires 1d",
+    "hosting:deploy": "npm run build:firebase && npx --yes firebase-tools@15.26.0 deploy --only hosting --project town-ai"
   },
   "dependencies": {
+    "firebase": "12.18.0",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "react-markdown": "10.1.0",

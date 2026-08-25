@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useAuth } from '../../features/auth/AuthContext'
 
 const navigation = [
   { to: '/', label: '대시보드', shortLabel: '홈', icon: '⌂', end: true },
@@ -17,6 +18,7 @@ const pageNames: Record<string, string> = {
 }
 
 export function AppShell() {
+  const auth = useAuth()
   const location = useLocation()
   const pageName = location.pathname.startsWith('/reports/')
     ? '리포트 상세'
@@ -50,8 +52,8 @@ export function AppShell() {
         <div className="sidebar__note">
           <span className="status-dot" />
           <div>
-            <strong>Personal workspace</strong>
-            <small>Asia / Tokyo</small>
+            <strong>{auth.user?.name || 'Personal workspace'}</strong>
+            <small>{auth.user?.email || 'Asia / Tokyo'}</small>
           </div>
         </div>
       </aside>
@@ -62,14 +64,25 @@ export function AppShell() {
             <span className="topbar__kicker">TOWN AI</span>
             <strong>{pageName}</strong>
           </div>
-          <span className="topbar__date">
-            {new Intl.DateTimeFormat('ko-KR', {
-              timeZone: 'Asia/Tokyo',
-              month: 'long',
-              day: 'numeric',
-              weekday: 'short',
-            }).format(new Date())}
-          </span>
+          <div className="topbar__tools">
+            <span className="topbar__date">
+              {new Intl.DateTimeFormat('ko-KR', {
+                timeZone: 'Asia/Tokyo',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'short',
+              }).format(new Date())}
+            </span>
+            {auth.enabled && (
+              <button
+                type="button"
+                className="topbar__logout"
+                onClick={() => void auth.signOut()}
+              >
+                로그아웃
+              </button>
+            )}
+          </div>
         </header>
 
         <main className="main-content">

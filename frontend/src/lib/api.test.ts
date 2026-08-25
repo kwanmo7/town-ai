@@ -1,9 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from './api'
 
+const { getFirebaseIdTokenMock } = vi.hoisted(() => ({
+  getFirebaseIdTokenMock: vi.fn<() => Promise<string | null>>(),
+}))
+
+vi.mock('./firebase', () => ({
+  getFirebaseIdToken: getFirebaseIdTokenMock,
+}))
+
+getFirebaseIdTokenMock.mockResolvedValue(null)
+
 describe('Area API client', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    getFirebaseIdTokenMock.mockReset()
+    getFirebaseIdTokenMock.mockResolvedValue(null)
   })
 
   it('Area 생성 요청을 JSON POST로 전송한다', async () => {
@@ -33,11 +45,10 @@ describe('Area API client', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/areas', expect.objectContaining({
       method: 'POST',
       body: JSON.stringify(input),
-      headers: expect.objectContaining({
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      }),
     }))
+    const headers = new Headers(fetchMock.mock.calls[0][1]?.headers)
+    expect(headers.get('Accept')).toBe('application/json')
+    expect(headers.get('Content-Type')).toBe('application/json')
     expect(result).toEqual(responseBody)
   })
 
@@ -55,6 +66,8 @@ describe('Area API client', () => {
 describe('Visit API client', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    getFirebaseIdTokenMock.mockReset()
+    getFirebaseIdTokenMock.mockResolvedValue(null)
   })
 
   it('자연어와 Web 선택 점수를 Visit Draft 요청으로 전송한다', async () => {
@@ -143,6 +156,8 @@ describe('Visit API client', () => {
 describe('Report API client', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    getFirebaseIdTokenMock.mockReset()
+    getFirebaseIdTokenMock.mockResolvedValue(null)
   })
 
   it('전체 유형은 areaIds 필드를 생략해 생성 요청을 전송한다', async () => {
@@ -197,12 +212,9 @@ describe('Report API client', () => {
 
     await expect(api.getReports('COMPARE')).resolves.toEqual([])
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/reports?reportType=COMPARE',
-      expect.objectContaining({
-        headers: expect.objectContaining({ Accept: 'application/json' }),
-      }),
-    )
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/reports?reportType=COMPARE')
+    const headers = new Headers(fetchMock.mock.calls[0][1]?.headers)
+    expect(headers.get('Accept')).toBe('application/json')
   })
 
   it('Report 삭제의 204 응답을 본문 없이 처리한다', async () => {
@@ -214,11 +226,30 @@ describe('Report API client', () => {
       method: 'DELETE',
     }))
   })
+
+  it('Report 다운로드 요청에도 Firebase Bearer Token을 전달한다', async () => {
+    getFirebaseIdTokenMock.mockResolvedValue('firebase-id-token')
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      '# 리포트\n',
+      { status: 200, headers: { 'Content-Type': 'text/markdown' } },
+    ))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const blob = await api.downloadReport(12)
+
+    expect(blob).toBeDefined()
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/reports/12/download')
+    const headers = new Headers(fetchMock.mock.calls[0][1]?.headers)
+    expect(headers.get('Accept')).toBe('text/markdown')
+    expect(headers.get('Authorization')).toBe('Bearer firebase-id-token')
+  })
 })
 
 describe('Statistics API client', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    getFirebaseIdTokenMock.mockReset()
+    getFirebaseIdTokenMock.mockResolvedValue(null)
   })
 
   it('선택한 Area의 통계 Endpoint를 호출한다', async () => {
@@ -241,11 +272,30 @@ describe('Statistics API client', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await expect(api.getAreaStatistics(1)).resolves.toEqual(responseBody)
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/areas/1/statistics',
-      expect.objectContaining({
-        headers: expect.objectContaining({ Accept: 'application/json' }),
-      }),
-    )
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/areas/1/statistics')
+    const headers = new Headers(fetchMock.mock.calls[0][1]?.headers)
+    expect(headers.get('Accept')).toBe('application/json')
+  })
+})
+
+describe('Firebase 인증 Header', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    getFirebaseIdTokenMock.mockReset()
+    getFirebaseIdTokenMock.mockResolvedValue(null)
+  })
+
+  it('로그인 사용자의 ID Token을 Bearer Header로 전달한다', async () => {
+    getFirebaseIdTokenMock.mockResolvedValue('firebase-id-token')
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify([]),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await api.getAreas()
+
+    const headers = new Headers(fetchMock.mock.calls[0][1]?.headers)
+    expect(headers.get('Authorization')).toBe('Bearer firebase-id-token')
   })
 })
