@@ -23,6 +23,7 @@ import com.townai.line.service.LineVisitDraftActionService;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -34,6 +35,12 @@ import java.util.UUID;
 @Component
 public class LineWebhookEventHandlerImpl
         implements LineWebhookEventHandler {
+
+    private static final Set<String> MAIN_MENU_TEXT_COMMANDS = Set.of(
+            "메뉴",
+            "메인메뉴",
+            "메인 메뉴"
+    );
 
     private final LineVisitDraftService lineVisitDraftService;
     private final LineVisitDraftActionService draftActionService;
@@ -115,6 +122,10 @@ public class LineWebhookEventHandlerImpl
     }
 
     private void handleFollow(LineWebhookEventWorkItem workItem) {
+        pushMainMenu(workItem);
+    }
+
+    private void pushMainMenu(LineWebhookEventWorkItem workItem) {
         push(
                 workItem,
                 LineMessagePurpose.MENU_RESULT,
@@ -123,6 +134,10 @@ public class LineWebhookEventHandlerImpl
     }
 
     private void handleTextMessage(LineWebhookEventWorkItem workItem) {
+        if (isMainMenuTextCommand(workItem.messageText())) {
+            pushMainMenu(workItem);
+            return;
+        }
         LineVisitDraftResult result =
                 lineVisitDraftService.getOrCreate(workItem);
         LinePushRequest request = result.hasDraft()
@@ -136,6 +151,11 @@ public class LineWebhookEventHandlerImpl
                 LineMessagePurpose.DRAFT_RESULT,
                 request
         );
+    }
+
+    private boolean isMainMenuTextCommand(String messageText) {
+        return messageText != null
+                && MAIN_MENU_TEXT_COMMANDS.contains(messageText.strip());
     }
 
     private void handlePostback(LineWebhookEventWorkItem workItem) {
