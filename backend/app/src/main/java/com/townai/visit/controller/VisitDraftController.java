@@ -32,6 +32,7 @@ public class VisitDraftController {
 
     /**
      * 자연어에서 Area, 방문일, 점수와 메모 후보를 추출한다.
+     * Web에서 점수를 별도 전달하면 해당 값은 AI 출력보다 우선한다.
      *
      * @param request 사용자가 작성한 자연어 방문 평가
      * @return 확인 및 보완이 필요한 Visit 초안

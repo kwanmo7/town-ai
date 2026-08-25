@@ -97,7 +97,7 @@
         "action": {
           "type": "uri",
           "label": "리포트 보기",
-          "uri": "https://town-ai-api-574086886148.asia-northeast1.run.app/api/reports/10/content"
+          "uri": "https://town-ai-api-574086886148.asia-northeast1.run.app/api/public/reports/10/content?expires=1790298000&signature=example-content-signature"
         }
       },
       {
@@ -107,7 +107,7 @@
         "action": {
           "type": "uri",
           "label": "Markdown 다운로드",
-          "uri": "https://town-ai-api-574086886148.asia-northeast1.run.app/api/reports/10/download"
+          "uri": "https://town-ai-api-574086886148.asia-northeast1.run.app/api/public/reports/10/download?expires=1790298000&signature=example-download-signature"
         }
       },
       {

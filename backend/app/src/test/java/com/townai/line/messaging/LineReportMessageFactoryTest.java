@@ -4,17 +4,21 @@ import com.townai.line.config.LineMessagingProperties;
 import com.townai.line.model.LineReportAreaOption;
 import com.townai.report.dto.ReportResponse;
 import com.townai.report.entity.ReportType;
+import com.townai.report.link.ReportLinkProperties;
+import com.townai.report.link.ReportSignedLinkService;
 import org.junit.jupiter.api.Test;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LineReportMessageFactoryTest {
@@ -29,7 +33,17 @@ class LineReportMessageFactoryTest {
                             Duration.ofSeconds(2),
                             "https://town-ai.example.com/"
                     ),
-                    ZoneId.of("Asia/Tokyo")
+                    ZoneId.of("Asia/Tokyo"),
+                    new ReportSignedLinkService(
+                            new ReportLinkProperties(
+                                    "test-signing-secret-that-is-at-least-32-characters",
+                                    Duration.ofDays(30)
+                            ),
+                            Clock.fixed(
+                                    Instant.parse("2026-08-03T01:02:03Z"),
+                                    ZoneId.of("UTC")
+                            )
+                    )
             );
 
     @Test
@@ -87,11 +101,12 @@ class LineReportMessageFactoryTest {
         );
 
         assertTrue(json.contains(
-                "https://town-ai.example.com/api/reports/10/content"
+                "https://town-ai.example.com/api/public/reports/10/content?expires="
         ));
         assertTrue(json.contains(
-                "https://town-ai.example.com/api/reports/10/download"
+                "https://town-ai.example.com/api/public/reports/10/download?expires="
         ));
+        assertTrue(json.contains("signature="));
         assertTrue(json.contains("action=menu&amp;target=main")
                 || json.contains("action=menu&target=main"));
         assertTrue(json.contains("2026-08-03"));
@@ -117,5 +132,29 @@ class LineReportMessageFactoryTest {
 
         assertTrue(json.contains("기존 리포트"));
         assertTrue(json.contains("기존 리포트를 불러왔습니다."));
+    }
+
+    @Test
+    void rejectsEnabledLineMessagingWithoutReportSigningSecret() {
+        ReportSignedLinkService invalidSigner = new ReportSignedLinkService(
+                new ReportLinkProperties("", Duration.ofDays(30)),
+                Clock.fixed(
+                        Instant.parse("2026-08-03T01:02:03Z"),
+                        ZoneId.of("UTC")
+                )
+        );
+
+        assertThatThrownBy(() -> new LineReportMessageFactory(
+                new LineMessagingProperties(
+                        "production-token",
+                        "https://api.line.me",
+                        Duration.ofSeconds(2),
+                        Duration.ofSeconds(2),
+                        "https://town-ai.example.com"
+                ),
+                ZoneId.of("Asia/Tokyo"),
+                invalidSigner
+        )).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("REPORT_LINK_SIGNING_SECRET");
     }
 }

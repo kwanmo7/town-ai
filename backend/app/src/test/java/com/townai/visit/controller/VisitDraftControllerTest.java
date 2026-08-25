@@ -94,4 +94,20 @@ class VisitDraftControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.errors[0].field").value("text"));
     }
+
+    @Test
+    void rejectsStructuredScoreOutsideAllowedRange() throws Exception {
+        mockMvc.perform(post("/api/visit-drafts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "text": "센터미나미를 방문했어.",
+                                  "atmosphereScore": 11
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.errors[0].field")
+                        .value("atmosphereScore"));
+    }
 }

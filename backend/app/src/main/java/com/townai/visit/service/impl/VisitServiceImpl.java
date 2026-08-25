@@ -20,9 +20,9 @@ import java.util.List;
 /**
  * Visit의 활성 Area 연결, 날짜 범위 검증, 메모 정규화와 Transaction 경계를 구현한다.
  *
- * <p>Visit 생성·수정 시 논리 삭제된 Area는 선택할 수 없다. 목록은 Repository가
- * 결정한 안정적인 정렬 순서를 그대로 유지하며, 삭제는 원본 Visit Row를 제거하는
- * 물리 삭제 방식이다.</p>
+ * <p>Visit 생성·수정 시 논리 삭제된 Area는 선택할 수 없다. 목록에서도 삭제된
+ * Area의 Visit을 제외하고 Repository가 결정한 안정적인 정렬 순서를 유지한다.
+ * Visit 자체의 삭제는 원본 Row를 제거하는 물리 삭제 방식이다.</p>
  */
 @Service
 @Transactional(readOnly = true)

@@ -1,0 +1,32 @@
+steps:
+  - id: Install Frontend dependencies
+    name: node:22-bookworm
+    dir: frontend
+    entrypoint: npm
+    args: ["ci"]
+
+  - id: Build Frontend
+    name: node:22-bookworm
+    dir: frontend
+    entrypoint: npm
+    args: ["run", "build:firebase"]
+
+  - id: Deploy Firebase Hosting preview
+    name: node:22-bookworm
+    dir: frontend
+    entrypoint: bash
+    env:
+      - "PR_NUMBER=$_PR_NUMBER"
+    args:
+      - -ceu
+      - |
+        channel_id="pr-$${PR_NUMBER:-manual}"
+        npx --yes firebase-tools@15.26.0 hosting:channel:deploy "$${channel_id}" \
+          --project "$PROJECT_ID" \
+          --expires 7d \
+          --non-interactive
+
+timeout: 900s
+
+options:
+  logging: CLOUD_LOGGING_ONLY

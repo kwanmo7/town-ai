@@ -1,6 +1,8 @@
 package com.townai.report.generation;
 
 import com.townai.report.entity.ReportType;
+import com.townai.report.generation.ReportDataAssembler.AllAreaInput;
+import com.townai.report.generation.ReportDataAssembler.AllInput;
 import com.townai.report.generation.ReportDataAssembler.CompareAreaInput;
 import com.townai.report.generation.ReportDataAssembler.CompareInput;
 import com.townai.report.generation.ReportDataAssembler.ScoreAverages;
@@ -21,6 +23,57 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReportContentGeneratorTest {
+
+    @Test
+    void buildsAllMarkdownFromStructuredOutputInInputAreaOrder() {
+        FakeAiClient aiClient = new FakeAiClient(allJson(1L, "A", 2L, "B"));
+        ReportContentGenerator generator =
+                new ReportContentGenerator(
+                        aiClient,
+                        new ObjectMapper(),
+                        new ReportMarkdownValidator()
+                );
+        AllInput input = new AllInput(List.of(
+                allArea(1, 1L, "A"),
+                allArea(2, 2L, "B")
+        ));
+
+        GeneratedReportContent result = generator.generate(
+                new ReportGenerationData(ReportType.ALL, List.of(), input)
+        );
+
+        assertEquals("all-v1", result.promptVersion());
+        assertTrue(result.markdown().contains("# 전체 지역 분석 리포트"));
+        assertTrue(result.markdown().indexOf("### A") < result.markdown().indexOf("### B"));
+        assertTrue(result.markdown().contains("#### 주요 장점"));
+        assertTrue(result.markdown().contains("### 접근성 우선"));
+        assertTrue(result.markdown().contains("- **도쿄 주요 지역 이동**:"));
+        assertEquals(1, aiClient.correctionInstructions.size());
+    }
+
+    @Test
+    void retriesOnceWhenAllAreaOrderDoesNotMatchInput() {
+        FakeAiClient aiClient = new FakeAiClient(
+                allJson(2L, "B", 1L, "A"),
+                allJson(1L, "A", 2L, "B")
+        );
+        ReportContentGenerator generator =
+                new ReportContentGenerator(
+                        aiClient,
+                        new ObjectMapper(),
+                        new ReportMarkdownValidator()
+                );
+        AllInput input = new AllInput(List.of(
+                allArea(1, 1L, "A"),
+                allArea(2, 2L, "B")
+        ));
+
+        generator.generate(new ReportGenerationData(ReportType.ALL, List.of(), input));
+
+        assertEquals(2, aiClient.correctionInstructions.size());
+        assertTrue(aiClient.correctionInstructions.get(1)
+                .contains("지역 ID, 이름 또는 순서"));
+    }
 
     @Test
     void buildsSummaryMarkdownFromBackendStatisticsAndAiComment() {
@@ -150,6 +203,68 @@ class ReportContentGeneratorTest {
                 new ScoreAverages(8.0, 7.0, 6.0, 5.0, 4.0),
                 List.of("메모")
         );
+    }
+
+    private AllAreaInput allArea(int order, Long id, String name) {
+        return new AllAreaInput(
+                order,
+                id,
+                name,
+                "가나가와현",
+                "요코하마시",
+                null,
+                1,
+                new ScoreAverages(8.0, 7.0, 6.0, 5.0, 4.0),
+                List.of()
+        );
+    }
+
+    private String allJson(Long firstId, String firstName, Long secondId, String secondName) {
+        return """
+                {
+                  "overallTrends": "전체 경향입니다.",
+                  "areaAnalyses": [
+                    {
+                      "areaId": %d,
+                      "areaName": "%s",
+                      "summary": "첫 지역 평가 요약",
+                      "strengths": "첫 지역 장점",
+                      "weaknesses": "첫 지역 단점",
+                      "considerations": "첫 지역 고려사항"
+                    },
+                    {
+                      "areaId": %d,
+                      "areaName": "%s",
+                      "summary": "둘째 지역 평가 요약",
+                      "strengths": "둘째 지역 장점",
+                      "weaknesses": "둘째 지역 단점",
+                      "considerations": "둘째 지역 고려사항"
+                    }
+                  ],
+                  "criteriaCandidates": {
+                    "atmosphere": "분위기 후보",
+                    "infra": "생활 인프라 후보",
+                    "clean": "청결도 후보",
+                    "size": "넓은 집 가능성 후보",
+                    "access": "접근성 후보"
+                  },
+                  "priorityCandidates": {
+                    "atmosphere": "분위기 우선 후보",
+                    "infra": "생활 인프라 우선 후보",
+                    "clean": "청결도 우선 후보",
+                    "size": "넓은 집 가능성 우선 후보",
+                    "access": "접근성 우선 후보"
+                  },
+                  "verificationChecklist": [
+                    {"category": "도쿄 주요 지역 이동", "content": "실제로 이동한 후 편의를 확인"},
+                    {"category": "주거비", "content": "동일 조건 매물을 비교"},
+                    {"category": "시간대별 환경", "content": "낮과 밤에 각각 확인"},
+                    {"category": "안전", "content": "귀가 동선을 직접 확인"},
+                    {"category": "생활 편의", "content": "자주 이용할 시설까지 걸어 확인"}
+                  ],
+                  "overall": "우선순위에 따라 선택이 달라질 수 있습니다."
+                }
+                """.formatted(firstId, firstName, secondId, secondName);
     }
 
     private String compareJson(Long firstId, String firstName, Long secondId, String secondName) {

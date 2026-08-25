@@ -7,7 +7,9 @@ town-ai/
 │   └── Spring Boot
 │
 ├── frontend/
-│   └── React
+│   ├── React + TypeScript + Vite
+│   ├── Firebase Hosting 설정
+│   └── Area·Visit·Report·Statistics 관리 UI
 │
 ├── docs/
 │   └── 설계·검증 문서

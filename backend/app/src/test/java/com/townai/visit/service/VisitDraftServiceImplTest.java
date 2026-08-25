@@ -96,6 +96,41 @@ class VisitDraftServiceImplTest {
     }
 
     @Test
+    void keepsStructuredWebScoresInsteadOfModelScores() {
+        FakeVisitParserAiClient aiClient = new FakeVisitParserAiClient(
+                completeOutput(1L, "센터미나미").replace(
+                        "\"warnings\": []",
+                        "\"warnings\": [\"점수가 입력되지 않았습니다.\"]"
+                )
+        );
+        VisitDraftService service = service(aiClient);
+
+        VisitDraftResponse result = service.create(new VisitDraftRequest(
+                "센터미나미를 산책했고 역 앞이 편리했어.",
+                9,
+                7,
+                6,
+                5,
+                10
+        ));
+
+        assertEquals(9, result.atmosphereScore());
+        assertEquals(7, result.infraScore());
+        assertEquals(6, result.cleanScore());
+        assertEquals(5, result.sizeScore());
+        assertEquals(10, result.accessScore());
+        assertTrue(result.warnings().isEmpty());
+        assertEquals(
+                "센터미나미를 산책했고 역 앞이 편리했어.",
+                aiClient.inputs.getFirst().text()
+        );
+        assertEquals(
+                10,
+                aiClient.inputs.getFirst().selectedScores().accessScore()
+        );
+    }
+
+    @Test
     void retriesOnceWhenAreaDoesNotMatchActiveArea() {
         FakeVisitParserAiClient aiClient = new FakeVisitParserAiClient(
                 completeOutput(99L, "존재하지 않는 지역"),

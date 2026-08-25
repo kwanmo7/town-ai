@@ -16,8 +16,8 @@ import java.nio.charset.StandardCharsets;
 /**
  * Report 유형별 Prompt와 Schema를 읽어 OpenAI Responses API 호출을 구성하는 Adapter이다.
  *
- * <p>SUMMARY와 COMPARE는 Backend가 Markdown을 조립할 수 있도록 Structured Output을
- * 사용하고, 상세 분석인 AREA와 ALL은 Markdown Text를 직접 요청한다. Resource는
+ * <p>SUMMARY, COMPARE와 ALL은 Backend가 Markdown을 조립할 수 있도록 Structured Output을
+ * 사용하고, 단일 지역 상세 분석인 AREA는 Markdown Text를 직접 요청한다. Resource는
  * {@code prompts/{reportType}/v1}에서 읽으며 교정 요청에도 같은 버전을 유지한다.</p>
  */
 @Component
@@ -52,7 +52,7 @@ public class OpenAiReportClient implements ReportAiClient {
                     correctionInstruction
             );
             OpenAiResponse response;
-            if (reportType == ReportType.SUMMARY || reportType == ReportType.COMPARE) {
+            if (usesStructuredOutput(reportType)) {
                 response = responsesClient.generateStructured(
                         instructions,
                         promptInput,
@@ -100,5 +100,11 @@ public class OpenAiReportClient implements ReportAiClient {
 
     private String promptBasePath(ReportType reportType) {
         return "prompts/" + reportType.pathName() + "/v1";
+    }
+
+    private boolean usesStructuredOutput(ReportType reportType) {
+        return reportType == ReportType.SUMMARY
+                || reportType == ReportType.COMPARE
+                || reportType == ReportType.ALL;
     }
 }

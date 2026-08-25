@@ -34,6 +34,21 @@ public enum ErrorCode {
             "LINE Task 요청 인증이 올바르지 않습니다."
     ),
 
+    /** Web 관리 API에 Firebase 인증 정보가 전달되지 않음. */
+    AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."),
+
+    /** Firebase ID Token의 형식, 서명, 발급자 또는 만료 검증에 실패함. */
+    INVALID_FIREBASE_TOKEN(HttpStatus.UNAUTHORIZED, "로그인 정보가 올바르지 않습니다."),
+
+    /** 인증된 Firebase 사용자가 허용된 단일 관리자가 아님. */
+    WEB_ACCESS_DENIED(HttpStatus.FORBIDDEN, "이 계정은 Town AI에 접근할 수 없습니다."),
+
+    /** 공개 Report 링크의 HMAC 서명이 없거나 요청 경로와 일치하지 않음. */
+    INVALID_REPORT_LINK(HttpStatus.UNAUTHORIZED, "리포트 링크가 올바르지 않습니다."),
+
+    /** 공개 Report 링크의 사용 가능 시간이 지남. */
+    REPORT_LINK_EXPIRED(HttpStatus.GONE, "리포트 링크가 만료되었습니다."),
+
     /** Area가 없거나 논리 삭제되어 활성 조회 대상이 아님. */
     AREA_NOT_FOUND(HttpStatus.NOT_FOUND, "지역을 찾을 수 없습니다."),
 

@@ -42,6 +42,7 @@ backend/app/src/main/resources/db/migration/V4__add_line_report_idempotency_key.
 backend/app/src/main/resources/db/migration/V5__support_area_registration_from_line_draft.sql
 backend/app/src/main/resources/db/migration/V6__support_line_visit_draft_revision.sql
 backend/app/src/main/resources/db/migration/V7__claim_line_visit_draft_revision.sql
+backend/app/src/main/resources/db/migration/V8__add_report_source_fingerprint.sql
 ```
 
 V1은 초기 스키마를 생성하고, V2는 기존 Draft의 `warnings`가 `NULL`이면 빈 JSON
@@ -54,6 +55,64 @@ V6는 LINE Draft 부분 수정을 위한 `AWAITING_REVISION`, `SUPERSEDED` 상�
 V7은 수정 Text Message가 원본 Draft를 AI 호출 전에 점유하는
 `REVISION_PROCESSING` 상태와 `revision_webhook_event_id`를 추가하고, 재시도에서도
 수정 의도를 유지하도록 Event에 `revision_source_draft_id`를 보존한다.
+V8은 변경되지 않은 Report를 재사용할 수 있도록 Prompt 입력 기반
+`source_fingerprint`와 조회 Index를 추가한다.
+
+## Local 화면 확인용 Seed 데이터
+
+Frontend의 Dashboard, Area·Visit 목록과 Statistics 표시를 확인할 때는 Backend를
+실행한 뒤 Local 전용 Seed 스크립트를 사용한다.
+
+```powershell
+cd C:\Users\kwanm\git\town-ai\backend
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local-seed.ps1
+```
+
+기본 대상은 `http://localhost:8080`이다. 다른 Local Port를 사용한다면 다음처럼
+Loopback URL을 전달한다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\local-seed.ps1 `
+  -BaseUrl http://localhost:18080
+```
+
+스크립트는 API를 통해 Area 3개와 Visit 5개를 생성한다. 기존 Area는
+`prefecture`, `city`, `name`으로 찾고, 같은 Area·방문일·점수의 Visit은 건너뛴다.
+따라서 반복 실행해도 같은 Fixture가 중복 생성되지 않는다. Production 오실행을
+막기 위해 `localhost`, `127.0.0.1` 같은 Loopback 주소 이외에는 실행을 거부한다.
+명령의 `ExecutionPolicy Bypass`는 해당 PowerShell Process에만 적용하며 시스템의
+영구 실행 정책은 변경하지 않는다.
+
+### Soft Delete한 Seed Area 복구
+
+Area 관리 화면에서 세 Seed Area를 삭제하면 Area Row와 기존 Visit Row는 DB에
+보존되지만 일반 Area·Visit 목록과 통계에서는 제외된다. V1에는 사용자용 Area 복구
+API가 없으므로 Local Fixture에 한해서 다음 스크립트로 세 Area의 `deleted_at`만
+`NULL`로 되돌린다.
+
+```powershell
+cd C:\Users\kwanm\git\town-ai\backend
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\local-restore-seed.ps1
+```
+
+스크립트는 Local MySQL 접속만 허용하고 `mysql.exe`가 비밀번호를 직접 묻는다.
+비밀번호는 스크립트, Git 또는 Process 명령 인자에 저장되지 않는다. MySQL을 다른
+경로에 설치했다면 `-MySqlPath`로 실제 Client 경로를 전달할 수 있다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\local-restore-seed.ps1 `
+  -MySqlPath "D:\MySQL\bin\mysql.exe"
+```
+
+복구 후 `local-seed.ps1`을 다시 실행하면 기존 Visit은 중복 생성하지 않고 현재
+Fixture 상태를 확인한다. 이 스크립트는 정확히 일치하는 세 Local Seed Area만
+복구하며 Production Database에는 사용하지 않는다.
+
+Report는 OpenAI API 비용이 발생하므로 Seed에 포함하지 않는다. Report 화면은
+필요할 때 Local API 또는 이후 구현할 Frontend 생성 화면에서 별도로 생성해 확인한다.
 
 최초 실행 후에는 다음과 같은 이력이 저장된다.
 
