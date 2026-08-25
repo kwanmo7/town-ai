@@ -23,6 +23,8 @@ import com.townai.line.service.LineVisitDraftActionService;
 import com.townai.line.service.LineVisitDraftService;
 import com.townai.line.service.LineVisitDraftResult;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Instant;
 import java.util.List;
@@ -135,6 +137,38 @@ class LineWebhookEventHandlerImplTest {
         handler.handle(workItem);
 
         verify(pushClient).push(request, retryKey);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "메뉴",
+            "메인메뉴",
+            "메인 메뉴",
+            "  메뉴  "
+    })
+    void routesTextMenuCommandBeforeDraftProcessing(String messageText) {
+        LineWebhookEventWorkItem workItem = new LineWebhookEventWorkItem(
+                "event-text-menu",
+                "user-1",
+                LineWebhookEventType.TEXT_MESSAGE,
+                messageText,
+                null,
+                Instant.parse("2026-07-25T08:30:00Z"),
+                1
+        );
+        LinePushRequest request = textRequest("메인 메뉴");
+        UUID retryKey = UUID.randomUUID();
+        when(menuMessageFactory.createMainMenu("user-1"))
+                .thenReturn(request);
+        when(retryKeyFactory.create(
+                "event-text-menu",
+                LineMessagePurpose.MENU_RESULT
+        )).thenReturn(retryKey);
+
+        handler.handle(workItem);
+
+        verify(pushClient).push(request, retryKey);
+        verify(draftService, never()).getOrCreate(workItem);
     }
 
     @Test
