@@ -58,7 +58,7 @@
      - Java 25 Build·Runtime Multi-stage Image 및 Non-root 사용자 적용
      - Cloud Run `PORT` 환경변수 연동
      - Docker Build Context와 Spring Boot 실행 JAR에서 Local Secret·환경 파일 제외
-     - 현재 개발 PC에는 Docker Engine이 없어 실제 Image Build는 후속 검증
+     - [O] 개발 PC Docker Desktop에서 Linux amd64 Image Build와 Non-root 실행 설정 검증
    - [O] GitHub Actions Backend CI Workflow 구현
      - Java 25, Gradle Test·Build, Javadoc 및 Docker Image Build 검증
      - `main` 대상 모든 Pull Request와 수동 실행에서 검증
@@ -103,11 +103,20 @@
      - [O] Firebase Admin SDK Token 검증과 `FIREBASE_ALLOWED_UID` 단일 사용자 제한
      - [O] LINE Webhook, Cloud Tasks OIDC, Health Check와 Web 관리 API의 접근 정책 분리
      - [O] Cloud Run 허용 UID 일반 환경변수 설정
-     - [ ] 새 Backend Revision에서 실제 401·403·정상 접근 검증
+     - [O] 새 Backend Revision에서 미인증·잘못된 Token의 `401` 검증
+     - [O] 허용 UID 정상 접근과 다른 Firebase UID의 `403` 검증
      - [O] Web Report Firebase 인증과 LINE Report 30일 만료 서명 URL 분리
+     - [O] Cloud Run `LINE_EVENT_DISPATCHER=cloud-tasks` 설정 및 미인증 내부 요청 `401` 검증
+     - [ ] malformed JWT 예외 처리 수정본 배포 후 `401` 재검증
+       - [O] Cloud Tasks API 활성화와 `asia-northeast1/line-events` Queue 생성
+       - [O] Cloud Run Runtime Service Account에 `roles/cloudtasks.enqueuer` 부여
+       - [O] LINE 메시지 전송부터 OIDC 내부 처리와 Push 응답까지 재검증
      - 반영 문서: `004-api.md`, `006-deployment.md`, `012-frontend.md`
    - [ ] Firebase 활성화, Hosting Preview와 Production 배포 검증
-     - Web 관리 API 인증 적용 후 Developer Connect Trigger 활성화
+     - [O] 수동 Preview Channel 배포, SPA·Cloud Run Rewrite·Cache Header와 로그인 UI 검증
+     - [O] 허용 UID 정상 접근과 다른 UID 권한 거부 검증
+     - [O] `main` Push용 `town-ai-web-production` Developer Connect Trigger 생성
+     - [ ] Live Channel 최초 배포와 Production 주요 화면 검증
      - 검증 문서: `013-firebase-hosting-deployment.md`
    - 반영 문서: `012-frontend.md`, `013-firebase-hosting-deployment.md`
 6. [ ] ERD PNG/XLSX 최종 동기화

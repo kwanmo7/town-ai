@@ -35,7 +35,10 @@ Firebase Hosting과 Preview Channel URL은 공개된다. Preview도 `/api/**`를
 - [x] 허용된 단일 UID만 관리 API 호출 허용
 - [x] LINE Webhook Signature, Cloud Tasks OIDC 및 Health Check 예외 경로 분리
 - [x] LINE Report 공개 링크에 30일 만료 HMAC-SHA256 서명 적용
-- [ ] Preview에서 인증·권한·기존 LINE 흐름 회귀 검증
+- [x] Preview에서 인증·권한·기존 LINE 흐름 회귀 검증
+  - [x] 허용 UID 로그인과 Dashboard 접근
+  - [x] 다른 Firebase UID의 관리 권한 거부
+  - [x] 실제 LINE Webhook → Cloud Tasks → OIDC 처리
 
 ## 1. Firebase 활성화
 
@@ -178,8 +181,46 @@ Refresh Token이나 Service Account JSON Key는 Repository에 저장하지 않�
 2026-08-26 기준 기존 GCP Project에 Firebase가 활성화됐고 Web App 등록과 Google 로그인
 Provider 활성화를 완료했다. Frontend 로그인, Backend ID Token 검증, 단일 UID 제한과
 LINE·Cloud Tasks·Health 예외 경로, LINE Report 만료 서명 URL 구현 및 자동 테스트도
-완료했다. Cloud Run 인증 환경변수는 설정했으며 새 Backend Revision 배포 후 실제
-401·403·정상 접근, Preview·Live 배포와 Production 통합 검증은 아직 완료되지 않았다.
+완료했다.
+
+배포된 Cloud Run Revision을 외부에서 확인한 결과는 다음과 같다.
+
+- Liveness와 Readiness는 모두 `200 UP`
+- Token 없는 관리 API는 `401 AUTHENTICATION_REQUIRED`
+- 잘못된 Bearer Token은 `401 INVALID_FIREBASE_TOKEN`
+- 인증 없는 Web Report 본문 요청은 `401 AUTHENTICATION_REQUIRED`
+- 변조한 LINE Report 서명 URL은 `401 INVALID_REPORT_LINK`
+
+수동 `manual-preview` Channel을 배포했으며 임시 URL의 `/`, `/areas`, `/reports` 직접
+접속은 모두 `200`으로 SPA Rewrite가 정상 동작했다. `/api/areas`와 `/api/auth/me`는 Token
+없이 `401`을 반환해 Cloud Run Rewrite와 관리 API 인증 경계도 확인했다. 정적 Asset은
+`public,max-age=31536000,immutable`, `index.html`은 `no-cache` Header를 반환한다.
+Preview는 Firebase Authentication 허용 Domain에 자동 등록됐고 Google 로그인 화면도
+표시된다.
+
+Preview 브라우저에서 허용 UID로 로그인해 Dashboard와 관리 API의 정상 접근을 확인했고,
+다른 Firebase UID로 로그인하면 `WEB_ACCESS_DENIED` 안내와 함께 관리 화면 진입이 차단되는
+것도 확인했다. Live Channel의 `town-ai.web.app`은 아직 `404 Site Not Found`를 반환하므로
+Production Hosting 배포는 아직 완료되지 않았다.
+
+Developer Connect의 `main` Push를 감지하는 `town-ai-web-production` Cloud Build Trigger를
+`asia-northeast1`에 생성했다. Trigger는 `frontend/cloudbuild.production.yaml`과 전용
+`town-ai-firebase-deployer` Service Account를 사용한다. 실제 Live Channel 최초 배포와
+Production 화면 검증은 다음 PR을 `main`에 Merge한 뒤 수행한다.
+
+Cloud Run에 `LINE_EVENT_DISPATCHER=cloud-tasks`와 OIDC 설정을 적용한 뒤 내부 Endpoint의
+인증 없는 요청은 `401 INVALID_LINE_TASK_AUTHORIZATION`으로 차단되는 것을 확인했다.
+구조가 정상인 잘못된 JWT도 `401`이지만 JWT 형식 자체가 깨진 문자열은 Google 인증
+Library의 파싱 예외가 변환되지 않아 `500`을 반환하는 문제를 확인했다. 해당 예외를 내부
+OIDC 검증 실패로 변환하는 회귀 테스트와 수정은 완료했으며, Backend 재배포 후 `401` 응답과
+실제 LINE 메시지의 Cloud Tasks·OIDC 처리를 다시 검증한다.
+
+실제 LINE 회귀 검증 중 Cloud Tasks API가 비활성화돼 있고 `asia-northeast1`의 `line-events`
+Queue가 생성되지 않아 Webhook이 `503`을 반환하는 운영 설정 누락을 확인했다. 2026-08-26에
+Cloud Tasks API를 활성화하고 Queue를 생성했으며, Cloud Run Runtime Service Account에
+`roles/cloudtasks.enqueuer`를 추가했다. Queue는 초당·동시 실행 각각 1개, 최대 5회·1시간
+이내 재시도로 구성했다. 이후 실제 LINE 이벤트에서 Webhook `200`, OIDC 내부 Task Endpoint
+`204`와 잔여 Task 0건을 확인해 비동기 처리 경로가 정상 복구된 것을 검증했다.
 
 ## 참고 문서
 

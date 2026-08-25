@@ -4,8 +4,9 @@ Town AI의 지역, 방문 기록, 통계와 AI 리포트를 관리하는 React C
 
 ## 실행 환경
 
-- Node.js 20 이상
+- Node.js 24.19.0 LTS
 - npm 10 이상
+- React 19.2.8 (Latest 안정 채널)
 - Local Backend: `http://localhost:8080`
 
 ## Local 실행

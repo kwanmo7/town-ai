@@ -28,7 +28,7 @@ test('리포트 유형을 즉시 필터링하고 선택한 리포트를 삭제�
   await installApiMock(page, state)
   await page.goto('/reports')
 
-  await page.getByRole('button', { name: '전체 요약' }).click()
+  await page.getByRole('button', { name: '전체 요약', exact: true }).click()
   await expect(page.getByRole('heading', { name: '전체 요약 리포트' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '한 지역 분석 리포트' })).toHaveCount(0)
 
