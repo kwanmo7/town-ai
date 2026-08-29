@@ -14,7 +14,6 @@ import com.townai.visit.service.VisitDraftService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
 import java.time.Clock;
@@ -34,7 +33,6 @@ import java.util.Locale;
  * 않는다.</p>
  */
 @Service
-@Transactional(readOnly = true)
 public class VisitDraftServiceImpl implements VisitDraftService {
 
     private static final Logger log =

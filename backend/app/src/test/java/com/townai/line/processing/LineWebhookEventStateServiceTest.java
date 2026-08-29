@@ -5,12 +5,14 @@ import com.townai.line.entity.LineWebhookEventStatus;
 import com.townai.line.model.LineWebhookEventPayload;
 import com.townai.line.model.LineWebhookEventType;
 import com.townai.line.repository.LineWebhookEventRepository;
+import com.townai.persistence.firestore.FirestoreTransactionRunner;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -26,11 +28,22 @@ class LineWebhookEventStateServiceTest {
 
     private final LineWebhookEventRepository repository =
             mock(LineWebhookEventRepository.class);
+    private final FirestoreTransactionRunner transactions =
+            mock(FirestoreTransactionRunner.class);
     private final LineWebhookEventStateService service =
             new LineWebhookEventStateService(
                     repository,
+                    transactions,
                     Clock.fixed(NOW, ZoneOffset.UTC)
             );
+
+    LineWebhookEventStateServiceTest() {
+        when(transactions.execute(
+                org.mockito.ArgumentMatchers.<Supplier<Object>>any()
+        )).thenAnswer(invocation -> invocation
+                .<Supplier<?>>getArgument(0)
+                .get());
+    }
 
     @Test
     void claimsReceivedEventAndIncrementsAttempt() {

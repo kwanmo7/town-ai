@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 /**
  * 내부 Task 요청의 점유, 업무 처리 및 최종 상태 전환을 조율한다.
  *
- * <p>업무 Handler 호출은 DB Transaction과 Lease Lock 밖에서 수행한다.
+ * <p>업무 Handler 호출은 Firestore Transaction과 Lease Lock 밖에서 수행한다.
  * Handler가 아직 구현되지 않은 개발 단계에서는 이벤트를 점유하지 않고 재시도를
  * 반환해 Attempt를 소모하거나 이벤트를 최종 실패시키지 않는다.</p>
  */

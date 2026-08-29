@@ -50,13 +50,13 @@ class VisitServiceImplTest {
         VisitRequest request = createRequest(1L, "  재방문 메모  ");
         when(areaRepository.findByIdAndDeletedAtIsNull(1L))
                 .thenReturn(Optional.of(area));
-        when(visitRepository.saveAndFlush(any(VisitEntity.class)))
+        when(visitRepository.save(any(VisitEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         visitService.create(request);
 
         ArgumentCaptor<VisitEntity> captor = ArgumentCaptor.forClass(VisitEntity.class);
-        verify(visitRepository).saveAndFlush(captor.capture());
+        verify(visitRepository).save(captor.capture());
         VisitEntity saved = captor.getValue();
         assertSame(area, saved.getArea());
         assertEquals("재방문 메모", saved.getMemo());
@@ -68,13 +68,13 @@ class VisitServiceImplTest {
         AreaEntity area = createArea("센터미나미");
         when(areaRepository.findByIdAndDeletedAtIsNull(1L))
                 .thenReturn(Optional.of(area));
-        when(visitRepository.saveAndFlush(any(VisitEntity.class)))
+        when(visitRepository.save(any(VisitEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         visitService.create(createRequest(1L, "  "));
 
         ArgumentCaptor<VisitEntity> captor = ArgumentCaptor.forClass(VisitEntity.class);
-        verify(visitRepository).saveAndFlush(captor.capture());
+        verify(visitRepository).save(captor.capture());
         assertNull(captor.getValue().getMemo());
     }
 
@@ -89,7 +89,7 @@ class VisitServiceImplTest {
         );
 
         assertEquals(ErrorCode.AREA_NOT_FOUND, exception.errorCode());
-        verify(visitRepository, never()).saveAndFlush(any());
+        verify(visitRepository, never()).save(any());
     }
 
     @Test

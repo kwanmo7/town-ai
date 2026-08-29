@@ -9,6 +9,7 @@ import com.townai.line.model.LineWebhookEventWorkItem;
 import com.townai.line.repository.LineVisitDraftRepository;
 import com.townai.line.entity.LineWebhookEventEntity;
 import com.townai.line.repository.LineWebhookEventRepository;
+import com.townai.persistence.firestore.FirestoreTransactionRunner;
 import com.townai.visit.dto.VisitDraftAreaResponse;
 import com.townai.visit.dto.VisitDraftResponse;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -39,13 +41,24 @@ class LineVisitDraftPersistenceServiceTest {
     private final LineWebhookEventRepository eventRepository =
             mock(LineWebhookEventRepository.class);
     private final AreaRepository areaRepository = mock(AreaRepository.class);
+    private final FirestoreTransactionRunner transactions =
+            mock(FirestoreTransactionRunner.class);
     private final LineVisitDraftPersistenceService service =
             new LineVisitDraftPersistenceService(
                     draftRepository,
                     eventRepository,
                     areaRepository,
+                    transactions,
                     Clock.fixed(NOW, ZoneOffset.UTC)
             );
+
+    LineVisitDraftPersistenceServiceTest() {
+        when(transactions.execute(
+                org.mockito.ArgumentMatchers.<Supplier<Object>>any()
+        )).thenAnswer(invocation -> invocation
+                .<Supplier<?>>getArgument(0)
+                .get());
+    }
 
     @Test
     void storesCompleteUnregisteredAreaAsConfirmableCandidate() {
@@ -58,7 +71,7 @@ class LineVisitDraftPersistenceServiceTest {
                         "요코하마시",
                         "센터미나미"
                 )).thenReturn(Optional.empty());
-        when(draftRepository.saveAndFlush(
+        when(draftRepository.save(
                 org.mockito.ArgumentMatchers.any()
         )).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -96,7 +109,7 @@ class LineVisitDraftPersistenceServiceTest {
                         "요코하마시",
                         "센터미나미"
                 )).thenReturn(Optional.of(existing));
-        when(draftRepository.saveAndFlush(
+        when(draftRepository.save(
                 org.mockito.ArgumentMatchers.any()
         )).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -109,7 +122,7 @@ class LineVisitDraftPersistenceServiceTest {
         assertEquals(false, result.isAreaRegistrationRequired());
         ArgumentCaptor<LineVisitDraftEntity> captor =
                 ArgumentCaptor.forClass(LineVisitDraftEntity.class);
-        verify(draftRepository).saveAndFlush(captor.capture());
+        verify(draftRepository).save(captor.capture());
         assertEquals(existing, captor.getValue().getArea());
     }
 
@@ -151,7 +164,7 @@ class LineVisitDraftPersistenceServiceTest {
                 .thenReturn(Optional.of(source));
         when(areaRepository.findByIdAndDeletedAtIsNull(1L))
                 .thenReturn(Optional.of(area));
-        when(draftRepository.saveAndFlush(
+        when(draftRepository.save(
                 org.mockito.ArgumentMatchers.any()
         )).thenAnswer(invocation -> invocation.getArgument(0));
 

@@ -4,7 +4,6 @@ import com.townai.line.entity.LineWebhookEventEntity;
 import com.townai.line.model.LineWebhookEventPayload;
 import com.townai.line.repository.LineWebhookEventRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -14,11 +13,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 검증된 LINE 이벤트를 하나의 DB Transaction으로 저장한다.
+ * 검증된 LINE 이벤트를 하나의 Firestore Transaction으로 저장한다.
  *
  * <p>이미 저장된 {@code webhookEventId}는 새 Row를 만들지 않는다. 반환 목록에는
  * 기존 이벤트도 포함해 Webhook 재전송 시 Dispatcher 전달을 다시 시도할 수 있게
- * 한다. Transaction이 Commit된 뒤에만 상위 Service가 Dispatcher를 호출한다.</p>
+ * 한다. Firestore Commit이 끝난 뒤에만 상위 Service가 Dispatcher를 호출한다.</p>
  */
 @Service
 public class LineWebhookEventPersistenceService {
@@ -42,7 +41,6 @@ public class LineWebhookEventPersistenceService {
      * @param payloads 검증을 통과한 이벤트 Payload 목록
      * @return 저장 여부와 관계없이 Dispatcher에 전달할 고유 이벤트 ID 목록
      */
-    @Transactional
     public List<String> store(List<LineWebhookEventPayload> payloads) {
         if (payloads == null || payloads.isEmpty()) {
             return List.of();
@@ -71,7 +69,7 @@ public class LineWebhookEventPersistenceService {
                 .toList();
 
         if (!newEvents.isEmpty()) {
-            eventRepository.saveAllAndFlush(newEvents);
+            eventRepository.saveAll(newEvents);
         }
         return List.copyOf(uniquePayloads.keySet());
     }

@@ -4,8 +4,8 @@ import com.townai.line.entity.LineWebhookEventEntity;
 import com.townai.line.entity.LineWebhookEventStatus;
 import com.townai.line.model.LineWebhookEventWorkItem;
 import com.townai.line.repository.LineWebhookEventRepository;
+import com.townai.persistence.firestore.FirestoreTransactionRunner;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -29,6 +29,7 @@ public class LineWebhookEventStateService {
             "MAX_ATTEMPTS_EXCEEDED";
 
     private final LineWebhookEventRepository eventRepository;
+    private final FirestoreTransactionRunner transactions;
     private final Clock clock;
 
     /**
@@ -39,9 +40,11 @@ public class LineWebhookEventStateService {
      */
     public LineWebhookEventStateService(
             LineWebhookEventRepository eventRepository,
+            FirestoreTransactionRunner transactions,
             Clock clock
     ) {
         this.eventRepository = eventRepository;
+        this.transactions = transactions;
         this.clock = clock;
     }
 
@@ -51,8 +54,11 @@ public class LineWebhookEventStateService {
      * @param webhookEventId 점유할 LINE Webhook Event ID
      * @return 점유 상태와 성공 시 Work Item
      */
-    @Transactional
     public LineEventClaim claim(String webhookEventId) {
+        return transactions.execute(() -> claimInTransaction(webhookEventId));
+    }
+
+    private LineEventClaim claimInTransaction(String webhookEventId) {
         Optional<LineWebhookEventEntity> found =
                 eventRepository.findByIdForUpdate(webhookEventId);
         if (found.isEmpty()) {
@@ -76,12 +82,14 @@ public class LineWebhookEventStateService {
         }
         if (event.getAttemptCount() >= MAX_ATTEMPTS) {
             event.fail(MAX_ATTEMPTS_ERROR_CODE, now);
+            eventRepository.save(event);
             return LineEventClaim.withoutWork(
                     LineEventClaimStatus.TERMINAL
             );
         }
 
         event.startProcessing(now);
+        eventRepository.save(event);
         return LineEventClaim.acquired(toWorkItem(event));
     }
 
@@ -92,8 +100,17 @@ public class LineWebhookEventStateService {
      * @param attemptCount Work Item에 기록된 처리 시도 번호
      * @return 현재 시도의 상태가 반영됐으면 {@code true}
      */
-    @Transactional
     public boolean complete(
+            String webhookEventId,
+            int attemptCount
+    ) {
+        return transactions.execute(() -> completeInTransaction(
+                webhookEventId,
+                attemptCount
+        ));
+    }
+
+    private boolean completeInTransaction(
             String webhookEventId,
             int attemptCount
     ) {
@@ -104,6 +121,7 @@ public class LineWebhookEventStateService {
             return false;
         }
         found.get().complete(clock.instant());
+        eventRepository.save(found.get());
         return true;
     }
 
@@ -116,8 +134,21 @@ public class LineWebhookEventStateService {
      * @param retryable 같은 입력으로 다시 시도할 가치가 있는지 여부
      * @return Task 재시도 여부 또는 만료된 이전 시도 여부
      */
-    @Transactional
     public LineEventFailureResult fail(
+            String webhookEventId,
+            int attemptCount,
+            String errorCode,
+            boolean retryable
+    ) {
+        return transactions.execute(() -> failInTransaction(
+                webhookEventId,
+                attemptCount,
+                errorCode,
+                retryable
+        ));
+    }
+
+    private LineEventFailureResult failInTransaction(
             String webhookEventId,
             int attemptCount,
             String errorCode,
@@ -134,10 +165,12 @@ public class LineWebhookEventStateService {
         String validatedErrorCode = validateErrorCode(errorCode);
         if (!retryable || event.getAttemptCount() >= MAX_ATTEMPTS) {
             event.fail(validatedErrorCode, clock.instant());
+            eventRepository.save(event);
             return LineEventFailureResult.TERMINAL;
         }
 
         event.releaseForRetry(validatedErrorCode);
+        eventRepository.save(event);
         return LineEventFailureResult.RETRY;
     }
 

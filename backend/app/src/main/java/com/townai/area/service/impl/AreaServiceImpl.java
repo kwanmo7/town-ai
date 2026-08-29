@@ -8,9 +8,8 @@ import com.townai.area.repository.AreaRepository;
 import com.townai.area.service.AreaService;
 import com.townai.common.error.ApiException;
 import com.townai.common.error.ErrorCode;
-import org.springframework.dao.DataIntegrityViolationException;
+import com.townai.persistence.firestore.DuplicateDocumentException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -20,12 +19,11 @@ import java.util.List;
 /**
  * Area 문자열 정규화, 위치 중복 검사와 Transaction 경계를 구현한다.
  *
- * <p>공백 정리 후 애플리케이션에서 먼저 중복을 확인하고, 동시 요청은 DB UNIQUE
- * 제약과 {@code saveAndFlush}/{@code flush}로 최종 방어한다. 삭제는 Visit 이력을
+ * <p>공백 정리 후 애플리케이션에서 먼저 중복을 확인하고, 동시 요청은 Firestore의
+ * {@code areaKeys} 예약 문서와 트랜잭션으로 최종 방어한다. 삭제는 Visit 이력을
  * 보존하기 위해 UTC 초 단위 시각을 기록하는 논리 삭제 방식이다.</p>
  */
 @Service
-@Transactional(readOnly = true)
 public class AreaServiceImpl implements AreaService {
 
     private final AreaRepository areaRepository;
@@ -43,7 +41,6 @@ public class AreaServiceImpl implements AreaService {
     }
 
     @Override
-    @Transactional
     public AreaDetailResponse create(AreaRequest request) {
         NormalizedArea normalized = normalize(request);
         validateDuplicate(normalized);
@@ -56,8 +53,8 @@ public class AreaServiceImpl implements AreaService {
                 .build();
 
         try {
-            return AreaDetailResponse.from(areaRepository.saveAndFlush(area));
-        } catch (DataIntegrityViolationException exception) {
+            return AreaDetailResponse.from(areaRepository.save(area));
+        } catch (DuplicateDocumentException exception) {
             throw new ApiException(ErrorCode.AREA_ALREADY_EXISTS);
         }
     }
@@ -76,7 +73,6 @@ public class AreaServiceImpl implements AreaService {
     }
 
     @Override
-    @Transactional
     public AreaDetailResponse update(Long areaId, AreaRequest request) {
         AreaEntity area = findActiveArea(areaId);
         NormalizedArea normalized = normalize(request);
@@ -98,18 +94,17 @@ public class AreaServiceImpl implements AreaService {
         );
 
         try {
-            areaRepository.flush();
-            return AreaDetailResponse.from(area);
-        } catch (DataIntegrityViolationException exception) {
+            return AreaDetailResponse.from(areaRepository.save(area));
+        } catch (DuplicateDocumentException exception) {
             throw new ApiException(ErrorCode.AREA_ALREADY_EXISTS);
         }
     }
 
     @Override
-    @Transactional
     public void delete(Long areaId) {
         AreaEntity area = findActiveArea(areaId);
         area.softDelete(Instant.now(clock).truncatedTo(ChronoUnit.SECONDS));
+        areaRepository.save(area);
     }
 
     private AreaEntity findActiveArea(Long areaId) {
@@ -118,7 +113,7 @@ public class AreaServiceImpl implements AreaService {
     }
 
     /**
-     * 사전 조회로 일반 중복을 처리하고 DB UNIQUE 제약으로 동시 요청의 중복을 최종 방어한다.
+     * 사전 조회로 일반 중복을 처리하고 예약 문서로 동시 요청의 중복을 최종 방어한다.
      */
     private void validateDuplicate(NormalizedArea area) {
         if (areaRepository.existsByPrefectureAndCityAndName(

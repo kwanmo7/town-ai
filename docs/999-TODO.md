@@ -68,12 +68,41 @@
      - Build Type은 Dockerfile, Source Location은 `backend/Dockerfile` 사용
      - `town-ai-api` 실제 Backend 배포 및 Liveness·Readiness `UP` 확인
    - [O] 실제 외부 서비스 및 Production GCP 통합 검증
-     - [O] Cloud Run, Cloud SQL, 실제 OpenAI AREA Report와 GCS 저장·조회·삭제
+     - [O] Cloud Run, Cloud SQL, 실제 OpenAI AREA Report와 GCS 저장·조회·삭제 (Legacy 검증)
      - [O] LINE Messaging API, Cloud Tasks와 OIDC
      - [O] 위치 보완·저장 완료 메뉴·Report 공개 URL 수정본 Production 재검증
      - [O] 기존 Report 재사용과 분석 입력 변경 시 재생성 Production 검증
      - 검증 결과: `010-production-gcp-integration.md`
-5. [ ] Frontend 구현 및 Production 배포
+   - [ ] Cloud SQL에서 Firestore로 Production 전환
+     - [O] JPA·Flyway·MySQL·Cloud SQL Connector Runtime 의존성 제거
+     - [O] Area·Visit·Report·Statistics·LINE Firestore Repository 구현
+     - [O] 숫자 ID Counter와 Area 복합 중복 방지 Key 구현
+     - [O] Local Firestore Emulator 실행·초기화·Seed Script 구현
+     - [O] Emulator Repository 통합 Test와 GitHub Actions 연결
+     - [O] 데이터 모델·배포·전환·Rollback 문서화
+     - [O] Production `town-ai` Firestore Standard Native를 `asia-northeast1`에 생성
+     - [O] Production `town-ai` Client 접근 거부 Rules와 V1 Index 배포
+     - [O] Production `town-ai` Firestore Delete Protection 활성화
+     - [O] 전용 Runtime Service Account 생성 및 최소 권한 사전 구성
+       - [O] `town-ai-runtime` 계정 생성
+       - [O] Firestore·Cloud Tasks·Logging Project 역할 부여
+       - [O] `gs://town_ai` Object User와 사용 중인 Secret 6개 Accessor 부여
+       - [O] Cloud Tasks OIDC용 자체 `iam.serviceAccounts.actAs` 부여
+     - [ ] 새 Cloud Run Revision에 전용 계정 연결
+     - [ ] 회귀 검증 후 기본 Compute 계정의 `Editor`·관리자 권한 제거
+     - [O] 기존 데이터 복원 범위와 방법 결정
+       - [O] Legacy Instance `SUSPENDED`, 자동 백업 비활성 및 보존 Backup 0건 확인
+       - [O] 유료 재기동 없이 GCS Report 기반 복원 선택
+       - [O] Area 3개·Visit 3개·`areaKeys`·`counters` 복원 및 필드값 검증
+       - [O] Report Metadata와 LINE 처리 상태는 신규 생성하도록 결정
+       - [O] GCS Markdown 9개의 generation·Hash·크기·수정 시각 불변 검증
+     - [ ] Firestore Backend Revision 배포 및 Web·LINE 전체 회귀 검증
+     - [ ] scale-to-zero 이후 첫 LINE 요청 검증
+     - [O] Legacy Cloud SQL `town-ai-api` Instance 삭제
+     - [ ] 새 Revision에서 Cloud SQL 연결·환경변수·Secret 참조 제거
+     - [ ] 회귀 검증 후 Legacy DB Secret·기본 Compute 계정 권한 정리
+     - 설계·검증 문서: `014-firestore-migration.md`, `015-firestore-production-cutover.md`
+5. [O] Frontend 구현 및 Production 배포
    - [O] React·TypeScript·Vite 프로젝트와 공통 반응형 Layout 구성
    - [O] Backend API Client와 Loading·Error·Empty 공통 상태 구성
    - [O] Dashboard, Area·Visit·Report 목록과 Markdown Report 조회 구현
@@ -94,10 +123,11 @@
      - Desktop Chrome·Pixel 7에서 주요 6개 Route의 WCAG 심각 위반과 가로 넘침 검사
      - Visit 수정·삭제, Report 필터·삭제, Top 5 Area 통계 조회 E2E 검증
      - GitHub Actions에서 Chromium 설치 후 E2E 자동 실행
-   - [O] Firebase Hosting 설정과 Preview·Production Cloud Build 구성
+   - [O] Firebase Hosting 설정과 Production Cloud Build 구성
      - 정적 Asset Cache, SPA 및 `/api/**` Cloud Run Rewrite
-     - PR `pr-{번호}` 7일 Preview Channel과 main Live Channel 설정 파일
-   - [ ] 공개 Web 관리 API 인증과 단일 사용자 권한 제한
+     - 수동 Preview 설정 파일과 main Live Channel 자동 배포
+     - 개인용 V1에서는 PR Preview Trigger를 생성하지 않음
+   - [O] 공개 Web 관리 API 인증과 단일 사용자 권한 제한
      - Firebase Hosting과 Preview URL은 공개되므로 쓰기·삭제 API를 인증 없이 노출하지 않음
      - [O] Firebase Google 로그인 UI와 모든 관리 API의 ID Token 전달
      - [O] Firebase Admin SDK Token 검증과 `FIREBASE_ALLOWED_UID` 단일 사용자 제한
@@ -107,22 +137,22 @@
      - [O] 허용 UID 정상 접근과 다른 Firebase UID의 `403` 검증
      - [O] Web Report Firebase 인증과 LINE Report 30일 만료 서명 URL 분리
      - [O] Cloud Run `LINE_EVENT_DISPATCHER=cloud-tasks` 설정 및 미인증 내부 요청 `401` 검증
-     - [ ] malformed JWT 예외 처리 수정본 배포 후 `401` 재검증
+     - [O] malformed JWT 예외 처리 수정본 배포 후 `401` 재검증
        - [O] Cloud Tasks API 활성화와 `asia-northeast1/line-events` Queue 생성
        - [O] Cloud Run Runtime Service Account에 `roles/cloudtasks.enqueuer` 부여
        - [O] LINE 메시지 전송부터 OIDC 내부 처리와 Push 응답까지 재검증
      - 반영 문서: `004-api.md`, `006-deployment.md`, `012-frontend.md`
-   - [ ] Firebase 활성화, Hosting Preview와 Production 배포 검증
+   - [O] Firebase 활성화, Hosting Preview와 Production 배포 검증
      - [O] 수동 Preview Channel 배포, SPA·Cloud Run Rewrite·Cache Header와 로그인 UI 검증
      - [O] 허용 UID 정상 접근과 다른 UID 권한 거부 검증
      - [O] `main` Push용 `town-ai-web-production` Developer Connect Trigger 생성
-     - [ ] Live Channel 최초 배포와 Production 주요 화면 검증
-     - 검증 문서: `013-firebase-hosting-deployment.md`
+     - [O] Live Channel 최초 배포와 Production 주요 화면 검증
+     - 설계 문서: `013-firebase-hosting-deployment.md`
    - 반영 문서: `012-frontend.md`, `013-firebase-hosting-deployment.md`
-6. [ ] ERD PNG/XLSX 최종 동기화
+6. [O] 관계형 ERD PNG/XLSX를 Legacy 산출물로 보존
 
-- ERD의 기준 스키마는 개발 중 `ERD/town-ai-v1.sql`로 관리한다.
-- `ERD/town-ai-v1.png`와 `ERD/town-ai-v1.xlsx`는 Backend 구현 이후 최종 스키마를 기준으로 갱신한다.
+- 현행 데이터 모델 기준은 `003-erd.md`의 Firestore Collection 구조이다.
+- 기존 SQL·PNG·XLSX는 Cloud SQL 데이터 Export와 Rollback 참고용으로만 보존한다.
 
 ## V1 설계 결정
 
@@ -135,15 +165,15 @@
   - `visit-parser-v1`은 기존 Area 매칭, 미등록 Area 후보와 위치 확인 및 Draft 부분 수정을 지원
   - DB 컬럼은 `VARCHAR(30)` 사용
   - 반영 문서: `003-erd.md`, `004-api.md`, `ERD/town-ai-v1.sql`
-- [O] PK 및 Timestamp 생성 정책 확정
-  - Entity PK는 `BIGINT AUTO_INCREMENT`, `report_area`는 복합 PK 사용
-  - `created_at`, `updated_at`은 DB의 `CURRENT_TIMESTAMP`를 사용하고 `updated_at`은 수정 시 자동 갱신
-  - DB와 애플리케이션은 UTC를 사용하고 API는 ISO8601로 직렬화
+- [O] ID 및 Timestamp 생성 정책 확정
+  - 기존 API 호환용 숫자 ID는 Firestore `counters` 문서와 Transaction으로 생성
+  - `createdAt`, `updatedAt`은 Backend UTC Clock과 Firestore Timestamp를 사용
+  - Firestore와 애플리케이션은 UTC를 사용하고 API는 ISO8601로 직렬화
   - Visit 점수는 DB와 Backend에서 0 이상 10 이하로 검증
   - 반영 문서: `003-erd.md`, `ERD/town-ai-v1.sql`
 - [O] Report ID 선점 및 실패 보상 순서 확정
-  - Transaction 내부에서 Report Row를 먼저 INSERT해 ID를 얻은 후 Storage 경로 생성
-  - Storage 저장 후 DB 실패 시 Rollback하고 Storage 객체를 Best-effort로 삭제
+  - Firestore에 임시 Metadata를 저장해 ID를 얻은 후 Storage 경로 생성
+  - Storage 저장 후 Metadata 확정 실패 시 Storage 객체와 임시 Metadata를 Best-effort로 삭제
   - 반영 문서: `003-erd.md`, `004-api.md`
 - [O] LINE Bot Backend V1 범위 확정
   - Webhook 서명 검증, 텍스트 Visit Draft 처리 및 Push Message 결과 회신
@@ -153,8 +183,8 @@
 - [O] LINE Webhook 비동기 처리 및 중복 방지 방식 확정
   - Production은 Cloud Tasks HTTP Target과 OIDC 인증 사용
   - Local은 `LocalLineEventDispatcher` 사용
-  - `webhookEventId`를 DB PK 및 결정적 Task 이름으로 사용
-  - 이벤트 처리와 Draft 확인은 DB 상태 전환으로 멱등성 보장
+  - `webhookEventId`를 Firestore 문서 ID 및 결정적 Task 이름으로 사용
+  - 이벤트 처리와 Draft 확인은 Firestore 상태 전환으로 멱등성 보장
   - 기존 Draft는 `source_webhook_event_id`로 조회해 재사용
   - Push Message는 `webhookEventId`와 메시지 용도 기반 UUIDv5 Retry Key 사용
   - 다섯 번째 애플리케이션 처리 실패는 이벤트를 `FAILED`로 종료
@@ -163,7 +193,7 @@
   - Java 25 LTS
   - Spring Boot 4.1.x, 초기 고정 Version `4.1.0`
   - Gradle `9.6.1`
-  - Local 및 Production MySQL 8.4 LTS
+  - Local은 Firestore Emulator, Production은 Firestore Standard Native mode
   - 반영 파일: `backend/app/build.gradle`, `backend/gradle/wrapper/gradle-wrapper.properties`
   - 반영 문서: `001-requirements.md`, `006-deployment.md`
 - [O] 날짜 및 Timestamp 정책 확정
@@ -175,13 +205,12 @@
   - 기존 Visit Row는 보존하되 삭제된 Area의 Visit은 일반 목록·통계·Report에서 제외
   - Local Seed Area는 전용 복구 스크립트로 `deleted_at`만 되돌릴 수 있음
   - 반영 문서: `003-erd.md`, `004-api.md`, `ERD/town-ai-v1.sql`
-- [O] Report와 생성 대상 Area는 `report_area` 연결 테이블로 관리
-  - 복합 PK: `(report_id, area_id)`
-  - 일반 컬럼: `display_order`
-  - 반영 문서: `003-erd.md`, `004-api.md`, `ERD/town-ai-v1.sql`
+- [O] Report와 생성 대상 Area 관계 관리
+  - Firestore Report 문서의 `targetAreaIds` 배열로 ID와 표시 순서를 함께 보존
+  - 반영 문서: `003-erd.md`, `004-api.md`
 - [O] Statistics 집계 및 정렬 정책 확정
   - 반영 문서: `004-api.md`
-- [O] SUMMARY는 SQL 통계 결과에 짧은 AI Comment를 추가
+- [O] SUMMARY는 Firestore 원본에서 Backend가 계산한 통계에 짧은 AI Comment를 추가
   - 반영 문서: `004-api.md`
 - [O] ALL은 모든 Area와 Visit을 기반으로 AI 상세 분석 리포트 생성
   - 반영 문서: `004-api.md`
@@ -197,9 +226,10 @@
 
 ## V1 미결 사항
 
-- [O] Local MySQL 8.4 환경 전환
-  - MySQL 8.4.10과 Local `town_ai` Database 사용
-  - Flyway V1·V2, Hibernate Schema 검증 및 Health Check 기동 확인 완료
+- [O] Local Firestore Emulator 환경 전환
+  - `demo-town-ai`, Firestore Port 8081, Emulator UI Port 4000 사용
+  - Area 3개·Visit 5개 Seed와 전체 초기화 후 ID Reset 검증 완료
+  - Unit Test와 실제 Emulator Repository 통합 Test 검증
   - 실행 절차 및 결과 문서: `007-local-database.md`
 - [O] Cloud Storage 디렉터리 및 파일명 정책 확정
   - 객체 경로: `reports/v1/{reportType-lowercase}/{filename}_{yyyy-MM-dd}_{reportId}.md`
@@ -225,16 +255,20 @@
   - 테스트 Report·Visit 삭제와 Area Soft Delete 완료
   - 검증 결과: `010-production-gcp-integration.md`
 - [O] Production GCP Region은 `asia-northeast1`(Tokyo)로 통일
-  - 적용 대상: Cloud Run, Cloud SQL, Cloud Storage, Artifact Registry
+  - 적용 대상: Cloud Run, Firestore, Cloud Storage, Cloud Tasks, Artifact Registry
   - 반영 문서: `006-deployment.md`
-- [ ] Cloud SQL Instance 사양 및 월 비용 확정
-  - 30일 무료 평가 Instance `town-ai-api` 생성
-  - 연결 이름: `town-ai:asia-northeast1:town-ai-api`
-  - Cloud SQL Java Connector `1.29.0`과 Production `DB_URL` 적용
-  - Cloud Run Readiness `UP`, Flyway V1·V2 및 실제 API CRUD로 연결 검증 완료
-  - 무료 평가 종료 전 Pricing Calculator로 장기 운영 사양과 비용 확정
-  - MySQL 8.4와 Enterprise Edition 기준으로 CPU·Memory·Storage 사양 확인
-  - 결정 후 수정할 문서: `006-deployment.md`
+- [ ] Firestore Production 전환 및 Cloud SQL 종료
+  - [O] `town-ai` Database를 Standard·Native·Tokyo로 생성
+  - [O] `town-ai` Rules와 Index 배포
+  - [O] `town-ai` Delete Protection 활성화
+  - [O] Runtime Service Account에 `roles/datastore.user` 부여
+    - [O] `town-ai-runtime` 전용 계정과 최소 권한 사전 구성
+    - [ ] 새 Revision에 전용 계정 연결
+  - [O] GCS Report 기반 Area 3개·Visit 3개 복원과 GCS Markdown 9개 불변 검증
+  - [O] Legacy Cloud SQL `town-ai-api` Instance 삭제
+  - [ ] Firestore 새 Revision 배포와 Web·LINE·scale-to-zero 회귀 검증
+  - [ ] Cloud SQL 연결·환경변수·Secret 참조와 Legacy 권한 정리
+  - 반영 문서: `006-deployment.md`, `014-firestore-migration.md`, `015-firestore-production-cutover.md`
 - [ ] Report 생성 중 장애로 남은 고아 Storage 객체 정리 방식 확정
   - Storage 저장 직후 Process가 종료되면 보상 삭제가 실행되지 않을 수 있음
   - Production 운영 전 수동 점검 절차 또는 정리 Job 중 하나를 결정
@@ -250,7 +284,7 @@
 - [O] 초기 GCP 월 Budget과 알림 기준 확정
   - 월 Budget: `¥1,000`
   - 알림: 실제 사용액 `50%`, `80%`, `100%`, 예상 월말 사용액 `80%`
-  - Cloud SQL 도입 후 정상 예상 월 비용의 120%로 재산정
+  - Firestore·Cloud Run·GCS 실제 사용액 추이를 기준으로 필요 시 재산정
   - 반영 문서: `006-deployment.md`
 - [O] Firebase Hosting과 GCP 서비스를 하나의 Production GCP Project에서 운영
   - 기존 Town-AI GCP Project에 Firebase를 활성화
@@ -274,7 +308,7 @@
 
 ## 최종 동기화
 
-- [ ] ERD 다이어그램 산출물 갱신
-  - Backend 구현 이후 최종 스키마를 기준으로 갱신
-  - `ERD/town-ai-v1.sql`의 Area Soft Delete, UNIQUE Key, ReportArea, LineWebhookEvent, LineVisitDraft 등을 반영
-  - 수정할 파일: `ERD/town-ai-v1.png`, `ERD/town-ai-v1.xlsx`
+- [O] Firestore 데이터 모델 문서 갱신
+  - Collection, Counter, Area Key, 참조·삭제·시간 정책 반영
+  - 관계형 ERD 산출물은 Legacy로 분류
+  - 기준 문서: `003-erd.md`

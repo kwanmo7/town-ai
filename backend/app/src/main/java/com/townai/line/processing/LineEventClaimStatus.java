@@ -14,6 +14,6 @@ public enum LineEventClaimStatus {
     /** 이벤트가 이미 완료 또는 최종 실패 상태임. */
     TERMINAL,
 
-    /** 전달된 Webhook Event ID에 대응하는 DB Row가 없음. */
+    /** 전달된 Webhook Event ID에 대응하는 Firestore 문서가 없음. */
     MISSING
 }

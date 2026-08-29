@@ -11,7 +11,6 @@ import com.townai.statistics.service.StatisticsService;
 import com.townai.visit.entity.VisitEntity;
 import com.townai.visit.repository.VisitRepository;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -31,7 +30,6 @@ import java.util.function.ToIntFunction;
  * 임의로 재계산하지 않도록 평균과 표시 순서는 Backend에서 확정한다.</p>
  */
 @Component
-@Transactional(readOnly = true)
 public class ReportDataAssembler {
 
     private final AreaRepository areaRepository;
@@ -391,7 +389,7 @@ public class ReportDataAssembler {
     }
 
     /**
-     * SQL 통계를 중심으로 짧은 AI Comment를 생성하는 SUMMARY 입력이다.
+     * Backend 통계를 중심으로 짧은 AI Comment를 생성하는 SUMMARY 입력이다.
      *
      * @param areaCount 활성 Area 수
      * @param visitCount 집계된 Visit 수

@@ -1,20 +1,9 @@
 package com.townai.report.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SourceType;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 
@@ -27,44 +16,29 @@ import java.time.Instant;
  * LINE에서 생성한 Report는 원본 Webhook Event ID를 선택적 UNIQUE 멱등 Key로
  * 보존한다.</p>
  */
-@Entity
-@Table(name = "report")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ReportEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "report_type", nullable = false, length = 10)
     private ReportType reportType;
 
-    @Column(nullable = false, length = 50)
     private String model;
 
-    @Column(name = "prompt_version", nullable = false, length = 30)
     private String promptVersion;
 
-    @Column(name = "source_fingerprint", length = 64)
     private String sourceFingerprint;
 
     /**
      * ID 선점 Transaction 안에서만 임시로 null일 수 있다.
      */
-    @Column(name = "storage_path", length = 255)
     private String storagePath;
 
-    @Column(name = "source_webhook_event_id", unique = true, length = 64)
     private String sourceWebhookEventId;
 
-    @CreationTimestamp(source = SourceType.DB)
-    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @UpdateTimestamp(source = SourceType.DB)
-    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
     @Builder
@@ -80,6 +54,39 @@ public class ReportEntity {
         this.promptVersion = promptVersion;
         this.sourceFingerprint = sourceFingerprint;
         this.sourceWebhookEventId = sourceWebhookEventId;
+    }
+
+    public static ReportEntity restore(
+            Long id,
+            ReportType reportType,
+            String model,
+            String promptVersion,
+            String sourceFingerprint,
+            String storagePath,
+            String sourceWebhookEventId,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        ReportEntity report = ReportEntity.builder()
+                .reportType(reportType)
+                .model(model)
+                .promptVersion(promptVersion)
+                .sourceFingerprint(sourceFingerprint)
+                .sourceWebhookEventId(sourceWebhookEventId)
+                .build();
+        report.id = id;
+        report.storagePath = storagePath;
+        report.createdAt = createdAt;
+        report.updatedAt = updatedAt;
+        return report;
+    }
+
+    public void markPersisted(Long persistedId, Instant persistedAt) {
+        if (id == null) {
+            id = persistedId;
+            createdAt = persistedAt;
+        }
+        updatedAt = persistedAt;
     }
 
     /**

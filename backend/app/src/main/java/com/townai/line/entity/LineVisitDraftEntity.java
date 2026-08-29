@@ -4,27 +4,10 @@ import com.townai.area.entity.AreaEntity;
 import com.townai.visit.dto.VisitDraftAreaResponse;
 import com.townai.visit.dto.VisitDraftResponse;
 import com.townai.visit.entity.VisitEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.SourceType;
-import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -40,91 +23,54 @@ import java.util.List;
  * 필요한 신규 Area 위치, 방문일과 다섯 점수가 모두 존재하며, 누락 값이 있으면
  * {@code NEEDS_INPUT}으로 저장한다.</p>
  */
-@Entity
-@Table(name = "line_visit_draft")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LineVisitDraftEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(
-            name = "source_webhook_event_id",
-            nullable = false,
-            unique = true,
-            length = 64
-    )
     private String sourceWebhookEventId;
 
-    @Column(name = "line_user_id", nullable = false, length = 64)
     private String lineUserId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "area_id")
     private AreaEntity area;
 
-    @Column(name = "area_registration_required", nullable = false)
     private boolean areaRegistrationRequired;
 
-    @Column(name = "area_name", length = 25)
     private String areaName;
 
-    @Column(name = "area_prefecture", length = 20)
     private String areaPrefecture;
 
-    @Column(name = "area_city", length = 20)
     private String areaCity;
 
-    @Column(name = "area_station", length = 50)
     private String areaStation;
 
-    @Column(name = "visit_date")
     private LocalDate visitDate;
 
-    @Column(name = "atmosphere_score", columnDefinition = "TINYINT")
     private Integer atmosphereScore;
 
-    @Column(name = "infra_score", columnDefinition = "TINYINT")
     private Integer infraScore;
 
-    @Column(name = "clean_score", columnDefinition = "TINYINT")
     private Integer cleanScore;
 
-    @Column(name = "size_score", columnDefinition = "TINYINT")
     private Integer sizeScore;
 
-    @Column(name = "access_score", columnDefinition = "TINYINT")
     private Integer accessScore;
 
-    @Column(columnDefinition = "TEXT")
     private String memo;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(nullable = false, columnDefinition = "JSON")
     private List<String> warnings;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
     private LineVisitDraftStatus status;
 
-    @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
-    @Column(name = "revision_webhook_event_id", unique = true, length = 64)
     private String revisionWebhookEventId;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "confirmed_visit_id", unique = true)
     private VisitEntity confirmedVisit;
 
-    @CreationTimestamp(source = SourceType.DB)
-    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @UpdateTimestamp(source = SourceType.DB)
-    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
     @Builder(access = AccessLevel.PRIVATE)
@@ -166,6 +112,67 @@ public class LineVisitDraftEntity {
         this.warnings = new ArrayList<>(warnings);
         this.status = status;
         this.expiresAt = expiresAt;
+    }
+
+    public static LineVisitDraftEntity restore(
+            Long id,
+            String sourceWebhookEventId,
+            String lineUserId,
+            AreaEntity area,
+            boolean areaRegistrationRequired,
+            String areaName,
+            String areaPrefecture,
+            String areaCity,
+            String areaStation,
+            LocalDate visitDate,
+            Integer atmosphereScore,
+            Integer infraScore,
+            Integer cleanScore,
+            Integer sizeScore,
+            Integer accessScore,
+            String memo,
+            List<String> warnings,
+            LineVisitDraftStatus status,
+            Instant expiresAt,
+            String revisionWebhookEventId,
+            VisitEntity confirmedVisit,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        LineVisitDraftEntity draft = LineVisitDraftEntity.builder()
+                .sourceWebhookEventId(sourceWebhookEventId)
+                .lineUserId(lineUserId)
+                .area(area)
+                .areaRegistrationRequired(areaRegistrationRequired)
+                .areaName(areaName)
+                .areaPrefecture(areaPrefecture)
+                .areaCity(areaCity)
+                .areaStation(areaStation)
+                .visitDate(visitDate)
+                .atmosphereScore(atmosphereScore)
+                .infraScore(infraScore)
+                .cleanScore(cleanScore)
+                .sizeScore(sizeScore)
+                .accessScore(accessScore)
+                .memo(memo)
+                .warnings(warnings == null ? List.of() : warnings)
+                .status(status)
+                .expiresAt(expiresAt)
+                .build();
+        draft.id = id;
+        draft.revisionWebhookEventId = revisionWebhookEventId;
+        draft.confirmedVisit = confirmedVisit;
+        draft.createdAt = createdAt;
+        draft.updatedAt = updatedAt;
+        return draft;
+    }
+
+    public void markPersisted(Long persistedId, Instant persistedAt) {
+        if (id == null) {
+            id = persistedId;
+            createdAt = persistedAt;
+        }
+        updatedAt = persistedAt;
     }
 
     /**
@@ -237,7 +244,7 @@ public class LineVisitDraftEntity {
     /**
      * 확인 가능한 Draft를 생성된 Visit과 연결하고 확정 상태로 전환한다.
      *
-     * @param visit 같은 Transaction에서 생성된 Visit
+     * @param visit 같은 Firestore Transaction에서 생성된 Visit Reference
      */
     public void confirm(VisitEntity visit) {
         this.confirmedVisit = visit;

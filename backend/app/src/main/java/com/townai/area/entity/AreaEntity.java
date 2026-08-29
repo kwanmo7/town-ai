@@ -1,60 +1,38 @@
 package com.townai.area.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SourceType;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 
 /**
- * 평가 대상 지역의 위치 정보와 논리 삭제 상태를 저장하는 JPA Entity이다.
+ * 평가 대상 지역의 위치 정보와 논리 삭제 상태를 표현하는 Domain Entity이다.
  *
  * <p>동일 지역은 {@code prefecture + city + name} 조합으로 식별한다. 삭제 후에도
  * Visit 이력과 중복 방지 규칙을 보존하므로 Row를 제거하지 않고 {@code deletedAt}을
  * 기록한다. 임의 상태 변경을 막기 위해 Setter를 제공하지 않으며 수정과 삭제는
  * 도메인 메서드로만 처리한다.</p>
  */
-@Entity
-@Table(name = "area")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AreaEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 25)
     private String name;
 
-    @Column(nullable = false, length = 20)
     private String prefecture;
 
-    @Column(nullable = false, length = 20)
     private String city;
 
-    @Column(length = 50)
     private String station;
 
-    @CreationTimestamp(source = SourceType.DB)
-    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @UpdateTimestamp(source = SourceType.DB)
-    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    @Column(name = "deleted_at")
     private Instant deletedAt;
 
     @Builder
@@ -63,6 +41,32 @@ public class AreaEntity {
         this.prefecture = prefecture;
         this.city = city;
         this.station = station;
+    }
+
+    public static AreaEntity restore(
+            Long id,
+            String name,
+            String prefecture,
+            String city,
+            String station,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant deletedAt
+    ) {
+        AreaEntity area = new AreaEntity(name, prefecture, city, station);
+        area.id = id;
+        area.createdAt = createdAt;
+        area.updatedAt = updatedAt;
+        area.deletedAt = deletedAt;
+        return area;
+    }
+
+    public void markPersisted(Long persistedId, Instant persistedAt) {
+        if (id == null) {
+            id = persistedId;
+            createdAt = persistedAt;
+        }
+        updatedAt = persistedAt;
     }
 
     /**

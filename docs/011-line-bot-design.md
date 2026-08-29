@@ -138,7 +138,7 @@ Postback Data는 화면 상태 표현일 뿐 신뢰 가능한 권한 정보가 �
 
 ### SUMMARY 및 ALL
 
-별도 Area 선택 없이 바로 생성한다. `SUMMARY`는 SQL 통계 중심의 짧은 AI Comment,
+별도 Area 선택 없이 바로 생성한다. `SUMMARY`는 Backend 집계 중심의 짧은 AI Comment,
 `ALL`은 모든 대상 Area의 상세 AI 분석이라는 기존 Report 정책을 유지한다.
 단, 활성 Visit이 한 건도 없으면 생성 중 화면과 AI 호출 없이 방문 기록 등록 안내를
 표시한다.

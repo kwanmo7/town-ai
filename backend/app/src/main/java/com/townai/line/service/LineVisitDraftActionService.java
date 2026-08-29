@@ -5,19 +5,21 @@ import com.townai.area.dto.AreaRequest;
 import com.townai.area.entity.AreaEntity;
 import com.townai.area.repository.AreaRepository;
 import com.townai.area.service.AreaService;
+import com.townai.common.error.ApiException;
+import com.townai.common.error.ErrorCode;
 import com.townai.line.entity.LineVisitDraftEntity;
 import com.townai.line.entity.LineVisitDraftStatus;
 import com.townai.line.messaging.LineMessagePurpose;
 import com.townai.line.model.LineDraftAction;
 import com.townai.line.model.LineDraftCommand;
 import com.townai.line.repository.LineVisitDraftRepository;
+import com.townai.persistence.firestore.FirestoreTransactionRunner;
 import com.townai.visit.dto.VisitMutationResponse;
 import com.townai.visit.dto.VisitRequest;
 import com.townai.visit.entity.VisitEntity;
 import com.townai.visit.repository.VisitRepository;
 import com.townai.visit.service.VisitService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -42,6 +44,7 @@ public class LineVisitDraftActionService {
     private final AreaService areaService;
     private final VisitRepository visitRepository;
     private final VisitService visitService;
+    private final FirestoreTransactionRunner transactions;
     private final Clock clock;
     private final ZoneId userTimeZone;
 
@@ -62,6 +65,7 @@ public class LineVisitDraftActionService {
             AreaService areaService,
             VisitRepository visitRepository,
             VisitService visitService,
+            FirestoreTransactionRunner transactions,
             Clock clock,
             ZoneId userTimeZone
     ) {
@@ -70,21 +74,38 @@ public class LineVisitDraftActionService {
         this.areaService = areaService;
         this.visitRepository = visitRepository;
         this.visitService = visitService;
+        this.transactions = transactions;
         this.clock = clock;
         this.userTimeZone = userTimeZone;
     }
 
     /**
-     * Postback 사용자와 Draft를 검증하고 결과를 하나의 Transaction으로 반영한다.
+     * Postback 사용자와 Draft를 검증하고 Visit 저장과 Draft 상태를 하나의 Firestore
+     * Transaction으로 반영한다. 신규 Area는 Transaction 진입 전에 멱등 생성한다.
      *
      * @param command 수정, 확인 또는 취소 명령
      * @param lineUserId Postback을 발생시킨 LINE User ID
      * @return 사용자에게 동일하게 재전송할 수 있는 처리 결과
      */
-    @Transactional
     public LineDraftActionResult execute(
             LineDraftCommand command,
             String lineUserId
+    ) {
+        AreaEntity preparedArea = prepareNewAreaIfNecessary(
+                command,
+                lineUserId
+        );
+        return transactions.execute(() -> executeInTransaction(
+                command,
+                lineUserId,
+                preparedArea
+        ));
+    }
+
+    private LineDraftActionResult executeInTransaction(
+            LineDraftCommand command,
+            String lineUserId,
+            AreaEntity preparedArea
     ) {
         Optional<LineVisitDraftEntity> found =
                 draftRepository.findByIdForUpdate(command.draftId());
@@ -98,14 +119,19 @@ public class LineVisitDraftActionService {
 
         LineVisitDraftEntity draft = found.get();
         expireIfNecessary(draft);
-        return switch (command.action()) {
-            case CONFIRM -> confirm(draft);
+        LineDraftActionResult actionResult = switch (command.action()) {
+            case CONFIRM -> confirm(draft, preparedArea);
             case EDIT -> requestRevision(draft);
             case CANCEL -> cancel(draft);
         };
+        draftRepository.save(draft);
+        return actionResult;
     }
 
-    private LineDraftActionResult confirm(LineVisitDraftEntity draft) {
+    private LineDraftActionResult confirm(
+            LineVisitDraftEntity draft,
+            AreaEntity preparedArea
+    ) {
         return switch (draft.getStatus()) {
             case CONFIRMED -> savedResult(confirmedMessage(draft));
             case CANCELLED -> result(
@@ -132,7 +158,10 @@ public class LineVisitDraftActionService {
                     LineDraftAction.CONFIRM,
                     "수정된 새 방문 기록 초안이 이미 생성되었습니다."
             );
-            case AWAITING_CONFIRMATION -> confirmAwaiting(draft);
+            case AWAITING_CONFIRMATION -> confirmAwaiting(
+                    draft,
+                    preparedArea
+            );
         };
     }
 
@@ -183,9 +212,10 @@ public class LineVisitDraftActionService {
     }
 
     private LineDraftActionResult confirmAwaiting(
-            LineVisitDraftEntity draft
+            LineVisitDraftEntity draft,
+            AreaEntity preparedArea
     ) {
-        AreaEntity area = resolveAreaForConfirmation(draft);
+        AreaEntity area = resolveAreaForConfirmation(draft, preparedArea);
         if (area == null) {
             draft.requireNewInput(AREA_REVALIDATION_WARNING);
             return result(
@@ -213,8 +243,7 @@ public class LineVisitDraftActionService {
                         draft.getMemo()
                 )
         );
-        VisitEntity visit = visitRepository.getReferenceById(created.id());
-        draft.confirm(visit);
+        draft.confirm(VisitEntity.reference(created.id()));
         return savedResult(
                 "방문 기록을 저장했습니다. Visit ID: " + created.id()
         );
@@ -282,7 +311,8 @@ public class LineVisitDraftActionService {
     private void supersedeOtherPendingRevisions(
             LineVisitDraftEntity selectedDraft
     ) {
-        draftRepository.findAllByLineUserIdAndStatusIn(
+        List<LineVisitDraftEntity> superseded = draftRepository
+                .findAllByLineUserIdAndStatusIn(
                 selectedDraft.getLineUserId(),
                 List.of(
                         LineVisitDraftStatus.AWAITING_REVISION,
@@ -292,11 +322,14 @@ public class LineVisitDraftActionService {
                 .filter(draft -> !draft.getId().equals(
                         selectedDraft.getId()
                 ))
-                .forEach(LineVisitDraftEntity::supersede);
+                .peek(LineVisitDraftEntity::supersede)
+                .toList();
+        draftRepository.saveAll(superseded);
     }
 
     private AreaEntity resolveAreaForConfirmation(
-            LineVisitDraftEntity draft
+            LineVisitDraftEntity draft,
+            AreaEntity preparedArea
     ) {
         if (draft.getArea() != null) {
             return areaRepository.findByIdAndDeletedAtIsNull(
@@ -320,25 +353,87 @@ public class LineVisitDraftActionService {
             draft.assignArea(existing.get());
             return existing.get();
         }
-        if (areaRepository.existsByPrefectureAndCityAndName(
-                draft.getAreaPrefecture(),
-                draft.getAreaCity(),
-                draft.getAreaName()
-        )) {
+        if (preparedArea == null) {
+            return null;
+        }
+        AreaEntity area = areaRepository.findByIdAndDeletedAtIsNull(
+                preparedArea.getId()
+        ).orElse(null);
+        if (area == null) {
+            return null;
+        }
+        draft.assignArea(area);
+        return area;
+    }
+
+    /**
+     * Firestore Transaction은 모든 읽기가 첫 쓰기보다 먼저 실행되어야 한다. 신규 Area와
+     * Visit이 서로 다른 숫자 Counter를 사용하므로 Area를 멱등하게 먼저 생성한 뒤,
+     * Visit 저장과 Draft 확정만 하나의 Transaction으로 처리한다.
+     */
+    private AreaEntity prepareNewAreaIfNecessary(
+            LineDraftCommand command,
+            String lineUserId
+    ) {
+        if (command.action() != LineDraftAction.CONFIRM) {
+            return null;
+        }
+        Optional<LineVisitDraftEntity> found =
+                draftRepository.findByIdForUpdate(command.draftId());
+        if (found.isEmpty()) {
+            return null;
+        }
+        LineVisitDraftEntity draft = found.get();
+        if (!draft.getLineUserId().equals(lineUserId)
+                || draft.getStatus()
+                != LineVisitDraftStatus.AWAITING_CONFIRMATION
+                || !clock.instant().isBefore(draft.getExpiresAt())
+                || draft.getArea() != null
+                || !draft.isAreaRegistrationRequired()
+                || !hasText(draft.getAreaName())
+                || !hasText(draft.getAreaPrefecture())
+                || !hasText(draft.getAreaCity())
+                || !hasValidRequiredValues(draft)) {
             return null;
         }
 
-        AreaDetailResponse created = areaService.create(new AreaRequest(
-                draft.getAreaName(),
-                draft.getAreaPrefecture(),
-                draft.getAreaCity(),
-                draft.getAreaStation()
-        ));
-        AreaEntity area = areaRepository.findByIdAndDeletedAtIsNull(
-                created.id()
-        ).orElseThrow();
-        draft.assignArea(area);
-        return area;
+        Optional<AreaEntity> existing = areaRepository
+                .findByPrefectureAndCityAndNameAndDeletedAtIsNull(
+                        draft.getAreaPrefecture(),
+                        draft.getAreaCity(),
+                        draft.getAreaName()
+                );
+        if (existing.isPresent()
+                || areaRepository.existsByPrefectureAndCityAndName(
+                        draft.getAreaPrefecture(),
+                        draft.getAreaCity(),
+                        draft.getAreaName()
+                )) {
+            return null;
+        }
+
+        AreaDetailResponse created;
+        try {
+            created = areaService.create(new AreaRequest(
+                    draft.getAreaName(),
+                    draft.getAreaPrefecture(),
+                    draft.getAreaCity(),
+                    draft.getAreaStation()
+            ));
+        } catch (ApiException exception) {
+            if (exception.errorCode() != ErrorCode.AREA_ALREADY_EXISTS) {
+                throw exception;
+            }
+            return areaRepository
+                    .findByPrefectureAndCityAndNameAndDeletedAtIsNull(
+                            draft.getAreaPrefecture(),
+                            draft.getAreaCity(),
+                            draft.getAreaName()
+                    )
+                    .orElse(null);
+        }
+        return areaRepository.findByIdAndDeletedAtIsNull(created.id())
+                .orElseThrow();
     }
 
     private boolean hasText(String value) {

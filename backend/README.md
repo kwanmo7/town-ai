@@ -2,15 +2,27 @@
 
 ## Local 실행
 
-PowerShell에서 Local MySQL 접속 정보를 환경변수로 설정하고 실행한다.
+Town AI Backend의 Local Database는 Firestore Emulator이다. Repository Root에서 먼저
+Emulator를 실행한다.
 
 ```powershell
-$env:DB_USERNAME = "root"
-$env:DB_PASSWORD = "로컬 MySQL 비밀번호"
-$env:REPORT_STORAGE_TYPE = "local"
-
-.\gradlew.bat :app:bootRun
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\backend\scripts\local-firestore-start.ps1
 ```
+
+새 PowerShell에서 Backend를 실행한다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\backend\scripts\local-backend-firestore.ps1
+```
+
+기본 주소:
+
+- Backend: `http://localhost:8080`
+- Firestore Emulator: `127.0.0.1:8081`
+- Firestore Database ID: `town-ai`
+- Emulator UI: `http://127.0.0.1:4000`
 
 Local 기본값은 Web 관리 API 인증을 사용하지 않는다. 실제 Firebase ID Token 검증을
 활성화할 때는 다음 일반 환경변수가 추가로 필요하다.
@@ -37,26 +49,60 @@ Production의 `REPORT_LINK_SIGNING_SECRET`은 Secret Manager에서 주입하고 
 
 ## Local 테스트 데이터
 
-Backend 실행 후 다른 PowerShell에서 Local 전용 Seed 스크립트를 실행한다.
+Backend 실행 후 다른 PowerShell에서 Local 전용 Seed Script를 실행한다.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local-seed.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\backend\scripts\local-seed.ps1
 ```
 
-스크립트는 Loopback 주소만 허용하고 Area 3개와 Visit 5개를 API로 등록한다. 같은
-Area와 같은 날짜·점수의 Visit이 있으면 건너뛰므로 반복 실행할 수 있다.
-`ExecutionPolicy Bypass`는 이 명령으로 시작한 Process에만 적용하며 Windows의
-영구 실행 정책은 변경하지 않는다.
-
-Area 관리 화면에서 Seed Area를 Soft Delete한 경우에는 기존 Visit을 유지한 채
-세 Area만 복구한 후 Seed를 다시 실행한다.
+Area 3개와 Visit 5개를 API로 등록한다. Emulator 전체 데이터를 지우고 Seed 상태로
+되돌리려면 다음을 실행한다.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local-restore-seed.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local-seed.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\backend\scripts\local-restore-seed.ps1
 ```
 
-복구 스크립트는 Local MySQL만 허용하며 비밀번호를 파일이나 명령 인자에 저장하지
-않고 MySQL Client Prompt에서 입력받는다.
+복원 Script는 Loopback Firestore Emulator만 허용하며 Production에는 실행되지 않는다.
 
-자세한 Database와 Flyway 사용 방법은 `../docs/007-local-database.md`를 참고한다.
+## Production 데이터 복원
+
+Legacy Cloud SQL 종료 전 GCS Report를 기준으로 Production Firestore에 Area 3개와 Visit
+3개를 복원할 때 다음 Script를 사용한다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\backend\scripts\production-restore-gcs-report-data.ps1 `
+  -ConfirmProductionRestore
+```
+
+Script는 `town-ai/town-ai` Firestore만 허용하고 Database 설정, 기존 Collection과 GCS
+Markdown 9개의 메타데이터를 검사한다. 최초 실행은 모든 문서를 원자적으로 생성하며,
+동일한 복원 데이터가 이미 있으면 덮어쓰지 않고 필드값과 GCS 불변 여부만 재검증한다.
+실제 복원·Cloud SQL 종료 결과는 `../docs/015-firestore-production-cutover.md`에 기록한다.
+
+## 테스트
+
+Unit Test:
+
+```powershell
+.\backend\gradlew.bat -p backend :app:test --no-daemon
+```
+
+Firestore Emulator 통합 Test:
+
+```powershell
+npx.cmd --yes firebase-tools@15.26.0 emulators:exec `
+  --only firestore `
+  --project demo-town-ai `
+  --config backend/firebase.json `
+  ".\backend\gradlew.bat -p backend :app:test --no-daemon"
+```
+
+자세한 내용:
+
+- Local Emulator: `../docs/007-local-database.md`
+- Firestore 데이터 모델: `../docs/003-erd.md`
+- Firestore 전환: `../docs/014-firestore-migration.md`
+- Production 전환 검증: `../docs/015-firestore-production-cutover.md`

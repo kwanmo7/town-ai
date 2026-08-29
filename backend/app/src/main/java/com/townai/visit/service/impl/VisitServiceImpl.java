@@ -12,7 +12,6 @@ import com.townai.visit.entity.VisitEntity;
 import com.townai.visit.repository.VisitRepository;
 import com.townai.visit.service.VisitService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,7 +24,6 @@ import java.util.List;
  * Visit 자체의 삭제는 원본 Row를 제거하는 물리 삭제 방식이다.</p>
  */
 @Service
-@Transactional(readOnly = true)
 public class VisitServiceImpl implements VisitService {
 
     private final VisitRepository visitRepository;
@@ -46,7 +44,6 @@ public class VisitServiceImpl implements VisitService {
     }
 
     @Override
-    @Transactional
     public VisitMutationResponse create(VisitRequest request) {
         AreaEntity area = findActiveArea(request.areaId());
         VisitEntity visit = VisitEntity.builder()
@@ -60,7 +57,7 @@ public class VisitServiceImpl implements VisitService {
                 .memo(normalizeMemo(request.memo()))
                 .build();
 
-        return VisitMutationResponse.from(visitRepository.saveAndFlush(visit));
+        return VisitMutationResponse.from(visitRepository.save(visit));
     }
 
     @Override
@@ -82,7 +79,6 @@ public class VisitServiceImpl implements VisitService {
     }
 
     @Override
-    @Transactional
     public VisitMutationResponse update(Long visitId, VisitRequest request) {
         VisitEntity visit = findVisit(visitId);
         AreaEntity area = findActiveArea(request.areaId());
@@ -97,13 +93,10 @@ public class VisitServiceImpl implements VisitService {
                 request.accessScore(),
                 normalizeMemo(request.memo())
         );
-        visitRepository.flush();
-
-        return VisitMutationResponse.from(visit);
+        return VisitMutationResponse.from(visitRepository.save(visit));
     }
 
     @Override
-    @Transactional
     public void delete(Long visitId) {
         visitRepository.delete(findVisit(visitId));
     }

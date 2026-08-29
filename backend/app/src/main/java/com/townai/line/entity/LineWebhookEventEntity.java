@@ -2,19 +2,10 @@ package com.townai.line.entity;
 
 import com.townai.line.model.LineWebhookEventPayload;
 import com.townai.line.model.LineWebhookEventType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SourceType;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -26,57 +17,36 @@ import java.time.temporal.ChronoUnit;
  * 이벤트가 별도 Row를 만들지 못하게 한다. 원문 Webhook Body, Reply Token 및
  * Channel Access Token은 저장하지 않는다.</p>
  */
-@Entity
-@Table(name = "line_webhook_event")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LineWebhookEventEntity {
 
-    @Id
-    @Column(name = "webhook_event_id", length = 64)
     private String webhookEventId;
 
-    @Column(name = "line_user_id", nullable = false, length = 64)
     private String lineUserId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "event_type", nullable = false, length = 20)
     private LineWebhookEventType eventType;
 
-    @Column(name = "message_text", columnDefinition = "TEXT")
     private String messageText;
 
-    @Column(name = "postback_data", length = 255)
     private String postbackData;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
     private LineWebhookEventStatus status;
 
-    @Column(name = "attempt_count", nullable = false)
     private int attemptCount;
 
-    @Column(name = "last_error_code", length = 50)
     private String lastErrorCode;
 
-    @Column(name = "revision_source_draft_id")
     private Long revisionSourceDraftId;
 
-    @Column(name = "occurred_at", nullable = false)
     private Instant occurredAt;
 
-    @Column(name = "processing_started_at")
     private Instant processingStartedAt;
 
-    @Column(name = "processed_at")
     private Instant processedAt;
 
-    @CreationTimestamp(source = SourceType.DB)
-    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @UpdateTimestamp(source = SourceType.DB)
-    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
     @Builder(access = AccessLevel.PRIVATE)
@@ -98,6 +68,48 @@ public class LineWebhookEventEntity {
         this.status = status;
         this.attemptCount = attemptCount;
         this.occurredAt = occurredAt;
+    }
+
+    public static LineWebhookEventEntity restore(
+            String webhookEventId,
+            String lineUserId,
+            LineWebhookEventType eventType,
+            String messageText,
+            String postbackData,
+            LineWebhookEventStatus status,
+            int attemptCount,
+            String lastErrorCode,
+            Long revisionSourceDraftId,
+            Instant occurredAt,
+            Instant processingStartedAt,
+            Instant processedAt,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        LineWebhookEventEntity event = LineWebhookEventEntity.builder()
+                .webhookEventId(webhookEventId)
+                .lineUserId(lineUserId)
+                .eventType(eventType)
+                .messageText(messageText)
+                .postbackData(postbackData)
+                .status(status)
+                .attemptCount(attemptCount)
+                .occurredAt(occurredAt)
+                .build();
+        event.lastErrorCode = lastErrorCode;
+        event.revisionSourceDraftId = revisionSourceDraftId;
+        event.processingStartedAt = processingStartedAt;
+        event.processedAt = processedAt;
+        event.createdAt = createdAt;
+        event.updatedAt = updatedAt;
+        return event;
+    }
+
+    public void markPersisted(Instant persistedAt) {
+        if (createdAt == null) {
+            createdAt = persistedAt;
+        }
+        updatedAt = persistedAt;
     }
 
     /**

@@ -32,6 +32,7 @@ out/
 /backend/app/data/
 firebase-debug.log
 firebase-debug.*.log
+firestore-debug.log
 
 # Local environment and secret files
 .env
