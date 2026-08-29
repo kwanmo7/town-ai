@@ -8,7 +8,6 @@ import com.townai.report.repository.ReportAreaRepository;
 import com.townai.report.repository.ReportRepository;
 import com.townai.visit.repository.VisitRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -55,7 +54,6 @@ public class ReportReuseService {
      * @param sourceFingerprint 현재 입력의 SHA-256 지문
      * @return 그대로 조회할 수 있는 기존 Report
      */
-    @Transactional
     public Optional<ReportEntity> findReusable(
             ReportGenerationData data,
             String sourceFingerprint

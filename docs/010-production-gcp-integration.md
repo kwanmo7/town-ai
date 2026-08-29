@@ -1,5 +1,9 @@
 # Production GCP 통합 검증
 
+> Legacy 검증 기록: 이 문서는 Cloud SQL을 사용하던 Production Revision의 당시 결과를
+> 보존한다. Firestore 전환 후 결과는 이 문서에 덮어쓰지 않는다. 전환 설계는
+> `014-firestore-migration.md`, 실제 진행 상태와 완료 조건은 `999-TODO.md`에 기록한다.
+
 ## 목적
 
 Developer Connect로 배포한 실제 Cloud Run Backend가 Cloud SQL, OpenAI API,

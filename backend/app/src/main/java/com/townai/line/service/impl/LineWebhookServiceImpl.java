@@ -12,9 +12,8 @@ import com.townai.line.service.LineWebhookService;
 import com.townai.line.webhook.LineWebhookRequestProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessException;
+import com.townai.persistence.firestore.FirestorePersistenceException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.TransactionException;
 
 import java.util.List;
 
@@ -23,7 +22,7 @@ import java.util.List;
  *
  * <p>서명 검증과 이벤트 선별 후 별도 Transaction Service에서 이벤트를 저장한다.
  * 해당 호출이 반환되어 Commit이 완료된 다음 Dispatcher를 실행하므로 비동기 Task가
- * 아직 존재하지 않는 DB Row를 조회하는 상황을 방지한다.</p>
+ * 아직 존재하지 않는 Firestore 문서를 조회하는 상황을 방지한다.</p>
  */
 @Service
 public class LineWebhookServiceImpl implements LineWebhookService {
@@ -79,8 +78,7 @@ public class LineWebhookServiceImpl implements LineWebhookService {
         try {
             List<String> eventIds = persistenceService.store(payloads);
             eventIds.forEach(eventDispatcher::dispatch);
-        } catch (DataAccessException
-                 | TransactionException
+        } catch (FirestorePersistenceException
                  | LineEventDispatchException exception) {
             log.error(
                     "LINE webhook event persistence or dispatch failed. exceptionType={}",

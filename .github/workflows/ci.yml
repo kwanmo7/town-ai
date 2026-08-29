@@ -36,22 +36,28 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Make Gradle Wrapper executable
-        run: chmod +x backend/gradlew
-
-      - name: Test and build Backend
-        working-directory: backend
-        run: ./gradlew :app:build :app:javadoc --no-daemon
-
-      - name: Validate Backend Docker image
-        run: docker build --tag town-ai-backend:ci ./backend
-
       - name: Set up Node.js 24.19.0 LTS
         uses: actions/setup-node@v6
         with:
           node-version: "24.19.0"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+
+      - name: Make Gradle Wrapper executable
+        run: chmod +x backend/gradlew
+
+      - name: Test Backend with Firestore Emulator and build
+        env:
+          FIRESTORE_DATABASE_ID: town-ai
+        run: >-
+          npx --yes firebase-tools@15.26.0 emulators:exec
+          --only firestore
+          --project demo-town-ai
+          --config backend/firebase.json
+          "./backend/gradlew -p backend :app:build :app:javadoc --no-daemon"
+
+      - name: Validate Backend Docker image
+        run: docker build --tag town-ai-backend:ci ./backend
 
       - name: Test and build Frontend
         working-directory: frontend

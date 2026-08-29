@@ -132,7 +132,7 @@ public class ReportContentGenerator {
     }
 
     /**
-     * SQL 통계 표와 최대 500자의 AI Comment를 SUMMARY Markdown으로 조립한다.
+     * Backend 집계 표와 최대 500자의 AI Comment를 SUMMARY Markdown으로 조립한다.
      */
     private String renderSummary(SummaryInput input, SummaryAiOutput output) {
         if (output == null) {

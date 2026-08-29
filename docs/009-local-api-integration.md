@@ -1,5 +1,9 @@
 # Local MySQL API 통합 검증
 
+> Legacy 검증 기록: 이 문서는 2026-07-27 MySQL·JPA 구현의 당시 결과를 보존한다.
+> 현행 Local Database와 검증 방법은 Firestore Emulator 기반의
+> `007-local-database.md`와 `014-firestore-migration.md`를 따른다.
+
 ## 목적
 
 단위 Test의 Mock 경계를 넘어 HTTP Controller, Service, JPA, Flyway, MySQL 및

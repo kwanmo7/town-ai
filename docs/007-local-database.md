@@ -1,321 +1,167 @@
-# Local Database와 Flyway 사용 방법
+# Local Firestore Emulator 사용 방법
 
 ## 목적
 
-Local MySQL에서 Backend의 DB 연결, JPA Entity 및 Migration을 검증하는 방법을 정리한다.
+Production Firestore 데이터와 비용에 영향을 주지 않고 Backend의 Repository,
+트랜잭션, API와 로컬 테스트 데이터를 검증한다. 파일명은 기존 링크 호환성을 위해
+유지하지만 현행 Local Database는 MySQL이 아닌 Firestore Emulator이다.
 
-V1의 Local Database 구성은 다음과 같다.
-
-```text
-MySQL       : 8.4 LTS
-Host        : localhost
-Port        : 3306
-Database    : town_ai
-Charset     : utf8mb4
-Collation   : utf8mb4_unicode_ci
-Migration   : Flyway
-```
-
-Local은 개발 및 구동 확인 목적이므로 초기에는 `root` 계정을 사용할 수 있다.
-Production Cloud SQL에서는 Local 계정을 재사용하지 않고 별도 DB 계정과 Secret을 구성한다.
-
-## Flyway의 역할
-
-Flyway는 Database 구조 변경 SQL을 Version 순서대로 한 번씩 실행하고 그 결과를
-`flyway_schema_history` 테이블에 기록한다.
+## 구성
 
 ```text
-Spring Boot 시작
-→ Flyway가 flyway_schema_history 확인
-→ 아직 성공 이력이 없는 Migration 실행
-→ Hibernate가 Entity와 실제 Table 구조 검증
-→ Backend 시작
+Firebase CLI  : 15.26.0
+Project ID    : demo-town-ai
+Database ID   : town-ai
+Firestore     : Standard, Native mode Emulator
+Firestore API : 127.0.0.1:8081
+Emulator UI   : http://127.0.0.1:4000
+Backend API   : http://localhost:8080
 ```
 
-현재 Migration은 다음 파일들이다.
+`demo-` Project ID는 실제 GCP Project가 아님을 Firebase CLI에 명확히 알려 실수로
+Production에 연결되는 것을 막는다.
 
-```text
-backend/app/src/main/resources/db/migration/V1__initialize_schema.sql
-backend/app/src/main/resources/db/migration/V2__make_line_draft_warnings_required.sql
-backend/app/src/main/resources/db/migration/V3__support_line_follow_event.sql
-backend/app/src/main/resources/db/migration/V4__add_line_report_idempotency_key.sql
-backend/app/src/main/resources/db/migration/V5__support_area_registration_from_line_draft.sql
-backend/app/src/main/resources/db/migration/V6__support_line_visit_draft_revision.sql
-backend/app/src/main/resources/db/migration/V7__claim_line_visit_draft_revision.sql
-backend/app/src/main/resources/db/migration/V8__add_report_source_fingerprint.sql
-```
+## 준비 사항
 
-V1은 초기 스키마를 생성하고, V2는 기존 Draft의 `warnings`가 `NULL`이면 빈 JSON
-배열로 정규화한 뒤 해당 Column을 `NOT NULL`로 변경한다.
-V3는 LINE `FOLLOW` Event 제약을 추가하고, V4는 LINE Report 재처리용
-`source_webhook_event_id` UNIQUE Key를 추가한다. V5는 LINE에서 첫 Visit 확인 시
-신규 Area를 함께 등록할 수 있도록 Draft에 위치 Snapshot과 등록 필요 여부를 추가한다.
-V6는 LINE Draft 부분 수정을 위한 `AWAITING_REVISION`, `SUPERSEDED` 상태와 최신
-수정 대기 Draft 조회 Index를 추가한다.
-V7은 수정 Text Message가 원본 Draft를 AI 호출 전에 점유하는
-`REVISION_PROCESSING` 상태와 `revision_webhook_event_id`를 추가하고, 재시도에서도
-수정 의도를 유지하도록 Event에 `revision_source_draft_id`를 보존한다.
-V8은 변경되지 않은 Report를 재사용할 수 있도록 Prompt 입력 기반
-`source_fingerprint`와 조회 Index를 추가한다.
+- Java 25
+- Node.js 24 LTS
+- PowerShell
 
-## Local 화면 확인용 Seed 데이터
+Firebase CLI는 Script가 `npx`로 고정 Version을 실행하므로 Global 설치가 필수는 아니다.
 
-Frontend의 Dashboard, Area·Visit 목록과 Statistics 표시를 확인할 때는 Backend를
-실행한 뒤 Local 전용 Seed 스크립트를 사용한다.
+## 1. Emulator 시작
 
-```powershell
-cd C:\Users\kwanm\git\town-ai\backend
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local-seed.ps1
-```
-
-기본 대상은 `http://localhost:8080`이다. 다른 Local Port를 사용한다면 다음처럼
-Loopback URL을 전달한다.
+Repository Root에서 다음 명령을 실행한다.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\scripts\local-seed.ps1 `
-  -BaseUrl http://localhost:18080
+  -File .\backend\scripts\local-firestore-start.ps1
 ```
 
-스크립트는 API를 통해 Area 3개와 Visit 5개를 생성한다. 기존 Area는
-`prefecture`, `city`, `name`으로 찾고, 같은 Area·방문일·점수의 Visit은 건너뛴다.
-따라서 반복 실행해도 같은 Fixture가 중복 생성되지 않는다. Production 오실행을
-막기 위해 `localhost`, `127.0.0.1` 같은 Loopback 주소 이외에는 실행을 거부한다.
-명령의 `ExecutionPolicy Bypass`는 해당 PowerShell Process에만 적용하며 시스템의
-영구 실행 정책은 변경하지 않는다.
+처음 실행하면 Firebase CLI Package를 내려받을 수 있다. Emulator Data는 기본적으로
+메모리에만 존재하며 Process를 종료하면 사라진다.
 
-### Soft Delete한 Seed Area 복구
+## 2. Backend 시작
 
-Area 관리 화면에서 세 Seed Area를 삭제하면 Area Row와 기존 Visit Row는 DB에
-보존되지만 일반 Area·Visit 목록과 통계에서는 제외된다. V1에는 사용자용 Area 복구
-API가 없으므로 Local Fixture에 한해서 다음 스크립트로 세 Area의 `deleted_at`만
-`NULL`로 되돌린다.
-
-```powershell
-cd C:\Users\kwanm\git\town-ai\backend
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\scripts\local-restore-seed.ps1
-```
-
-스크립트는 Local MySQL 접속만 허용하고 `mysql.exe`가 비밀번호를 직접 묻는다.
-비밀번호는 스크립트, Git 또는 Process 명령 인자에 저장되지 않는다. MySQL을 다른
-경로에 설치했다면 `-MySqlPath`로 실제 Client 경로를 전달할 수 있다.
+새 PowerShell에서 실행한다.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\scripts\local-restore-seed.ps1 `
-  -MySqlPath "D:\MySQL\bin\mysql.exe"
+  -File .\backend\scripts\local-backend-firestore.ps1
 ```
 
-복구 후 `local-seed.ps1`을 다시 실행하면 기존 Visit은 중복 생성하지 않고 현재
-Fixture 상태를 확인한다. 이 스크립트는 정확히 일치하는 세 Local Seed Area만
-복구하며 Production Database에는 사용하지 않는다.
-
-Report는 OpenAI API 비용이 발생하므로 Seed에 포함하지 않는다. Report 화면은
-필요할 때 Local API 또는 이후 구현할 Frontend 생성 화면에서 별도로 생성해 확인한다.
-
-최초 실행 후에는 다음과 같은 이력이 저장된다.
+Script가 다음 환경변수를 현재 Process에만 설정한다.
 
 ```text
-version     : 1
-description : initialize schema
-script      : V1__initialize_schema.sql
-success     : 1
+FIRESTORE_PROJECT_ID=demo-town-ai
+FIRESTORE_DATABASE_ID=town-ai
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8081
+REPORT_STORAGE_TYPE=local
+WEB_AUTH_ENABLED=false
+LINE_EVENT_DISPATCHER=local
 ```
 
-애플리케이션을 다시 실행해도 V1은 다시 실행되지 않는다. Flyway는 파일 Version과
-Checksum을 이력과 비교하고 새 Migration만 실행한다.
+`FIRESTORE_DATABASE_ID`는 Production의 named database와 동일한 `town-ai`를 사용한다.
+`FIRESTORE_EMULATOR_HOST`에는 `http://`를 붙이지 않는다. 이 값이 존재하면 Google
+Application Default Credentials 없이 Emulator의 Plaintext Channel을 사용한다.
 
-## 이번 초기 적용 방법
+## 3. 테스트 데이터 생성
 
-기존 `town_ai`는 SQL을 직접 실행해 만든 스키마였고 모든 업무 테이블이 0건이었다.
-또한 `flyway_schema_history`가 없었으므로 다음 순서로 Flyway 기준 스키마로 전환했다.
-
-```text
-1. 여섯 업무 테이블의 실제 행 수가 모두 0인지 확인
-2. V1__initialize_schema.sql 생성
-3. 기존 town_ai Database 삭제
-4. utf8mb4 / utf8mb4_unicode_ci로 town_ai Database 재생성
-5. Spring Boot 시작
-6. Flyway가 V1 실행
-7. Hibernate ddl-auto=validate 통과 확인
-8. Health와 목록 API 확인
-```
-
-데이터가 존재하는 Database라면 이 방식으로 초기화하면 안 된다. 데이터를 보존해야 하는
-기존 스키마는 백업과 현재 구조 비교 후 Flyway Baseline 적용 여부를 별도로 결정해야 한다.
-
-## Local Database 최초 생성
-
-MySQL Client를 실행한다.
+Backend가 8080에서 실행된 뒤 새 PowerShell에서 다음을 실행한다.
 
 ```powershell
-& "C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe" `
-    --host=127.0.0.1 `
-    --port=3306 `
-    --user=root `
-    --password
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\backend\scripts\local-seed.ps1
 ```
 
-`--password` 뒤에 실제 비밀번호를 명령문으로 작성하지 않고 Prompt에서 입력한다.
+Area 3개와 Visit 5개를 API를 통해 생성한다. 동일 데이터가 있으면 건너뛰므로 반복
+실행할 수 있다.
 
-Database가 없다면 다음 SQL로 빈 Database만 생성한다. 업무 Table은 직접 생성하지 않고
-Backend를 시작해 Flyway가 생성하게 한다.
-
-```sql
-CREATE DATABASE `town_ai`
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
-```
-
-## Backend 실행
-
-현재 Local 검증에서는 별도 `town_ai` DB 사용자를 만들지 않고 `root`를 사용한다.
-비밀번호는 Git에 저장하지 않고 현재 Terminal Process의 환경변수로만 전달한다.
+## 4. 전체 초기화 후 복원
 
 ```powershell
-cd C:\Users\kwanm\git\town-ai\backend
-
-$env:DB_HOST = "localhost"
-$env:DB_PORT = "3306"
-$env:DB_NAME = "town_ai"
-$env:DB_USERNAME = "root"
-$env:DB_PASSWORD = "<로컬 MySQL 비밀번호>"
-
-.\gradlew.bat :app:bootRun
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\backend\scripts\local-restore-seed.ps1
 ```
 
-실행을 종료한 뒤 현재 Terminal에서 민감한 환경변수를 제거할 수 있다.
+이 Script는 다음 순서로 동작한다.
+
+1. Project ID가 `demo-`로 시작하고 대상이 Loopback Emulator인지 확인
+2. Emulator 전용 삭제 Endpoint로 모든 문서 삭제
+3. 기존 `local-seed.ps1` 실행
+4. Counter도 삭제되므로 Area와 Visit ID를 1부터 다시 생성
+
+Production Project나 원격 Host를 대상으로 실행하지 않는다.
+
+## 5. 확인
 
 ```powershell
-Remove-Item Env:DB_PASSWORD
+Invoke-RestMethod http://localhost:8080/api/areas
+Invoke-RestMethod http://localhost:8080/api/visits
+Invoke-RestMethod http://localhost:8080/api/statistics
 ```
 
-IDE에서 실행할 때도 동일한 값을 Run Configuration 환경변수로 전달한다.
-실제 비밀번호를 `application.yml`이나 Git 추적 파일에 작성하지 않는다.
+예상 결과:
 
-## 적용 결과 확인
+- 활성 Area: 3개
+- Visit: 5개
+- Area ID: 1, 2, 3
+- Visit ID: 1~5
 
-Flyway 이력:
+문서 원본은 Emulator UI `http://127.0.0.1:4000`에서도 확인할 수 있다.
 
-```sql
-SELECT
-    installed_rank,
-    version,
-    description,
-    script,
-    success
-FROM flyway_schema_history
-ORDER BY installed_rank;
-```
+## 자동 테스트
 
-Table 목록:
-
-```sql
-SHOW TABLES;
-```
-
-정상 V1 결과에는 다음 일곱 Table이 존재한다.
-
-```text
-area
-visit
-report
-report_area
-line_webhook_event
-line_visit_draft
-flyway_schema_history
-```
-
-Backend Health:
+일반 Unit Test는 Emulator 없이 실행한다.
 
 ```powershell
-Invoke-RestMethod http://localhost:8080/actuator/health
-Invoke-RestMethod http://localhost:8080/actuator/health/liveness
-Invoke-RestMethod http://localhost:8080/actuator/health/readiness
+.\backend\gradlew.bat -p backend :app:test --no-daemon
 ```
 
-세 요청 모두 `UP`이면 Backend Process와 DB 연결 준비 상태가 정상이다.
-
-## 다음 스키마 변경 방법
-
-V1이 실행된 이후 Column이나 Table을 변경할 때는 `V1__initialize_schema.sql`을 수정하지 않는다.
-다음 Version 파일을 추가한다.
-
-예를 들어 Report에 새 Column을 추가한다면:
-
-```text
-backend/app/src/main/resources/db/migration/V2__add_report_status.sql
-```
-
-```sql
-ALTER TABLE `report`
-    ADD COLUMN `status` VARCHAR(20) NOT NULL;
-```
-
-권장 작업 순서:
-
-```text
-1. ERD와 변경 목적 검토
-2. 새로운 V{번호}__{설명}.sql 작성
-3. Entity와 Repository 수정
-4. Local Database 백업
-5. Backend 시작으로 Migration 실행
-6. flyway_schema_history 성공 이력 확인
-7. JPA 검증, Test 및 API 동작 확인
-8. 기준 ERD SQL과 관련 설계 문서 갱신
-```
-
-Migration 규칙:
-
-- 이미 실행된 Migration 파일의 내용과 Version을 변경하지 않는다.
-- 기존 Version 번호를 재사용하지 않는다.
-- 여러 변경 파일의 Version 순서를 바꾸지 않는다.
-- 운영 데이터가 있는 Table의 삭제나 Type 변경은 백업 및 복구 방법을 먼저 정한다.
-- Migration 실패 시 원인을 해결하기 전에 `repair`를 임의로 실행하지 않는다.
-- Local과 Production은 동일한 Migration 파일을 사용한다.
-
-## Database 초기화가 필요한 경우
-
-다음 명령은 `town_ai`의 모든 데이터를 삭제한다. Local 데이터가 필요 없고 백업이 완료된
-경우에만 사용한다.
-
-```sql
-DROP DATABASE `town_ai`;
-
-CREATE DATABASE `town_ai`
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
-```
-
-빈 Database를 만든 다음 Backend를 시작하면 Flyway가 V1부터 순서대로 다시 실행한다.
-
-Production Cloud SQL에서는 이 초기화 방법을 사용하지 않는다.
-
-## 현재 Local 검증 결과
-
-2026-07-24 기준 결과:
-
-```text
-MySQL Server                    : 8.4.10
-Flyway V1                       : 성공
-Hibernate ddl-auto=validate     : 성공
-Spring Boot 기동                : 성공
-GET /actuator/health            : UP
-GET /actuator/health/liveness   : UP
-GET /actuator/health/readiness  : UP
-GET /api/areas                  : 200 OK, 빈 목록
-GET /api/reports                : 200 OK, 빈 목록
-```
-
-## 참고 사항
-
-현재 PC에는 `DEBUG` 환경변수가 존재해 Spring Boot 실행 시 상세 Debug 로그가 출력될 수 있다.
-일반 로그로 확인하려면 Backend를 실행한 Terminal에서만 다음과 같이 제거할 수 있다.
+실제 Firestore Repository 통합 테스트는 다음 명령으로 실행한다.
 
 ```powershell
-Remove-Item Env:DEBUG
+npx.cmd --yes firebase-tools@15.26.0 emulators:exec `
+  --only firestore `
+  --project demo-town-ai `
+  --config backend/firebase.json `
+  ".\backend\gradlew.bat -p backend :app:test --no-daemon"
 ```
 
-다른 개발 도구가 해당 환경변수를 사용하는지 먼저 확인하고 시스템 환경변수 자체를 임의로
-삭제하지 않는다.
+GitHub Actions도 같은 방식으로 Emulator를 실행하고 Backend Build와 Javadoc을
+검증한다.
+
+## Firestore 설정 파일
+
+| 파일 | 역할 |
+| --- | --- |
+| `backend/firebase.json` | `town-ai` named database, Standard Edition, Emulator Port와 Rules·Index 파일 연결 |
+| `backend/firestore.rules` | Client의 모든 직접 접근 거부 |
+| `backend/firestore.indexes.json` | Composite Index 정의, V1은 비어 있음 |
+
+Admin Server SDK는 Security Rules가 아닌 IAM으로 접근한다. 따라서 Rules Emulator
+Test는 Client SDK 보안 검증용이고, Backend Repository 통합 테스트는 Server SDK의
+데이터 동작 검증용이다.
+
+## 문제 해결
+
+### Port가 이미 사용 중인 경우
+
+```powershell
+Get-NetTCPConnection -State Listen -LocalPort 8081,4000 |
+  Select-Object LocalPort,OwningProcess
+```
+
+실행 중인 Emulator를 종료하거나 `backend/firebase.json`의 Port와 실행 Script 환경값을
+함께 변경한다.
+
+### Production 데이터가 보이는 경우
+
+즉시 Backend를 종료하고 `FIRESTORE_EMULATOR_HOST=127.0.0.1:8081`,
+`FIRESTORE_PROJECT_ID=demo-town-ai`, `FIRESTORE_DATABASE_ID=town-ai`를 확인한다. 로컬 개발에서는 실제 `town-ai`
+Project를 사용하지 않는다.
+
+### PowerShell 실행 정책 오류
+
+문서의 `powershell.exe -ExecutionPolicy Bypass -File ...` 형식을 사용한다. 이 설정은
+해당 Process에만 적용되며 시스템 실행 정책을 영구 변경하지 않는다.

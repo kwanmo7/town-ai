@@ -14,19 +14,17 @@ import com.townai.report.storage.ReportStoragePathFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Report DB 메타데이터와 외부 Storage 사이의 저장 순서 및 실패 보상을 담당한다.
+ * Report Firestore 메타데이터와 외부 Storage 사이의 저장 순서 및 실패 보상을 담당한다.
  *
- * <p>Report ID가 Storage 파일명에 필요하므로 Transaction 안에서 Row를 먼저 저장해
- * ID를 얻고, 본문을 Storage에 쓴 뒤 경로와 대상 Area 연결을 확정한다. 외부 Storage는
- * DB Transaction에 참여하지 못하므로 이후 단계가 실패하면 작성한 객체를 최선
+ * <p>Report ID가 Storage 파일명에 필요하므로 임시 메타데이터를 먼저 저장해 ID를
+ * 얻고, 본문을 Storage에 쓴 뒤 경로와 대상 Area 연결을 확정한다. 외부 Storage와
+ * Firestore는 하나의 Transaction에 참여하지 못하므로 이후 단계가 실패하면 작성한 객체를 최선
  * 노력(best effort)으로 삭제해 고아 파일을 보상한다.</p>
  */
 @Component
@@ -38,29 +36,25 @@ public class ReportPersistenceService {
     private final ReportAreaRepository reportAreaRepository;
     private final ReportStorage reportStorage;
     private final ReportStoragePathFactory pathFactory;
-    private final TransactionTemplate transactionTemplate;
 
     /**
-     * DB Transaction과 외부 Storage 저장을 조정하는 Component를 만든다.
+     * Firestore Metadata와 외부 Storage 저장을 조정하는 Component를 만든다.
      *
      * @param reportRepository Report 메타데이터 Repository
      * @param reportAreaRepository Report 대상 Area 연결 Repository
      * @param reportStorage Markdown 본문 저장소
      * @param pathFactory 논리 Storage 경로 생성기
-     * @param transactionManager DB Transaction 관리자
      */
     public ReportPersistenceService(
             ReportRepository reportRepository,
             ReportAreaRepository reportAreaRepository,
             ReportStorage reportStorage,
-            ReportStoragePathFactory pathFactory,
-            PlatformTransactionManager transactionManager
+            ReportStoragePathFactory pathFactory
     ) {
         this.reportRepository = reportRepository;
         this.reportAreaRepository = reportAreaRepository;
         this.reportStorage = reportStorage;
         this.pathFactory = pathFactory;
-        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     /**
@@ -116,43 +110,40 @@ public class ReportPersistenceService {
             String sourceWebhookEventId
     ) {
         AtomicReference<String> attemptedStoragePath = new AtomicReference<>();
+        AtomicReference<Long> attemptedReportId = new AtomicReference<>();
         try {
-            ReportEntity result = transactionTemplate.execute(status -> {
-                ReportEntity report = ReportEntity.builder()
-                        .reportType(reportType)
-                        .model(model)
-                        .promptVersion(promptVersion)
-                        .sourceFingerprint(sourceFingerprint)
-                        .sourceWebhookEventId(sourceWebhookEventId)
-                        .build();
-                reportRepository.saveAndFlush(report);
+            ReportEntity report = ReportEntity.builder()
+                    .reportType(reportType)
+                    .model(model)
+                    .promptVersion(promptVersion)
+                    .sourceFingerprint(sourceFingerprint)
+                    .sourceWebhookEventId(sourceWebhookEventId)
+                    .build();
+            reportRepository.save(report);
+            attemptedReportId.set(report.getId());
 
-                String storagePath = pathFactory.create(
-                        reportType,
-                        report.getId(),
-                        targetAreas
-                );
-                attemptedStoragePath.set(storagePath);
-                reportStorage.write(storagePath, markdown);
-                report.assignStoragePath(storagePath);
+            String storagePath = pathFactory.create(
+                    reportType,
+                    report.getId(),
+                    targetAreas
+            );
+            attemptedStoragePath.set(storagePath);
+            reportStorage.write(storagePath, markdown);
+            report.assignStoragePath(storagePath);
 
-                List<ReportAreaEntity> reportAreas = new ArrayList<>();
-                for (int index = 0; index < targetAreas.size(); index++) {
-                    reportAreas.add(new ReportAreaEntity(
-                            report,
-                            targetAreas.get(index),
-                            index + 1
-                    ));
-                }
-                reportAreaRepository.saveAll(reportAreas);
-                return reportRepository.saveAndFlush(report);
-            });
-            if (result == null) {
-                throw new IllegalStateException("Report transaction returned no result.");
+            List<ReportAreaEntity> reportAreas = new ArrayList<>();
+            for (int index = 0; index < targetAreas.size(); index++) {
+                reportAreas.add(new ReportAreaEntity(
+                        report,
+                        targetAreas.get(index),
+                        index + 1
+                ));
             }
-            return result;
+            reportAreaRepository.saveAll(reportAreas);
+            return reportRepository.save(report);
         } catch (RuntimeException exception) {
             compensateStorage(attemptedStoragePath.get());
+            compensateMetadata(attemptedReportId.get());
             if (exception instanceof ReportStorageException) {
                 throw new ApiException(ErrorCode.STORAGE_ERROR);
             }
@@ -161,16 +152,13 @@ public class ReportPersistenceService {
     }
 
     /**
-     * Storage 객체가 먼저 삭제된 후 호출되며 관계 Row와 Report Row를 한 Transaction에서 삭제한다.
+     * Storage 객체가 먼저 삭제된 후 호출되며 Report Metadata를 삭제한다.
      *
      * @param reportId 메타데이터를 제거할 Report ID
      */
     public void deleteMetadata(Long reportId) {
-        transactionTemplate.executeWithoutResult(status -> {
-            reportAreaRepository.deleteAllByReportId(reportId);
-            reportRepository.deleteById(reportId);
-            reportRepository.flush();
-        });
+        reportAreaRepository.deleteAllByReportId(reportId);
+        reportRepository.deleteById(reportId);
     }
 
     private void compensateStorage(String storagePath) {
@@ -183,6 +171,21 @@ public class ReportPersistenceService {
             log.error(
                     "Failed to compensate orphan Report storage object. storagePath={}",
                     storagePath,
+                    compensationFailure
+            );
+        }
+    }
+
+    private void compensateMetadata(Long reportId) {
+        if (reportId == null) {
+            return;
+        }
+        try {
+            reportRepository.deleteById(reportId);
+        } catch (RuntimeException compensationFailure) {
+            log.error(
+                    "Failed to compensate incomplete Report metadata. reportId={}",
+                    reportId,
                     compensationFailure
             );
         }

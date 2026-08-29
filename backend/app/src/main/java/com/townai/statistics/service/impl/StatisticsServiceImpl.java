@@ -14,7 +14,6 @@ import com.townai.statistics.repository.projection.AreaScoreStatistics;
 import com.townai.statistics.repository.projection.ScoreStatistics;
 import com.townai.statistics.service.StatisticsService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -31,7 +30,6 @@ import java.util.function.Function;
  * 제외한다.</p>
  */
 @Service
-@Transactional(readOnly = true)
 public class StatisticsServiceImpl implements StatisticsService {
 
     private final AreaRepository areaRepository;

@@ -12,6 +12,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -49,7 +50,7 @@ class LineWebhookEventPersistenceServiceTest {
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<LineWebhookEventEntity>> captor =
                 ArgumentCaptor.forClass(List.class);
-        verify(repository).saveAllAndFlush(captor.capture());
+        verify(repository).saveAll(captor.capture());
         assertEquals(1, captor.getValue().size());
         assertEquals(
                 "event-new",
@@ -62,7 +63,7 @@ class LineWebhookEventPersistenceServiceTest {
         assertEquals(List.of(), service.store(List.of()));
 
         verify(repository, never()).findAllById(anyCollection());
-        verify(repository, never()).saveAllAndFlush(anyCollection());
+        verify(repository, never()).saveAll(anyList());
     }
 
     private LineWebhookEventPayload textPayload(String eventId) {

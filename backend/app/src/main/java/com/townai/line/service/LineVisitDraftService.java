@@ -4,10 +4,10 @@ import com.townai.line.entity.LineVisitDraftEntity;
 import com.townai.line.model.LineWebhookEventWorkItem;
 import com.townai.line.persistence.LineVisitDraftPersistenceService;
 import com.townai.line.persistence.LineRevisionClaim;
+import com.townai.persistence.firestore.DuplicateDocumentException;
 import com.townai.visit.dto.VisitDraftRequest;
 import com.townai.visit.dto.VisitDraftResponse;
 import com.townai.visit.service.VisitDraftService;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 /**
@@ -75,7 +75,7 @@ public class LineVisitDraftService {
         );
         try {
             return persistenceService.createIfAbsent(workItem, response);
-        } catch (DataIntegrityViolationException exception) {
+        } catch (DuplicateDocumentException exception) {
             return persistenceService.findBySourceEventId(
                     workItem.webhookEventId()
             ).orElseThrow(() -> exception);
@@ -99,7 +99,7 @@ public class LineVisitDraftService {
                     .orElseGet(() -> LineVisitDraftResult.notice(
                             REVISION_NOT_APPLIED_MESSAGE
                     ));
-        } catch (DataIntegrityViolationException exception) {
+        } catch (DuplicateDocumentException exception) {
             return persistenceService.findBySourceEventId(
                     workItem.webhookEventId()
             ).map(LineVisitDraftResult::draft)

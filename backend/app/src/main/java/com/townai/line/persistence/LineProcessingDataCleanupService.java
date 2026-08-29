@@ -3,7 +3,6 @@ package com.townai.line.persistence;
 import com.townai.line.repository.LineVisitDraftRepository;
 import com.townai.line.repository.LineWebhookEventRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -48,7 +47,6 @@ public class LineProcessingDataCleanupService {
      *
      * @return Draft와 Webhook Event의 삭제 Row 수
      */
-    @Transactional
     public LineCleanupResult cleanupExpiredData() {
         Instant cutoff = clock.instant()
                 .minus(RETENTION_PERIOD)

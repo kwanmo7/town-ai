@@ -59,7 +59,7 @@ $OutputEncoding = $utf8
 
 | 파일 | 검증 목적 |
 |---|---|
-| `summary.json` | SQL 통계와 Top 5를 바꾸지 않고 짧게 해석하는지 확인 |
+| `summary.json` | Backend 집계와 Top 5를 바꾸지 않고 짧게 해석하는지 확인 |
 | `area.json` | 세 번의 방문 변화, 점수와 memo의 차이, 시간대별 재확인 필요성을 다루는지 확인 |
 | `compare.json` | 세 지역의 서로 다른 강점과 Trade-off를 절대 순위 없이 비교하는지 확인 |
 | `all.json` | 네 지역을 누락하지 않고, 방문 1회인 지역의 데이터 한계를 구분하는지 확인 |

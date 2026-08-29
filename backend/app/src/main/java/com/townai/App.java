@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * Town AI Backend 애플리케이션의 진입점이다.
  *
  * <p>이 클래스가 위치한 {@code com.townai} 패키지를 기준으로 Spring Component와
- * JPA Repository를 탐색한다.</p>
+ * Firestore Repository를 탐색한다.</p>
  */
 @SpringBootApplication(proxyBeanMethods = false)
 public class App {

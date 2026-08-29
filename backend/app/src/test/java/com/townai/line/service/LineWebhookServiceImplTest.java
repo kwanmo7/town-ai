@@ -10,8 +10,8 @@ import com.townai.line.persistence.LineWebhookEventPersistenceService;
 import com.townai.line.persistence.LineProcessingDataCleanupService;
 import com.townai.line.service.impl.LineWebhookServiceImpl;
 import com.townai.line.webhook.LineWebhookRequestProcessor;
+import com.townai.persistence.firestore.FirestorePersistenceException;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.DataAccessResourceFailureException;
 
 import java.time.Instant;
 import java.util.List;
@@ -88,8 +88,9 @@ class LineWebhookServiceImplTest {
         when(requestProcessor.verifyAndSelect(body, "signature"))
                 .thenReturn(payloads);
         when(cleanupService.cleanupExpiredData()).thenThrow(
-                new DataAccessResourceFailureException(
-                        "cleanup database unavailable"
+                new FirestorePersistenceException(
+                        "cleanup database unavailable",
+                        new IllegalStateException()
                 )
         );
         when(persistenceService.store(payloads))
@@ -109,7 +110,10 @@ class LineWebhookServiceImplTest {
         when(requestProcessor.verifyAndSelect(body, "signature"))
                 .thenReturn(payloads);
         when(persistenceService.store(payloads)).thenThrow(
-                new DataAccessResourceFailureException("database unavailable")
+                new FirestorePersistenceException(
+                        "database unavailable",
+                        new IllegalStateException()
+                )
         );
 
         ApiException exception = assertThrows(

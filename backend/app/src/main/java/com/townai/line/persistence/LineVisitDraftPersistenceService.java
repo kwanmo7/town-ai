@@ -8,9 +8,9 @@ import com.townai.line.entity.LineWebhookEventEntity;
 import com.townai.line.model.LineWebhookEventWorkItem;
 import com.townai.line.repository.LineVisitDraftRepository;
 import com.townai.line.repository.LineWebhookEventRepository;
+import com.townai.persistence.firestore.FirestoreTransactionRunner;
 import com.townai.visit.dto.VisitDraftResponse;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -34,6 +34,7 @@ public class LineVisitDraftPersistenceService {
     private final LineVisitDraftRepository draftRepository;
     private final LineWebhookEventRepository eventRepository;
     private final AreaRepository areaRepository;
+    private final FirestoreTransactionRunner transactions;
     private final Clock clock;
 
     /**
@@ -48,11 +49,13 @@ public class LineVisitDraftPersistenceService {
             LineVisitDraftRepository draftRepository,
             LineWebhookEventRepository eventRepository,
             AreaRepository areaRepository,
+            FirestoreTransactionRunner transactions,
             Clock clock
     ) {
         this.draftRepository = draftRepository;
         this.eventRepository = eventRepository;
         this.areaRepository = areaRepository;
+        this.transactions = transactions;
         this.clock = clock;
     }
 
@@ -62,7 +65,6 @@ public class LineVisitDraftPersistenceService {
      * @param sourceWebhookEventId 원본 LINE Webhook Event ID
      * @return 기존 Draft
      */
-    @Transactional(readOnly = true)
     public Optional<LineVisitDraftEntity> findBySourceEventId(
             String sourceWebhookEventId
     ) {
@@ -80,8 +82,13 @@ public class LineVisitDraftPersistenceService {
      * @param workItem 수정 가능성이 있는 Text Message 이벤트
      * @return 수정 대상 없음, 점유 성공, 다른 수정 처리 중 또는 무효 결과
      */
-    @Transactional
     public LineRevisionClaim claimRevision(
+            LineWebhookEventWorkItem workItem
+    ) {
+        return transactions.execute(() -> claimRevisionInTransaction(workItem));
+    }
+
+    private LineRevisionClaim claimRevisionInTransaction(
             LineWebhookEventWorkItem workItem
     ) {
         LineWebhookEventEntity event = eventRepository
@@ -111,6 +118,7 @@ public class LineVisitDraftPersistenceService {
                 );
         Instant now = clock.instant();
         LineVisitDraftEntity activeProcessing = null;
+        List<LineVisitDraftEntity> changedDrafts = new ArrayList<>();
         for (LineVisitDraftEntity draft : processing) {
             if (now.isBefore(draft.getExpiresAt())) {
                 if (activeProcessing == null) {
@@ -118,10 +126,13 @@ public class LineVisitDraftPersistenceService {
                 }
             } else {
                 draft.expire();
+                changedDrafts.add(draft);
             }
         }
         if (activeProcessing != null) {
             event.assignRevisionSource(activeProcessing.getId());
+            draftRepository.saveAll(changedDrafts);
+            eventRepository.save(event);
             return LineRevisionClaim.busy();
         }
 
@@ -132,10 +143,14 @@ public class LineVisitDraftPersistenceService {
                         now
                 );
         if (awaiting.isEmpty()) {
+            draftRepository.saveAll(changedDrafts);
             return LineRevisionClaim.none();
         }
         event.assignRevisionSource(awaiting.get().getId());
         awaiting.get().beginRevision(workItem.webhookEventId());
+        changedDrafts.add(awaiting.get());
+        draftRepository.saveAll(changedDrafts);
+        eventRepository.save(event);
         return LineRevisionClaim.claimed(awaiting.get());
     }
 
@@ -146,8 +161,17 @@ public class LineVisitDraftPersistenceService {
      * @param response Backend 검증을 통과한 Parser 응답
      * @return 기존 또는 새 LINE Draft
      */
-    @Transactional
     public LineVisitDraftEntity createIfAbsent(
+            LineWebhookEventWorkItem workItem,
+            VisitDraftResponse response
+    ) {
+        return transactions.execute(() -> createIfAbsentInTransaction(
+                workItem,
+                response
+        ));
+    }
+
+    private LineVisitDraftEntity createIfAbsentInTransaction(
             LineWebhookEventWorkItem workItem,
             VisitDraftResponse response
     ) {
@@ -160,7 +184,7 @@ public class LineVisitDraftPersistenceService {
         }
 
         LineVisitDraftEntity draft = createDraft(workItem, response);
-        return draftRepository.saveAndFlush(draft);
+        return draftRepository.save(draft);
     }
 
     /**
@@ -174,8 +198,19 @@ public class LineVisitDraftPersistenceService {
      * @param response 기존 값과 수정 내용을 병합한 Parser 응답
      * @return 이미 처리됐거나 새로 만든 수정 Draft. 점유가 무효면 빈 값
      */
-    @Transactional
     public Optional<LineVisitDraftEntity> createRevisionIfAbsent(
+            LineWebhookEventWorkItem workItem,
+            Long sourceDraftId,
+            VisitDraftResponse response
+    ) {
+        return transactions.execute(() -> createRevisionIfAbsentInTransaction(
+                workItem,
+                sourceDraftId,
+                response
+        ));
+    }
+
+    private Optional<LineVisitDraftEntity> createRevisionIfAbsentInTransaction(
             LineWebhookEventWorkItem workItem,
             Long sourceDraftId,
             VisitDraftResponse response
@@ -206,9 +241,12 @@ public class LineVisitDraftPersistenceService {
         }
 
         LineVisitDraftEntity revised = createDraft(workItem, response);
-        LineVisitDraftEntity saved = draftRepository.saveAndFlush(revised);
         foundSource.get().supersede();
-        return Optional.of(saved);
+        draftRepository.saveAll(List.of(
+                revised,
+                foundSource.get()
+        ));
+        return Optional.of(revised);
     }
 
     private LineVisitDraftEntity createDraft(

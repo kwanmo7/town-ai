@@ -1,89 +1,60 @@
 package com.townai.visit.entity;
 
 import com.townai.area.entity.AreaEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SourceType;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * Area를 직접 방문한 날짜와 다섯 가지 주관 평가를 저장하는 JPA Entity이다.
+ * Area를 직접 방문한 날짜와 다섯 가지 주관 평가를 표현하는 Domain Entity이다.
  *
  * <p>Visit은 사용자가 입력한 원본 평가의 Source of Truth이다. Area가 논리 삭제돼도
  * Visit Row와 연관 관계는 보존한다. 생성에는 Builder를 사용하고, 수정은 영속 상태
  * Entity의 {@link #update} 메서드로만 처리한다.</p>
  */
-@Entity
-@Table(name = "visit")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class VisitEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     /**
      * 여러 Visit이 하나의 Area를 참조한다. Visit 변경이 Area로 전파되지 않도록 Cascade는 사용하지 않는다.
      */
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "area_id", nullable = false)
     private AreaEntity area;
 
-    @Column(name = "visit_date", nullable = false)
     private LocalDate visitDate;
 
     @Min(0)
     @Max(10)
-    @Column(name = "atmosphere_score", nullable = false, columnDefinition = "TINYINT")
     private int atmosphereScore;
 
     @Min(0)
     @Max(10)
-    @Column(name = "infra_score", nullable = false, columnDefinition = "TINYINT")
     private int infraScore;
 
     @Min(0)
     @Max(10)
-    @Column(name = "clean_score", nullable = false, columnDefinition = "TINYINT")
     private int cleanScore;
 
     @Min(0)
     @Max(10)
-    @Column(name = "size_score", nullable = false, columnDefinition = "TINYINT")
     private int sizeScore;
 
     @Min(0)
     @Max(10)
-    @Column(name = "access_score", nullable = false, columnDefinition = "TINYINT")
     private int accessScore;
 
-    @Column(name = "memo", columnDefinition = "TEXT")
     private String memo;
 
-    @CreationTimestamp(source = SourceType.DB)
-    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @UpdateTimestamp(source = SourceType.DB)
-    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
     @Builder
@@ -105,6 +76,53 @@ public class VisitEntity {
         this.sizeScore = sizeScore;
         this.accessScore = accessScore;
         this.memo = memo;
+    }
+
+    public static VisitEntity restore(
+            Long id,
+            AreaEntity area,
+            LocalDate visitDate,
+            int atmosphereScore,
+            int infraScore,
+            int cleanScore,
+            int sizeScore,
+            int accessScore,
+            String memo,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        VisitEntity visit = VisitEntity.builder()
+                .area(area)
+                .visitDate(visitDate)
+                .atmosphereScore(atmosphereScore)
+                .infraScore(infraScore)
+                .cleanScore(cleanScore)
+                .sizeScore(sizeScore)
+                .accessScore(accessScore)
+                .memo(memo)
+                .build();
+        visit.id = id;
+        visit.createdAt = createdAt;
+        visit.updatedAt = updatedAt;
+        return visit;
+    }
+
+    /**
+     * 다른 문서가 새로 저장된 Visit ID만 참조할 때 사용하는 경량 Reference이다.
+     * Firestore Transaction에서 쓰기 이후 문서를 다시 읽지 않도록 한다.
+     */
+    public static VisitEntity reference(Long id) {
+        VisitEntity visit = new VisitEntity();
+        visit.id = id;
+        return visit;
+    }
+
+    public void markPersisted(Long persistedId, Instant persistedAt) {
+        if (id == null) {
+            id = persistedId;
+            createdAt = persistedAt;
+        }
+        updatedAt = persistedAt;
     }
 
     /**

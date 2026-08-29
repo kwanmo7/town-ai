@@ -13,9 +13,6 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionStatus;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,24 +38,15 @@ class ReportPersistenceServiceTest {
     @Mock
     private ReportStoragePathFactory pathFactory;
 
-    @Mock
-    private PlatformTransactionManager transactionManager;
-
-    @Mock
-    private TransactionStatus transactionStatus;
-
     private ReportPersistenceService persistenceService;
 
     @BeforeEach
     void setUp() {
-        when(transactionManager.getTransaction(any(TransactionDefinition.class)))
-                .thenReturn(transactionStatus);
         persistenceService = new ReportPersistenceService(
                 reportRepository,
                 reportAreaRepository,
                 reportStorage,
-                pathFactory,
-                transactionManager
+                pathFactory
         );
     }
 
@@ -68,7 +56,7 @@ class ReportPersistenceServiceTest {
         when(pathFactory.create(ReportType.SUMMARY, 10L, List.of()))
                 .thenReturn(storagePath);
         AtomicInteger saveCount = new AtomicInteger();
-        when(reportRepository.saveAndFlush(any(ReportEntity.class)))
+        when(reportRepository.save(any(ReportEntity.class)))
                 .thenAnswer(invocation -> {
                     ReportEntity report = invocation.getArgument(0);
                     if (saveCount.getAndIncrement() == 0) {
@@ -93,6 +81,6 @@ class ReportPersistenceServiceTest {
         InOrder storageOrder = inOrder(reportStorage);
         storageOrder.verify(reportStorage).write(storagePath, "# report");
         storageOrder.verify(reportStorage).delete(storagePath);
-        verify(transactionManager).rollback(transactionStatus);
+        verify(reportRepository).deleteById(10L);
     }
 }

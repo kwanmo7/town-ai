@@ -49,13 +49,13 @@ class AreaServiceImplTest {
                 "  요코하마시  ",
                 "   "
         );
-        when(areaRepository.saveAndFlush(any(AreaEntity.class)))
+        when(areaRepository.save(any(AreaEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         areaService.create(request);
 
         ArgumentCaptor<AreaEntity> captor = ArgumentCaptor.forClass(AreaEntity.class);
-        verify(areaRepository).saveAndFlush(captor.capture());
+        verify(areaRepository).save(captor.capture());
         AreaEntity saved = captor.getValue();
         assertEquals("센터미나미", saved.getName());
         assertEquals("가나가와현", saved.getPrefecture());

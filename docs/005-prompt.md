@@ -23,7 +23,7 @@ OpenAI API는 다음 두 역할만 담당한다.
 1. 자연어 방문 평가를 구조화된 Visit 초안으로 변환
 2. Backend가 제공한 Area, Visit 및 통계 데이터를 분석해 Report 생성
 
-AI는 비즈니스 로직이나 데이터의 최종 검증을 담당하지 않는다. MySQL을 Source of Truth로 사용하며 모든 입력 및 AI 출력은 Backend가 검증한다.
+AI는 비즈니스 로직이나 데이터의 최종 검증을 담당하지 않는다. Firestore를 Source of Truth로 사용하며 모든 입력 및 AI 출력은 Backend가 검증한다.
 
 ## 공통 원칙
 
@@ -272,7 +272,7 @@ Backend가 SQL로 계산한 전체 통계와 항목별 Top 5를 바탕으로 짧
 ```
 
 - JSON 객체만 반환하며 `comment` 이외의 필드를 추가하지 않는다.
-- Backend는 SQL 통계, 항목별 Top 5 및 `comment`를 조합해 최종 Markdown을 생성한다.
+- Backend는 Firestore 원본에서 계산한 통계, 항목별 Top 5 및 `comment`를 조합해 최종 Markdown을 생성한다.
 
 ### 최종 Markdown
 

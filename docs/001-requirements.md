@@ -107,7 +107,7 @@ AI는 다음 역할만 수행한다.
 | Messaging | LINE Messaging API(LINE Bot) |
 | Backend | Spring Boot 4.1.x |
 | Language | Java 25 LTS |
-| Database | MySQL 8.4 LTS |
+| Database | Cloud Firestore Standard (Native mode) |
 | AI | OpenAIAPI |
 | Cloud Storage | Google Cloud Storage |
 | Infrastructure | Google Cloud Platform(GCP) |
@@ -138,6 +138,6 @@ AI는 다음 역할만 수행한다.
 ## 설계 원칙(Design Principles)
 - AI는 비즈니스 로직을 수행하지 않는다.
 - Backend가 데이터의 최종 책임을 가진다.
-- 모든 AI결과는 참고 정보이며 원본 데이터는 항상 DB를 기준으로 한다.
+- 모든 AI결과는 참고 정보이며 원본 데이터는 항상 Firestore를 기준으로 한다.
 - 기능보다 유지보수성과 확장성을 우선한다.
 - 즉시 결정하지 않는 사항은 TODO로 기록하고 추후 검토한다.

@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Town AI data is accessed only by the authenticated Cloud Run backend.
+    // Server SDK requests use IAM and bypass these client security rules.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
