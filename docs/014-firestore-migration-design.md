@@ -1,5 +1,9 @@
 # Firestore 전환 설계
 
+> 완료된 전환 설계: 이 문서는 Cloud SQL에서 Firestore로 이동할 때 적용한 목표 구조와
+> 의사결정을 보존한다. 현재 운영 데이터 모델은 `003-firestore-data-model.md`, 실제 전환 결과는
+> `015-firestore-production-cutover-validation.md`를 우선한다.
+
 ## 목차
 
 1. 목적
@@ -24,7 +28,7 @@ LINE Bot과 Report 기능의 외부 동작은 유지하면서 상시 Instance �
 운영 부담을 제거하는 것이 목적이다.
 
 이 문서는 목표 Architecture, 데이터 모델, 일관성·보안·전환 정책을 정의한다. 구현과
-Production 전환의 진행 상태는 `999-TODO.md`에서 관리한다.
+Production 전환의 완료 이력은 `999-v1-completion-v2-backlog.md`에서 관리한다.
 
 ## 2. 전환 배경
 
@@ -96,7 +100,7 @@ Service와 Controller는 Google SDK를 직접 사용하지 않는다. Repository
 
 ## 5. 데이터 모델과 저장 정책
 
-Firestore Collection과 문서 필드의 상세 정의는 `003-erd.md`를 기준으로 한다.
+Firestore Collection과 문서 필드의 상세 정의는 `003-firestore-data-model.md`를 기준으로 한다.
 
 | Collection | 역할 | Document ID |
 | --- | --- | --- |
@@ -266,7 +270,7 @@ Counter를 10으로 맞췄다. 이미 생성된 신규 Report ID 1과 충돌하�
 
 Firestore 필드값과 GCS 객체의 generation·Hash·크기·수정 시각을 검증한 후 Legacy Cloud
 SQL Instance를 삭제했다. 실제 입력, 변환 규칙과 검증 결과는
-`015-firestore-production-cutover.md`에 기록한다.
+`015-firestore-production-cutover-validation.md`에 기록한다.
 
 ## 10. 배포와 Rollback
 
@@ -285,7 +289,7 @@ Firestore Database·Rules·Index 준비
 
 실제 V1은 `SUSPENDED` 평가 인스턴스를 유료 전환하지 않고 GCS 기반 복원 검증 직후
 삭제했으므로 이전 SQL Revision으로 Rollback할 수 없다. 이후 배포는
-`015-firestore-production-cutover.md`의 운영 전환 경계를 따른다.
+`015-firestore-production-cutover-validation.md`의 운영 전환 경계를 따른다.
 
 새 Revision은 Cloud SQL 연결과 DB Secret 없이 시작할 수 있어야 한다. Traffic 전환 전
 Startup, Liveness와 Readiness를 확인하고, 전환 후 Area·Visit·Statistics·Report 4종,
@@ -337,9 +341,9 @@ Protection을 활성화하고 PITR·예약 Backup은 사용하지 않는다. 대
 | `backend/scripts/production-restore-gcs-report-data.ps1` | GCS 기반 Production 데이터 복원·검증 |
 | `backend/scripts/production-restore-gcs-report-metadata.ps1` | 기존 GCS Report Metadata 복원·검증 |
 | `backend/app/src/main/resources/application.yml` | Local·Production Firestore 설정 |
-| `docs/003-erd.md` | Collection과 문서 필드의 기준 모델 |
-| `docs/015-firestore-production-cutover.md` | 실제 Production 전환 검증 기록 |
-| `docs/999-TODO.md` | 구현·배포 진행 상태와 남은 작업 |
+| `docs/003-firestore-data-model.md` | Collection과 문서 필드의 기준 모델 |
+| `docs/015-firestore-production-cutover-validation.md` | 실제 Production 전환 검증 기록 |
+| `docs/999-v1-completion-v2-backlog.md` | V1 구현·배포 완료 이력과 V2 후보 |
 
 ## 14. 참고 문서
 

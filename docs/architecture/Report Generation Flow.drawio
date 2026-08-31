@@ -19,20 +19,20 @@
                 <mxCell id="5" value="Spring Boot" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
                     <mxGeometry x="305" y="360" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="7" value="Visit" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
-                    <mxGeometry x="450" y="490" width="60" height="80" as="geometry"/>
+                <mxCell id="7" value="Firestore&lt;div&gt;Visits&lt;/div&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="440" y="490" width="80" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="9" value="OpenAI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
                     <mxGeometry x="305" y="690" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="11" value="Cloud Storage" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
-                    <mxGeometry x="110" y="320" width="60" height="80" as="geometry"/>
+                <mxCell id="11" value="Cloud Storage&lt;div&gt;Markdown&lt;/div&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="95" y="320" width="90" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="16" value="React" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
                     <mxGeometry x="180" y="170" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="28" value="Area" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
-                    <mxGeometry x="530" y="490" width="60" height="80" as="geometry"/>
+                <mxCell id="28" value="Firestore&lt;div&gt;Areas&lt;/div&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="530" y="490" width="80" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="29" value="" style="endArrow=classic;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="16" target="5" edge="1">
                     <mxGeometry relative="1" as="geometry">
@@ -89,8 +89,8 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="45" value="Report" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
-                    <mxGeometry x="110" y="430" width="60" height="80" as="geometry"/>
+                <mxCell id="45" value="Firestore&lt;div&gt;Report Metadata&lt;/div&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="95" y="430" width="90" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="46" style="edgeStyle=none;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" target="45" edge="1">
                     <mxGeometry relative="1" as="geometry">
@@ -119,11 +119,8 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="50" value="Query Visit Data" style="edgeLabel;resizable=0;html=1;;align=center;verticalAlign=middle;fontSize=15;" connectable="0" vertex="1" parent="1">
+                <mxCell id="50" value="Read Firestore Docs" style="edgeLabel;resizable=0;html=1;;align=center;verticalAlign=middle;fontSize=12;" connectable="0" vertex="1" parent="1">
                     <mxGeometry x="510" y="390" as="geometry"/>
-                </mxCell>
-                <mxCell id="51" value="Save Report" style="edgeLabel;resizable=0;html=1;;align=center;verticalAlign=middle;fontSize=15;" connectable="0" vertex="1" parent="1">
-                    <mxGeometry x="250" y="390" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>

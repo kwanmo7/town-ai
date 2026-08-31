@@ -85,7 +85,7 @@ Bearer Header로 전달한다. Markdown 다운로드도 인증된 API 요청으�
 Preview와 Live URL은 공개되므로 Cloud Run에
 `WEB_AUTH_ENABLED=true`, `FIREBASE_PROJECT_ID=town-ai`, `FIREBASE_ALLOWED_UID`를 먼저
 설정해야 한다. 활성화, IAM과 Developer Connect Trigger 설정은
-`../docs/013-firebase-hosting-deployment.md`를 따른다.
+`../docs/013-firebase-hosting-web-auth.md`를 따른다.
 
 `build:firebase`는 추적 가능한 `.env.firebase`의 공개 Boolean 설정으로 인증 UI를 항상
 활성화한다. 따라서 개발자의 `.env.local` 값과 관계없이 Preview와 Live Build에 로그인

@@ -1,4 +1,4 @@
-# Report Prompt 품질 평가
+# AI Report Prompt 품질 평가
 
 ## 목적
 
@@ -53,7 +53,9 @@ $utf8 = New-Object System.Text.UTF8Encoding $false
 $OutputEncoding = $utf8
 ```
 
-프로젝트의 `backend/gradle.properties`와 `backend/app/build.gradle`은 Gradle Daemon, Java Compile 및 Test JVM의 문자 인코딩을 UTF-8로 고정한다.
+`backend/app/build.gradle`은 Java Compile과 Test JVM의 문자 인코딩을
+UTF-8로 고정한다. PowerShell 5.1 터미널 출력은 위 설정을 함께
+적용한다.
 
 ## Fixture 구성
 
@@ -104,3 +106,13 @@ backend/app/build/prompt-eval/
 - Prompt Version을 최종 확정하기 전 동일 Fixture를 최소 3회 실행해 결과 편차도 확인한다.
 
 평가 결과가 기준을 충족하지 않으면 Prompt를 수정하고 `{type}-v2`처럼 Prompt Version을 올릴지 검토한다. 단순 문구 보완 단계에서는 V1 개발 중인 동안 같은 Version을 유지할 수 있지만, 이미 저장된 Report의 재현 기준이 된 이후에는 기존 Prompt를 덮어쓰지 않는다.
+
+## V1 수용 결과
+
+V1 기본 모델 `gpt-5.6-luna`로 생성한 SUMMARY·AREA·COMPARE·ALL Report를 Web과
+LINE의 실제 사용 흐름에서 확인했다. 입력 사실성, 지역 간 균형, 확인 항목의 실용성과
+Markdown 가독성에서 출시를 막을 문제가 발견되지 않아 V1 Prompt 품질을 수용했다.
+
+위의 최소 3회 반복 기준은 Prompt 또는 Model의 새 Version을 확정할 때 적용하는 회귀
+평가 기준이다. 동일한 V1 조합을 배포 때마다 유료 API로 반복 호출하지 않으며, 실제 사용
+중 품질 문제가 발견되거나 Model·Prompt 입력 계약이 바뀔 때 다시 실행한다.

@@ -1,10 +1,10 @@
-# Local Firestore Emulator 사용 방법
+# Local Firestore Emulator 가이드
 
 ## 목적
 
 Production Firestore 데이터와 비용에 영향을 주지 않고 Backend의 Repository,
-트랜잭션, API와 로컬 테스트 데이터를 검증한다. 파일명은 기존 링크 호환성을 위해
-유지하지만 현행 Local Database는 MySQL이 아닌 Firestore Emulator이다.
+Transaction, API와 로컬 테스트 데이터를 Firestore Emulator로 검증한다. 이 문서는
+Emulator 시작, Backend 연결, Seed 생성·복원과 자동 통합 테스트의 기준 절차를 다룬다.
 
 ## 구성
 

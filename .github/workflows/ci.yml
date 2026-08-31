@@ -46,6 +46,10 @@ jobs:
       - name: Make Gradle Wrapper executable
         run: chmod +x backend/gradlew
 
+      - name: Test Report orphan cleanup script
+        shell: pwsh
+        run: ./backend/scripts/test-report-orphan-cleanup.ps1
+
       - name: Test Backend with Firestore Emulator and build
         env:
           FIRESTORE_DATABASE_ID: town-ai
