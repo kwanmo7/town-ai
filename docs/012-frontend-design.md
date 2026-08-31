@@ -91,10 +91,12 @@ src/
 API 응답 Type은 Backend DTO와 같은 필드명을 사용한다. 화면 표시용 한글 이름과 날짜
 변환은 `lib`에서 관리하며, API Client는 HTTP 오류를 `ApiError`로 정규화한다.
 
-## 7. 구현 순서
+## 7. 구현 결과와 핵심 동작
+
+V1에서는 다음 범위를 순서대로 구현하고 Production에서 검증했다.
 
 1. 조회 중심 공통 Layout과 Backend 연결
-2. Area CRUD Form 완료 후 Visit CRUD Form
+2. Area·Visit CRUD Form
 3. 자연어 Visit Draft 입력과 확인
 4. Report 생성·필터·삭제
 5. Statistics 상세와 Area별 통계
@@ -139,7 +141,7 @@ Report 목록은 전체와 `AREA`, `COMPARE`, `SUMMARY`, `ALL` 유형 필터를 
 화면 진입 시 조회한 전체 목록을 Frontend에서 즉시 필터링한다. 개인용 V1에서 예상하는
 수십 건 규모에는 별도의 페이지네이션이나 필터별 반복 요청을 사용하지 않는다. Backend의
 `reportType` Query Parameter는 API 계약으로 유지한다. 각 Report 카드는 삭제 확인
-Dialog를 제공한다. 삭제가 확정되면 Storage의 Markdown과 DB 메타데이터를 삭제하는
+Dialog를 제공한다. 삭제가 확정되면 Storage의 Markdown과 Firestore 메타데이터를 삭제하는
 Backend API를 호출하고 전체 목록을 다시 조회한다. 삭제 실패 시 Dialog를 유지해 오류를
 확인하고 다시 시도할 수 있게 한다.
 
@@ -190,9 +192,10 @@ npm run hosting:deploy
 ```
 
 배포 CLI는 Frontend Package 의존성과 분리하고 Script에서 검증한 Firebase CLI 버전을
-고정해 실행한다. 자동 배포는 Developer Connect의 Pull Request·main Push Trigger가 각각
-`cloudbuild.preview.yaml`, `cloudbuild.production.yaml`을 사용한다. 실제 활성화와 IAM,
-검증 순서는 `013-firebase-hosting-deployment.md`를 따른다.
+고정해 실행한다. 자동 배포는 Developer Connect의 `main` Push Trigger가
+`cloudbuild.production.yaml`을 사용한다. 개인용 V1에서는 PR마다 Preview Channel을 만드는
+Trigger를 운영하지 않으며 `cloudbuild.preview.yaml`은 필요할 때 수동 Preview 검증에만
+사용한다. 실제 IAM과 검증 순서는 `013-firebase-hosting-web-auth.md`를 따른다.
 
 Hosting URL과 Preview URL은 공개되고 `/api`가 실제 운영 Backend로 연결된다. 따라서
 Cloud Run에 Firebase 인증과 단일 UID 제한이 실제 배포되고 401·403·정상 접근을 확인한

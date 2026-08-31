@@ -20,8 +20,8 @@ Town AI React Frontend를 Firebase Hosting에 배포하고 `/api/**` 요청을 T
 Cloud Run Backend로 전달한다. Web 관리 화면은 공개 URL을 사용하지만 Firebase
 Authentication과 Backend 권한 검증을 통해 허용된 한 명만 데이터에 접근하도록 한다.
 
-이 문서는 Hosting, 인증, 자동 배포와 운영 경계를 정의한다. 실제 구현·배포 진행 상태와
-검증 결과는 `999-TODO.md`에서 관리한다.
+이 문서는 Hosting, 인증, 자동 배포와 운영 경계를 정의한다. V1 구현·Production 배포
+결과는 `015-firestore-production-cutover-validation.md`, 완료 이력은 `999-v1-completion-v2-backlog.md`에서 관리한다.
 
 ## 2. 확정 구성
 

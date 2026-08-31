@@ -18,7 +18,7 @@
 Town AI Production의 기존 Cloud SQL 데이터를 유료 전환 없이 종료하고, 보존된 GCS
 Markdown Report를 근거로 핵심 Area와 Visit을 Firestore에 복원한 결과를 기록한다.
 
-이 문서는 Firestore의 목표 구조를 정의하는 `014-firestore-migration.md`와 달리 실제
+이 문서는 Firestore의 목표 구조를 정의하는 `014-firestore-migration-design.md`와 달리 실제
 Production 데이터 전환의 입력, 변환 범위, 검증 결과와 Cloud SQL 제거 사실을 보존한다.
 
 ## 2. 검증 환경
@@ -204,8 +204,8 @@ Database의 `freeTier=true` 상태를 확인했다. 운영 중에는 Billing Rep
 | --- | --- |
 | `backend/scripts/production-restore-gcs-report-data.ps1` | Production 복원과 불변 검증 |
 | `backend/scripts/production-restore-gcs-report-metadata.ps1` | 기존 GCS Report Metadata 복원과 불변 검증 |
-| `docs/003-erd.md` | Firestore Collection 기준 모델 |
-| `docs/006-deployment.md` | Production 배포·운영 기준 |
-| `docs/010-production-gcp-integration.md` | Legacy Cloud SQL 통합 검증 기록 |
-| `docs/014-firestore-migration.md` | Firestore 전환 설계 |
-| `docs/999-TODO.md` | 남은 배포·회귀 검증 상태 |
+| `docs/003-firestore-data-model.md` | Firestore Collection 기준 모델 |
+| `docs/006-deployment-operations.md` | Production 배포·운영 기준 |
+| `docs/legacy/010-legacy-cloud-sql-production-validation.md` | Legacy Cloud SQL 통합 검증 기록 |
+| `docs/014-firestore-migration-design.md` | Firestore 전환 설계 |
+| `docs/999-v1-completion-v2-backlog.md` | V1 배포·회귀 검증 완료 이력과 V2 후보 |

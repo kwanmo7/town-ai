@@ -1,8 +1,8 @@
-# Local MySQL API 통합 검증
+# Legacy Local MySQL API 통합 검증
 
 > Legacy 검증 기록: 이 문서는 2026-07-27 MySQL·JPA 구현의 당시 결과를 보존한다.
 > 현행 Local Database와 검증 방법은 Firestore Emulator 기반의
-> `007-local-database.md`와 `014-firestore-migration.md`를 따른다.
+> `../007-local-firestore-emulator.md`와 `../014-firestore-migration-design.md`를 따른다.
 
 ## 목적
 
@@ -70,9 +70,10 @@ Report Storage      : app/build/local-integration-reports
 
 회귀 Test를 추가해 미등록 Endpoint가 내부 서버 오류로 노출되지 않도록 고정했다.
 
-## 별도 검증 항목
+## 당시 범위 밖 검증 항목
 
-다음은 Local 통합 검증의 범위가 아니며 각각의 TODO에서 관리한다.
+다음은 이 검증을 수행할 당시 Local 통합 검증의 범위가 아니었던 항목이다. 현재 완료
+상태는 `../999-v1-completion-v2-backlog.md`를 기준으로 판단한다.
 
 - 실제 OpenAI 모델의 Report 품질과 응답 편차
 - 실제 GCP Bucket의 IAM·Region·네트워크를 포함한 GCS 통합

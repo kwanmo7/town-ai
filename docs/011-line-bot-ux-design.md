@@ -1,4 +1,4 @@
-# LINE Bot 화면 및 상호작용 설계
+# LINE Bot UX 및 상호작용 설계
 
 ## 1. 목적
 
@@ -164,7 +164,7 @@ AREA는 해당 Area의 실제 입력, COMPARE는 선택한 2~5개 Area의 순서
 - 다른 리포트 조회 버튼
 - 메인 메뉴 버튼
 
-DB ID와 GCS 내부 Object 경로는 사용자 메시지에 표시하지 않는다. URL은 추측
+내부 Document ID와 GCS Object 경로는 사용자 메시지에 표시하지 않는다. URL은 추측
 가능한 Report ID만으로 접근할 수 없도록 인증 또는 만료 정책을 Backend 구현 시
 확정한다.
 
@@ -194,13 +194,13 @@ Visit 저장 완료 화면은 `계속 등록`과 `메인 메뉴` 버튼을 제�
 메인 메뉴를 자동으로 다시 보내 대화가 길어지는 대신 사용자가 다음 동작을 직접
 선택한다.
 
-Production 적용 상태와 남은 작업은 다음과 같다.
+Production 적용 및 검증 상태는 다음과 같다.
 
 1. Rich Menu 생성·이미지 업로드·기본 메뉴 설정 완료
 2. 실제 모바일에서 등록·부분 수정·저장과 Report 조회 버튼 검증 완료
 3. 기존 Report 재사용과 분석 입력 변경 시 재생성 검증 완료
 4. 추측 가능한 Report ID는 30일 만료 HMAC-SHA256 서명 URL로 보호
-5. 오래된 메시지의 장기 재클릭 검증 필요
+5. 오래된 메시지의 장기 재클릭은 V1 완료 조건에서 제외하고 실제 사용 중 관찰
 
 V1 Welcome Message는 LINE Official Account Manager의 Greeting Message로
 설정한다. Backend는 이어서 수신한 Follow Event를 저장·비동기 처리하고 메인 메뉴
@@ -214,7 +214,8 @@ Webhook 처리와 별도로 같은 메시지가 중복되지 않도록 Official 
 2026-08-11 Production 수정본을 실제 LINE 모바일 대화에서 사용해 Rich Menu,
 Visit 등록·부분 수정·저장, 공개 HTTPS Report 보기·다운로드, 기존 Report 재사용,
 데이터 변경 시 재생성과 메인 메뉴 복귀를 확인했다. 세부 기록은
-`010-production-gcp-integration.md`에서 관리한다.
+초기 Cloud SQL 검증은 `legacy/010-legacy-cloud-sql-production-validation.md`, Firestore 전환 후
+최종 회귀 결과는 `015-firestore-production-cutover-validation.md`에서 관리한다.
 
 - 모든 JSON이 UTF-8로 파싱되는지 확인
 - Flex Message Simulator에서 Bubble·Carousel 표시 확인

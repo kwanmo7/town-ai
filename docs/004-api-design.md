@@ -258,7 +258,7 @@ DELETE /api/areas/{areaId}
 ```
 
 - V1에서는 Area를 물리 삭제하지 않고 Soft Delete한다.
-- Soft Delete에는 `deleted_at TIMESTAMP NULL` 컬럼을 사용한다.
+- Soft Delete에는 Firestore `deletedAt` Timestamp 또는 `null` Field를 사용한다.
 - 삭제된 Area는 지역 목록 및 상세 조회에서 노출하지 않는다.
 - 삭제된 Area에는 새로운 Visit을 등록하거나 Report 생성 대상으로 지정할 수 없다.
 - 기존 Visit은 원본 데이터 보존을 위해 유지한다.
@@ -341,7 +341,7 @@ GET /api/visits?areaId=1&from=2026-07-01&to=2026-07-31
 - `from`과 `to`는 해당 날짜를 포함한다.
 - `from`이 `to`보다 늦으면 `400 Bad Request`를 반환한다.
 - 기본 목록과 모든 필터 조회는 Soft Delete되지 않은 Area의 Visit만 반환한다.
-- Area를 Soft Delete해도 기존 Visit Row는 이력 보존을 위해 DB에 남지만 일반 Visit 목록에는 노출하지 않는다.
+- Area를 Soft Delete해도 기존 Visit 문서는 이력 보존을 위해 Firestore에 남지만 일반 Visit 목록에는 노출하지 않는다.
 - Visit 목록 필터에서 존재하지 않거나 삭제된 `areaId`를 지정하면 `200 OK`와 빈 배열을 반환한다. 이 규칙은 Area 단건 조회에는 적용하지 않는다.
 - 기본 정렬은 `visitDate DESC`, 동일한 방문일은 `id DESC`이다.
 
@@ -527,10 +527,10 @@ Content-Type: application/json
 - V1에서는 `LINE_ALLOWED_USER_ID`와 일치하는 1:1 대화의 Follow, 텍스트 Message와 메뉴·Draft·Report Postback Event만 처리한다. Draft의 `edit` Postback은 수정 대기 상태를 먼저 저장하고, 완료 안내를 받은 사용자가 다음 Text Message를 보내도록 한다.
 - 허용되지 않은 사용자, 그룹 대화, 텍스트가 아닌 메시지 및 지원하지 않는 이벤트는 외부에 정보를 노출하지 않고 `200 OK`로 종료한다.
 - 이벤트가 없는 Webhook URL 검증 요청도 `200 OK`로 응답한다.
-- 지원 이벤트는 최소 정보만 `line_webhook_event`에 먼저 저장하고 `webhookEventId` PK로 중복 수신을 방지한다. 원본 Webhook Body, Reply Token 및 Channel Access Token은 저장하지 않는다.
-- Webhook 요청 안에서 OpenAI를 호출하지 않는다. DB Commit 후 이벤트마다 Cloud Tasks Task를 생성하고 안전한 전달이 확인된 경우에만 Response Body 없이 `200 OK`를 반환한다.
+- 지원 이벤트는 최소 정보만 `lineWebhookEvents` Collection에 먼저 저장하고 `webhookEventId` Document ID로 중복 수신을 방지한다. 원본 Webhook Body, Reply Token 및 Channel Access Token은 저장하지 않는다.
+- Webhook 요청 안에서 OpenAI를 호출하지 않는다. Firestore 문서 저장 후 이벤트마다 Cloud Tasks Task를 생성하고 안전한 전달이 확인된 경우에만 Response Body 없이 `200 OK`를 반환한다.
 - Task 이름은 `webhookEventId`로부터 결정적으로 생성한다. 같은 Task가 이미 존재하면 이전 전달이 성공한 것으로 간주한다.
-- DB 저장 또는 Task 전달에 실패하면 `503 Service Unavailable`과 `LINE_EVENT_DISPATCH_ERROR`를 반환해 LINE Webhook Redelivery 대상이 되게 한다.
+- Firestore 이벤트 저장 또는 Task 전달에 실패하면 `503 Service Unavailable`과 `LINE_EVENT_DISPATCH_ERROR`를 반환해 LINE Webhook Redelivery 대상이 되게 한다.
 
 ### 비동기 처리 Endpoint
 
@@ -546,24 +546,24 @@ Authorization: Bearer {Cloud Tasks OIDC token}
 - 처리기는 `RECEIVED` 이벤트를 `PROCESSING`으로 원자적으로 전환하면서 `attemptCount`를 증가시키고 `processingStartedAt`을 기록한다.
 - `COMPLETED` 이벤트가 재전달되면 작업을 반복하지 않고 `2xx`로 종료한다.
 - `PROCESSING` 상태가 6분을 초과하면 이전 Process가 종료된 것으로 보고 다음 Cloud Tasks 시도가 이벤트를 다시 점유할 수 있다. 6분 이내의 중복 실행은 `5xx`로 종료해 나중에 재시도하게 한다.
-- 일시적인 OpenAI, LINE API 또는 DB 오류가 발생하고 `attemptCount`가 5 미만이면 이벤트를 다시 `RECEIVED`로 전환하고 오류 코드를 기록한 후 `5xx`를 반환해 Cloud Tasks가 재시도하게 한다.
-- 다섯 번째 애플리케이션 처리 시도에서도 실패하면, DB를 사용할 수 있는 경우 이벤트를 `FAILED`로 전환하고 마지막 오류 코드를 기록한다. 사용자 안내가 가능하면 실패 안내 Push Message를 Best-effort로 전송한 후 `2xx`로 종료한다.
-- Cloud Tasks가 애플리케이션 Endpoint에 도달하지 못해 애플리케이션이 최종 상태를 기록할 수 없는 경우는 Cloud Tasks 최종 실패 로그와 `RECEIVED` 또는 Lease가 만료된 `PROCESSING` Row를 운영 점검 대상으로 관리한다.
+- 일시적인 OpenAI, LINE API 또는 Firestore 오류가 발생하고 `attemptCount`가 5 미만이면 이벤트를 다시 `RECEIVED`로 전환하고 오류 코드를 기록한 후 `5xx`를 반환해 Cloud Tasks가 재시도하게 한다.
+- 다섯 번째 애플리케이션 처리 시도에서도 실패하면, Firestore를 사용할 수 있는 경우 이벤트를 `FAILED`로 전환하고 마지막 오류 코드를 기록한다. 사용자 안내가 가능하면 실패 안내 Push Message를 Best-effort로 전송한 후 `2xx`로 종료한다.
+- Cloud Tasks가 애플리케이션 Endpoint에 도달하지 못해 애플리케이션이 최종 상태를 기록할 수 없는 경우는 Cloud Tasks 최종 실패 로그와 `RECEIVED` 또는 Lease가 만료된 `PROCESSING` 문서를 운영 점검 대상으로 관리한다.
 - 재시도해도 해결되지 않는 입력 오류는 이벤트를 `FAILED`로 기록하고 사용자 안내가 가능하면 Push Message를 전송한 후 `2xx`로 종료한다.
 
 ### 텍스트 메시지 처리
 
 - 텍스트는 `POST /api/visit-drafts`와 동일한 Application Service 및 검증 규칙으로 파싱한다.
-- 처리 시작 시 `source_webhook_event_id`로 기존 Draft를 먼저 조회한다. 기존 Draft가 있으면 OpenAI를 다시 호출하거나 INSERT하지 않고 저장된 Draft와 warnings를 재사용한다.
-- 파싱 결과는 `line_visit_draft`에 저장하며 생성 시점부터 24시간 동안 유효하다.
+- 처리 시작 시 `sourceWebhookEventId`로 기존 Draft를 먼저 조회한다. 기존 Draft가 있으면 OpenAI를 다시 호출하거나 새 문서를 생성하지 않고 저장된 Draft와 warnings를 재사용한다.
+- 파싱 결과는 `lineVisitDrafts` Collection에 저장하며 생성 시점부터 24시간 동안 유효하다.
 - 기존 또는 신규 Area 후보, 위치, 방문일, 다섯 점수 및 memo를 보여주고 누락되거나 모호한 값은 `warnings`로 알린다.
 - 필수 값이 모두 유효하면 Draft 상태를 `AWAITING_CONFIRMATION`으로 저장하고 저장·수정·취소 Postback 버튼을 포함한 LINE Push Message를 전송한다.
 - 필수 값이 누락되거나 유효하지 않으면 `NEEDS_INPUT`으로 저장하고, 저장 버튼 없이 부족한 값만 자연어로 보완하도록 안내한다.
-- 사용자가 수정 또는 보완을 선택하면 Draft를 `AWAITING_REVISION`으로 전환한다. 다음 Text Message는 AI 호출 전에 `revision_webhook_event_id`로 원본을 점유하고 `REVISION_PROCESSING`으로 전환한다.
+- 사용자가 수정 또는 보완을 선택하면 Draft를 `AWAITING_REVISION`으로 전환한다. 다음 Text Message는 AI 호출 전에 `revisionWebhookEventId`로 원본을 점유하고 `REVISION_PROCESSING`으로 전환한다.
 - Parser는 `changedFields`와 전체 후보 값을 반환한다. Backend는 사용자가 명시한 `changedFields`만 기존 Draft에 병합하고 나머지 값은 모델 출력과 무관하게 유지한다.
 - 수정 결과는 새 Text Message의 `webhookEventId`를 사용하는 새 Draft로 저장하고 이전 Draft는 `SUPERSEDED`로 전환한다. 취소·만료·다른 수정으로 점유가 무효가 되면 결과를 신규 Draft로 우회 저장하지 않는다.
-- 수정 Text Message가 최초 선택한 원본 Draft ID는 `line_webhook_event.revision_source_draft_id`에 보존한다. 따라서 처리 결과 Push 또는 완료 상태 저장이 실패해 Task가 재시도되어도 수정 입력을 일반 신규 방문 입력으로 다시 해석하지 않는다.
-- 비동기 처리에서는 유효 시간이 짧은 Reply Token에 의존하지 않고 `line_user_id`를 대상으로 Push Message를 사용한다.
+- 수정 Text Message가 최초 선택한 원본 Draft ID는 `lineWebhookEvents.revisionSourceDraftId` Field에 보존한다. 따라서 처리 결과 Push 또는 완료 상태 저장이 실패해 Task가 재시도되어도 수정 입력을 일반 신규 방문 입력으로 다시 해석하지 않는다.
+- 비동기 처리에서는 유효 시간이 짧은 Reply Token에 의존하지 않고 `lineUserId`를 대상으로 Push Message를 사용한다.
 - Visit 저장이 완료되면 단순 Text 대신 `계속 등록`과 `메인 메뉴` Postback 버튼이 있는 저장 완료 Flex Message를 전송한다.
 
 ### Push Message 재시도
@@ -577,19 +577,19 @@ Authorization: Bearer {Cloud Tasks OIDC token}
 
 ### 이벤트 완료 전환
 
-- Draft 또는 Visit 처리 결과를 먼저 DB에 저장한 후 LINE Push Message를 전송한다.
-- LINE API가 `2xx`를 반환하거나 이미 수락된 Request ID가 포함된 `409 Conflict`를 반환한 경우에만 `line_webhook_event`를 `COMPLETED`로 전환한다.
+- Draft 또는 Visit 처리 결과를 먼저 Firestore에 저장한 후 LINE Push Message를 전송한다.
+- LINE API가 `2xx`를 반환하거나 이미 수락된 Request ID가 포함된 `409 Conflict`를 반환한 경우에만 `lineWebhookEvents` 문서를 `COMPLETED`로 전환한다.
 - Push 요청이 수락된 후 `COMPLETED` 저장에 실패하면 다음 Cloud Tasks 시도에서 저장된 Draft 또는 Visit 결과와 동일한 Retry Key를 사용해 같은 Push 요청을 재시도한다.
 - Push 요청 전에 이벤트를 `COMPLETED`로 전환하지 않는다.
 
 ### 저장, 수정 및 취소 처리
 
 - Postback Data는 `action=confirm&draftId={draftId}`, `action=edit&draftId={draftId}` 또는 `action=cancel&draftId={draftId}` 형식을 사용한다.
-- Backend는 Postback을 보낸 LINE User와 Draft의 `line_user_id`가 같은지 확인한다. `draftId`만으로 소유 권한을 인정하지 않는다.
-- 확인 시 Draft를 `SELECT ... FOR UPDATE`로 잠그고 상태, 24시간 만료, 기존 Area 상태 또는 신규 위치 필드, 날짜와 점수를 다시 검증한다.
+- Backend는 Postback을 보낸 LINE User와 Draft의 `lineUserId`가 같은지 확인한다. `draftId`만으로 소유 권한을 인정하지 않는다.
+- 확인 시 Firestore Transaction에서 Draft를 읽고 상태, 24시간 만료, 기존 Area 상태 또는 신규 위치 필드, 날짜와 점수를 다시 검증한다.
 - 신규 후보와 같은 활성 Area가 확인 시점에 이미 있으면 기존 Area를 재사용하고, 없으면 Area를 먼저 생성한다.
 - 유효한 Draft 확인에서 신규 Area가 필요하면 복합 Key로 먼저 멱등 생성한다. 이후 Visit 문서 저장과 Draft의 `CONFIRMED` 전환 및 `confirmedVisitId` 저장은 하나의 Firestore Transaction으로 처리한다.
-- 이미 확인된 Draft의 확인 이벤트가 재처리되면 기존 `confirmed_visit_id`를 사용해 성공으로 처리하고 Visit을 중복 생성하지 않는다.
+- 이미 확인된 Draft의 확인 이벤트가 재처리되면 기존 `confirmedVisitId`를 사용해 성공으로 처리하고 Visit을 중복 생성하지 않는다.
 - `NEEDS_INPUT`, `AWAITING_REVISION`, `REVISION_PROCESSING`, `SUPERSEDED`, `CANCELLED` 또는 `EXPIRED` 상태는 확인할 수 없다.
 - 수정은 `AWAITING_CONFIRMATION` 또는 `NEEDS_INPUT` Draft를 `AWAITING_REVISION`으로 전환하며 반복 요청은 같은 안내를 반환한다.
 - 취소는 `AWAITING_CONFIRMATION`, `AWAITING_REVISION` 또는 `REVISION_PROCESSING` Draft를 `CANCELLED`로 전환하며 반복 취소는 성공으로 간주한다. 처리 중이던 수정 결과는 저장하지 않는다.
@@ -607,14 +607,14 @@ Authorization: Bearer {Cloud Tasks OIDC token}
 - 분석 가능 여부를 확인한 뒤 현재 Prompt 입력 지문과 같은 Report를 먼저 조회한다. 기존 Report가 있으면 생성 중 안내와 AI·Storage 생성을 생략하고 `기존 리포트` 카드로 원래 생성일과 본문·다운로드 URL을 전송한다.
 - 같은 Report가 없을 때만 진행 안내를 Push하고 AI 생성과 Storage 저장을 수행한다.
 - 입력 지문은 Report Type, OpenAI 모델, Prompt Version, 대상 Area 순서와 실제 Prompt 입력으로 계산한다. 신규 Area·Visit, Area·Visit 수정·삭제, 비교 대상 변경, 모델 또는 Prompt Version 변경으로 생성 조건이 달라지면 새 Report를 생성한다.
-- LINE Report는 `source_webhook_event_id`도 UNIQUE로 저장한다. 결과 Push 실패 후 같은 Task가 재처리되면 입력 변화와 관계없이 해당 Event가 만든 기존 Report를 우선 복원한다.
+- LINE Report는 `sourceWebhookEventId`도 중복될 수 없도록 저장한다. 결과 Push 실패 후 같은 Task가 재처리되면 입력 변화와 관계없이 해당 Event가 만든 기존 Report를 우선 복원한다.
 - 완료 Flex Message는 리포트 보기, Markdown 다운로드, 다른 리포트 조회와 메인 메뉴 이동을 제공한다.
 
 ### 보관 및 Logging
 
 - 만료된 미확정 Draft는 조회 또는 확인 시 `EXPIRED`로 전환한다.
-- 지원 이벤트가 포함된 새 Webhook을 처리할 때 생성 후 30일이 지난 `line_visit_draft`를 먼저 기회적으로 삭제한다.
-- Draft가 참조하지 않는 30일 경과 `COMPLETED`·`FAILED` `line_webhook_event`를 이어서 삭제한다. 복구·점검 대상인 `RECEIVED`·`PROCESSING` 이벤트와 확인된 Visit은 자동 삭제하지 않는다.
+- 지원 이벤트가 포함된 새 Webhook을 처리할 때 생성 후 30일이 지난 `lineVisitDrafts` 문서를 먼저 기회적으로 삭제한다.
+- Draft가 참조하지 않는 30일 경과 `COMPLETED`·`FAILED` `lineWebhookEvents` 문서를 이어서 삭제한다. 복구·점검 대상인 `RECEIVED`·`PROCESSING` 이벤트와 확인된 Visit은 자동 삭제하지 않는다.
 - LINE User ID, 메시지 원문, memo, Postback Data 및 Token은 로그에 기록하지 않는다.
 - 로그에는 `webhookEventId`, `draftId`, 상태, 오류 코드, 재시도 횟수 및 처리 시간만 기록한다.
 
@@ -713,6 +713,10 @@ POST /api/reports
 - Report Storage 저장에 실패하면 불완전 Metadata를 삭제한다. 예약된 숫자 ID Gap은 정상으로 허용한다.
 - Report Storage 저장 후 Firestore 확정에 실패하면 방금 저장한 객체와 불완전 Metadata를 Best-effort로 삭제한다.
 - 보상 삭제도 실패하면 객체 경로와 오류를 로그에 남겨 운영 정리 대상으로 관리한다.
+- Process 강제 종료처럼 보상 로직 자체가 실행되지 않은 경우에는
+  `production-cleanup-orphan-reports.ps1`로 GCS 객체와 Firestore `storagePath`를 비교한다.
+- 운영 정리는 기본 Dry Run, 24시간 최소 보존, V1 Report 유형별 Markdown 경로와 GCS
+  Generation 일치 조건을 적용하며 두 개의 명시적 삭제 Option 없이는 객체를 제거하지 않는다.
 - 최종 Firestore Metadata 저장이 완료된 후에만 생성 성공으로 간주한다.
 
 Response
@@ -928,7 +932,7 @@ GET /actuator/health/liveness
 ```
 
 - Spring Boot 프로세스의 생존 상태만 확인한다.
-- DB, OpenAI API 및 Cloud Storage 상태는 포함하지 않는다.
+- Firestore, OpenAI API 및 Cloud Storage 상태는 포함하지 않는다.
 - 정상 상태는 `200 OK`, 비정상 상태는 `503 Service Unavailable`을 반환한다.
 
 Response
@@ -946,8 +950,8 @@ GET /actuator/health/readiness
 ```
 
 - Backend가 요청을 받을 준비가 되었는지 확인한다.
-- Spring Boot Readiness 상태와 DB 연결 상태를 포함한다.
-- OpenAI API와 Cloud Storage 상태는 포함하지 않는다.
+- Spring Boot Application Availability의 Readiness 상태만 포함한다.
+- Firestore, OpenAI API와 Cloud Storage 상태는 포함하지 않는다. 외부 의존성의 일시 장애가 Probe 실패와 반복 재시작으로 이어지지 않게 한다.
 - 정상 상태는 `200 OK`, 준비되지 않은 상태는 `503 Service Unavailable`을 반환한다.
 
 Response
@@ -959,5 +963,5 @@ Response
 ```
 
 - 두 Endpoint는 Cloud Run Probe 호출을 위해 인증 없이 접근할 수 있다.
-- 응답에는 Component 상세 정보, DB 주소 및 내부 오류 내용을 노출하지 않는다.
+- 응답에는 Component 상세 정보, 외부 시스템 주소 및 내부 오류 내용을 노출하지 않는다.
 

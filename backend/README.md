@@ -80,7 +80,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 Script는 `town-ai/town-ai` Firestore만 허용하고 Database 설정, 기존 Collection과 GCS
 Markdown 9개의 메타데이터를 검사한다. 최초 실행은 모든 문서를 원자적으로 생성하며,
 동일한 복원 데이터가 이미 있으면 덮어쓰지 않고 필드값과 GCS 불변 여부만 재검증한다.
-실제 복원·Cloud SQL 종료 결과는 `../docs/015-firestore-production-cutover.md`에 기록한다.
+실제 복원·Cloud SQL 종료 결과는 `../docs/015-firestore-production-cutover-validation.md`에 기록한다.
 
 Area·Visit 복원 후 GCS에 보존된 기존 Report 9개의 Firestore Metadata를 복원할 때는
 다음 Script를 사용한다.
@@ -95,6 +95,33 @@ Report Metadata 복원 Script는 GCS 파일명에 포함된 기존 ID `2~10`, �
 Prompt Version, 대상 Area를 복원한다. 이미 같은 Metadata가 있으면 값을 검증만 하고,
 `counters/report`가 더 큰 경우 Counter를 낮추지 않는다. 실행 전후 GCS 객체의 generation,
 Hash, 크기와 수정 시각을 비교하므로 Markdown 본문은 변경하지 않는다.
+
+## Production Report 고아 객체 점검
+
+Firestore `reports.storagePath`에서 참조하지 않는 GCS Markdown을 확인할 때 다음 Script를
+실행한다. 기본 실행은 Dry Run이며 GCS 객체를 삭제하지 않는다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\backend\scripts\production-cleanup-orphan-reports.ps1
+```
+
+Script는 `town-ai/town-ai`와 `gs://town_ai/reports/v1/{area|compare|summary|all}/*.md`만
+허용한다. 기본 24시간보다 최근인
+미참조 객체는 생성 중일 가능성이 있으므로 제외하고, 오래된 고아 객체의 경로·수정 시각·크기와
+Generation만 출력한다. 실제 삭제에는 다음 두 Option을 함께 지정해야 한다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\backend\scripts\production-cleanup-orphan-reports.ps1 `
+  -DeleteOrphans `
+  -ConfirmProductionCleanup
+```
+
+삭제에는 Scan 당시 Generation 일치 조건을 사용해 조회 후 교체된 객체를 보호한다. 이미 없는
+객체는 성공으로 처리한다. 실행 계정에는 Firestore Report 조회, GCS 객체 목록 조회 권한이
+필요하며 실제 삭제 시 GCS 객체 삭제 권한도 필요하다. 삭제 후 Dry Run을 다시 실행해 고아
+객체가 0개인지 확인한다.
 
 ## 코드 주석 기준
 
@@ -114,6 +141,13 @@ Unit Test:
 .\backend\gradlew.bat -p backend :app:test --no-daemon
 ```
 
+Production Report 고아 객체 정리 Script Test:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\backend\scripts\test-report-orphan-cleanup.ps1
+```
+
 Firestore Emulator 통합 Test:
 
 ```powershell
@@ -126,7 +160,7 @@ npx.cmd --yes firebase-tools@15.26.0 emulators:exec `
 
 자세한 내용:
 
-- Local Emulator: `../docs/007-local-database.md`
-- Firestore 데이터 모델: `../docs/003-erd.md`
-- Firestore 전환: `../docs/014-firestore-migration.md`
-- Production 전환 검증: `../docs/015-firestore-production-cutover.md`
+- Local Emulator: `../docs/007-local-firestore-emulator.md`
+- Firestore 데이터 모델: `../docs/003-firestore-data-model.md`
+- Firestore 전환: `../docs/014-firestore-migration-design.md`
+- Production 전환 검증: `../docs/015-firestore-production-cutover-validation.md`

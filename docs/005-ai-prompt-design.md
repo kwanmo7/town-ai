@@ -1,4 +1,4 @@
-# Prompt 설계
+# AI Prompt 설계
 
 ## 목차
 
@@ -84,7 +84,7 @@ Report 생성 요청 검증
 → AI 출력 JSON 또는 Markdown 검증
 → Backend에서 최종 Markdown 조립
 → Cloud Storage 저장
-→ Report 및 ReportArea 메타데이터 저장
+→ Firestore Report 메타데이터 저장
 ```
 
 - SUMMARY, COMPARE와 ALL은 AI가 반환한 JSON 필드를 Backend가 정해진 Markdown 템플릿에 삽입한다.
@@ -112,7 +112,7 @@ Report 생성 요청 검증
 
 | Version | System Prompt | Output Schema |
 |----|----|----|
-| `visit-parser-v1` | `backend/app/src/main/resources/prompts/visit-parser/v1/system.md` | 최초 입력은 `output-schema.json`, 부분 수정은 `revision-output-schema.json` |
+| `visit-parser-v1` | `backend/app/src/main/resources/prompts/visit-parser/v1/system.md` | 최초 입력은 `backend/app/src/main/resources/prompts/visit-parser/v1/output-schema.json`, 부분 수정은 `backend/app/src/main/resources/prompts/visit-parser/v1/revision-output-schema.json` |
 | `summary-v1` | `backend/app/src/main/resources/prompts/summary/v1/system.md` | `backend/app/src/main/resources/prompts/summary/v1/output-schema.json` |
 | `area-v1` | `backend/app/src/main/resources/prompts/area/v1/system.md` | 없음 |
 | `compare-v1` | `backend/app/src/main/resources/prompts/compare/v1/system.md` | `backend/app/src/main/resources/prompts/compare/v1/output-schema.json` |

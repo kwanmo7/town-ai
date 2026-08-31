@@ -1,18 +1,89 @@
-# 시스템 아키텍쳐 (Architecture)
+# 시스템 아키텍처 (Architecture)
 
 ## 목차
 - [시스템 구성](#시스템-구성)
+- [Web 관리 흐름](#web-관리-흐름)
 - [Report Generation Sequence](#report-generation-sequence)
 - [LINE Visit 입력 흐름](#line-visit-입력-흐름)
 - [LINE 메뉴 및 Report 조회 흐름](#line-메뉴-및-report-조회-흐름)
 - [설계 원칙](#설계-원칙)
 
 ## 시스템 구성
-![SystemArchitecture](./architecture/Component%20Diagram.png)
+
+```mermaid
+flowchart LR
+    Browser[Web Browser] --> Hosting[Firebase Hosting]
+    Hosting -->|React SPA| Browser
+    Hosting -->|/api rewrite| Backend[Cloud Run / Spring Boot]
+    LINE[LINE Platform] -->|signed webhook| Backend
+    Backend -->|HTTP task + OIDC| Tasks[Cloud Tasks]
+    Tasks -->|internal task| Backend
+    Backend --> Firestore[(Firestore Standard)]
+    Backend --> GCS[(Google Cloud Storage)]
+    Backend --> OpenAI[OpenAI Responses API]
+    Backend -->|Push Message| LINE
+```
+
+- Firebase Hosting은 React 정적 자산과 SPA Fallback을 제공하고 `/api/**`를 Cloud Run으로 Rewrite한다.
+- Cloud Run은 Web·LINE의 비즈니스 규칙, 인증·검증과 외부 시스템 연동을 담당한다.
+- Firestore는 Area·Visit·Report Metadata와 LINE 처리 상태의 Source of Truth이다.
+- GCS는 Markdown Report 본문만 저장하며 Firestore Report 문서가 객체 경로를 참조한다.
+- `architecture/`의 Draw.io·PNG는 편집 가능한 보조 시각 자료이며, 현재 구성의
+  텍스트 기준은 이 문서의 Mermaid Diagram이다.
+- 보조 자료: [Component Diagram](architecture/Component%20Diagram.png),
+  [Report Generation Flow](architecture/Report%20Generation%20Flow.png)
+
+## Web 관리 흐름
+
+```text
+Google Login
+→ Firebase Client SDK가 ID Token 발급
+→ React가 Authorization: Bearer <token>으로 /api 요청
+→ Cloud Run이 Token 서명·만료와 단일 허용 UID 검증
+→ Area·Visit·Statistics·Report Service 실행
+→ Firestore Metadata 또는 GCS Report 본문 접근
+→ React가 Loading·Error·Empty·Success 상태 렌더링
+```
+
+- 미인증 요청은 `401`, 유효한 Token이지만 허용 UID가 아닌 요청은 `403`이다.
+- Frontend는 Cloud Run Origin을 직접 갖지 않고 Hosting의 상대 경로 `/api`만 사용한다.
+- Health Check, LINE Webhook·Task, 서명된 Public Report Endpoint는 관리 API와 다른 보안 경계를 사용한다.
 
 
 ## Report Generation Sequence
-![ReportGenerationSequence](./architecture/Report%20Generation%20Sequence.png)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Client as Web or LINE
+    participant API as Spring Boot
+    participant FS as Firestore
+    participant AI as OpenAI
+    participant GCS as Cloud Storage
+
+    User->>Client: Report type and target
+    Client->>API: Generate report
+    API->>FS: Validate active Area and Visit data
+    API->>API: Build source fingerprint
+    alt LINE lookup
+        API->>FS: Find reusable report
+        FS-->>API: Existing metadata or empty
+    end
+    alt Web create or no reusable LINE report
+        API->>AI: Structured report input
+        AI-->>API: Analysis output
+        API->>API: Validate and assemble Markdown
+        API->>GCS: Store Markdown
+        API->>FS: Commit report metadata
+    end
+    API-->>Client: New or reused report result
+```
+
+Report ID를 먼저 확보한 뒤 GCS 경로를 만들며, Storage 저장 이후 Metadata 확정이
+실패하면 임시 Metadata와 GCS 객체를 Best-effort로 보상 삭제한다. 삭제 API는 Metadata와
+본문을 함께 정리하고, 별도 운영 Script가 Firestore에서 참조하지 않는 오래된 GCS 객체를
+Dry Run으로 탐지한다. Web의 `POST /api/reports`는 항상 새 Report를 생성하고, 기존 입력
+지문 재사용은 LINE 조회 흐름에만 적용한다.
 
 ## LINE Visit 입력 흐름
 
@@ -23,7 +94,7 @@ LINE Platform
 → POST /api/line/webhook
 → 원문 Body 기반 서명 검증
 → 허용된 LINE User 및 이벤트 검증
-→ line_webhook_event 저장
+→ `lineWebhookEvents` 문서 저장
 → Cloud Tasks에 webhookEventId 전달
 → 200 OK
 
@@ -31,7 +102,7 @@ Cloud Tasks
 → POST /internal/tasks/line-events/{webhookEventId}
 → OpenAI Visit Parser 호출
 → 기존 Area 연결 또는 신규 Area 위치 후보 검증
-→ line_visit_draft 저장
+→ `lineVisitDrafts` 문서 저장
 → LINE Push Message로 Draft와 저장/수정/취소 버튼 전송
 → LINE이 Push 요청을 수락한 후 Webhook Event를 COMPLETED로 전환
 
@@ -49,7 +120,7 @@ Cloud Tasks
 → Draft를 AWAITING_REVISION으로 전환한 뒤 수정 입력 안내
 → 다음 Text Message가 원본 Draft를 REVISION_PROCESSING으로 점유
 → OpenAI가 반환한 changedFields만 Backend가 기존 Draft에 병합
-→ 검증된 새 line_visit_draft 저장
+→ 검증된 새 `lineVisitDrafts` 문서 저장
 → 이전 Draft를 SUPERSEDED로 전환
 → 수정된 Draft를 다시 LINE Push Message로 전송
 ```
@@ -61,7 +132,7 @@ Cloud Tasks
 - 비동기 처리 결과는 Reply Token 만료 영향을 받지 않도록 LINE Push Message로 전송한다.
 - LINE Push Message는 `webhookEventId`와 메시지 용도로부터 만든 결정적 Retry Key를 사용해 재시도 중 중복 전송을 방지한다.
 - LINE Push Message가 `2xx` 또는 이미 수락된 Request ID가 포함된 `409 Conflict`로 확인된 후에만 이벤트를 `COMPLETED`로 전환한다.
-- Draft가 이미 저장된 이벤트를 재처리할 때는 OpenAI를 다시 호출하거나 Draft를 다시 INSERT하지 않고 기존 Draft를 재사용한다.
+- Draft가 이미 저장된 이벤트를 재처리할 때는 OpenAI를 다시 호출하거나 Draft 문서를 다시 생성하지 않고 기존 Draft를 재사용한다.
 - Parser가 기존 Area를 찾지 못해도 이름·도도부현·시구정촌이 확정된 한 지역은 신규 후보로 보존한다. AI가 보완한 위치 정보는 Draft 화면에서 사용자가 확인해야 한다.
 - 애플리케이션 처리 시도가 최대 횟수에 도달하면 이벤트를 `FAILED`로 종료해 `RECEIVED` 상태로 남지 않게 한다.
 - 이벤트를 `FAILED`로 확정한 뒤 내부 오류를 노출하지 않는 일반 재시도 안내를 Best-effort Push한다. 안내 실패는 종료된 이벤트를 다시 처리 상태로 되돌리지 않는다.
@@ -95,7 +166,7 @@ Cloud Tasks
 - 메뉴와 Report Postback의 ID 및 선택 상태는 신뢰하지 않고 Backend에서 다시 검증한다.
 - 분석 가능한 활성 Visit이 없으면 생성 중 메시지와 OpenAI 호출 없이 등록 안내를 Push한다.
 - LINE은 일반 Markdown 파일 발신을 지원하지 않으므로 Report는 안전한 HTTPS URL로 전달한다.
-- 화면 및 Postback 기준은 `011-line-bot-design.md`와 `linebotdesign/`에서 관리한다.
+- 화면 및 Postback 기준은 `011-line-bot-ux-design.md`와 `linebotdesign/`에서 관리한다.
 
 ## 설계 원칙
 - React와 LINE Bot은 입력 채널이다.

@@ -1,0 +1,334 @@
+# V1 완료 기록 및 V2 백로그
+
+V1 구현·Firestore Production 전환·운영 검증은 완료됐다. 이 문서의 `[x]` 항목은
+완료 내역과 설계 결정 기록이며, 현재 미확정 항목은 하단 V2 후보에서만 관리한다.
+
+상태 표기:
+- `[x]`: 구현·검증 완료 또는 설계 확정
+- `[ ]`: 미해결 또는 후속 검토 필요
+
+## 작업 순서
+
+1. [x] API 설계 완료
+2. [x] Prompt 설계 완료
+3. [x] 배포 설계 완료
+4. [x] Backend 구현 및 Production 연동 검증
+   - [x] Backend 핵심 기능 구현
+     - [x] Area REST API
+     - [x] Visit REST API
+     - [x] Report REST API와 Local Report 생성·저장 흐름
+     - [x] Statistics API와 SUMMARY 공통 집계 흐름
+     - [x] 자연어 Visit Parser API
+     - [x] LINE Webhook, 비동기 전달 및 Visit Draft 처리
+       - [x] 원문 Body HMAC-SHA256 서명 검증과 요청 DTO 역직렬화
+       - [x] `LINE_ALLOWED_USER_ID` 기반 1:1 사용자 및 지원 이벤트 선별
+       - [x] Webhook 이벤트 저장과 Local·Cloud Tasks Dispatcher 연결
+       - [x] 내부 Task Endpoint, OIDC 인증, 처리 Lease 및 최대 5회 상태 관리
+       - [x] Visit Draft 생성, LINE Push, 저장·부분 수정·취소 및 Visit 저장
+       - [x] 등록 Area 0건에서 신규 Area 후보 확인 후 Area·Visit 동시 저장
+       - [x] 최대 처리 실패 안내 Push 및 30일이 지난 처리 데이터의 기회적 정리
+     - [x] LINE Bot 등록·조회 화면과 Rich Menu 디자인
+       - [x] 등록·조회·Report 결과 Flex Message JSON
+       - [x] `2500 x 843`, 1MB 이하 Rich Menu 이미지와 터치 영역 정의
+       - 반영 파일: `linebotdesign/`
+       - 반영 문서: `011-line-bot-ux-design.md`
+     - [x] LINE 메뉴·Report 조회 Backend 연동
+       - [x] Flex Message 공통 모델과 Serialization 구조
+       - [x] Draft 확인 화면 및 고정 메뉴·안내 화면 Factory
+       - [x] Follow·메뉴·Report Type·Area 선택 Postback 처리
+     - [x] LINE용 Report 생성 결과 Push 및 Webhook Event 기반 중복 방지
+       - [x] Prompt 입력 SHA-256 지문 기반 기존 Report 재사용과 데이터 변경 시 재생성
+       - [x] Report 완료 화면의 메인 메뉴 이동
+       - [x] 활성 Visit 0건의 SUMMARY·ALL 생성 사전 차단
+       - [x] Draft 저장 전 자연어 부분 수정 및 누락값 병합
+     - [x] LINE Production 연동 및 후속 보안 강화
+       - [x] `LINE_REPORT_BASE_URL`과 Cloud Tasks OIDC Audience를 사용한 공개 Cloud Run Report 링크
+       - [x] 실제 모바일 Rich Menu와 등록·수정·Report 조회 흐름 검증
+       - [x] 행정구역 일부를 생략한 신규 Area 위치 보완 검증
+       - [x] Visit 저장 완료 후 계속 등록·메인 메뉴 이동 검증
+       - [x] 입력이 같은 기존 Report 재사용과 데이터 변경 시 재생성 검증
+       - [x] Report 보기·Markdown 다운로드 공개 URL 검증
+       - [x] 추측 가능한 Report ID를 보호할 30일 만료 HMAC-SHA256 URL
+       - [x] 서명 URL의 현재 Production 동작과 30일 만료 경계 자동 검증
+       - [x] Legacy Cloud SQL 시기의 Flyway V5~V7 배포 후 신규 Area·Visit 동시 등록과 Draft 부분 수정 검증
+     - [x] Production용 GCS Report Storage 구현체
+     - [x] Local Firestore Emulator 기반 Repository 통합 검증
+       - 격리된 `demo-town-ai-integration-*` Project와 `town-ai` Database 사용
+       - Area·Visit·Report·Draft의 저장, 조회, 관계 및 Transaction 흐름 검증
+       - CI에서 Firebase Emulator를 시작한 뒤 Backend Test와 Build 실행
+       - 현행 검증 방법: `007-local-firestore-emulator.md`, `014-firestore-migration-design.md`
+   - [x] Production용 Backend Dockerfile과 Docker Build Context 제외 정책
+     - Java 25 Build·Runtime Multi-stage Image 및 Non-root 사용자 적용
+     - Cloud Run `PORT` 환경변수 연동
+     - Docker Build Context와 Spring Boot 실행 JAR에서 Local Secret·환경 파일 제외
+     - [x] 개발 PC Docker Desktop에서 Linux amd64 Image Build와 Non-root 실행 설정 검증
+   - [x] GitHub Actions Backend CI Workflow 구현
+     - Java 25, Gradle Test·Build, Javadoc 및 Docker Image Build 검증
+     - `main` 대상 모든 Pull Request와 수동 실행에서 검증
+     - Required Status Check 누락 방지를 위해 경로 필터를 사용하지 않음
+   - [x] Developer Connect·Cloud Build 기반 Backend CD 실제 배포 검증
+     - GitHub Actions CD와 중복 구성하지 않음
+     - Build Type은 Dockerfile, Source Location은 `backend/Dockerfile` 사용
+     - `town-ai-api` 실제 Backend 배포 및 Liveness·Readiness `UP` 확인
+   - [x] 실제 외부 서비스 및 Production GCP 통합 검증
+     - [x] Cloud Run, Cloud SQL, 실제 OpenAI AREA Report와 GCS 저장·조회·삭제 (Legacy 검증)
+     - [x] LINE Messaging API, Cloud Tasks와 OIDC
+     - [x] 위치 보완·저장 완료 메뉴·Report 공개 URL 수정본 Production 재검증
+     - [x] 기존 Report 재사용과 분석 입력 변경 시 재생성 Production 검증
+     - 검증 결과: `legacy/010-legacy-cloud-sql-production-validation.md`
+   - [x] Cloud SQL에서 Firestore로 Production 전환
+     - [x] JPA·Flyway·MySQL·Cloud SQL Connector Runtime 의존성 제거
+     - [x] Area·Visit·Report·Statistics·LINE Firestore Repository 구현
+     - [x] 숫자 ID Counter와 Area 복합 중복 방지 Key 구현
+     - [x] Local Firestore Emulator 실행·초기화·Seed Script 구현
+     - [x] Emulator Repository 통합 Test와 GitHub Actions 연결
+     - [x] 데이터 모델·배포·전환·Rollback 문서화
+     - [x] Production `town-ai` Firestore Standard Native를 `asia-northeast1`에 생성
+     - [x] Production `town-ai` Client 접근 거부 Rules와 V1 Index 배포
+     - [x] Production `town-ai` Firestore Delete Protection 활성화
+     - [x] 전용 Runtime Service Account 생성 및 최소 권한 사전 구성
+       - [x] `town-ai-runtime` 계정 생성
+       - [x] Firestore·Cloud Tasks·Logging Project 역할 부여
+       - [x] `gs://town_ai` Object User와 사용 중인 Secret 6개 Accessor 부여
+       - [x] Cloud Tasks OIDC용 자체 `iam.serviceAccounts.actAs` 부여
+     - [x] 새 Cloud Run Revision에 전용 계정 연결
+     - [x] 회귀 검증 후 기본 Compute 계정의 `Editor`·관리자 권한 제거
+     - [x] 기존 데이터 복원 범위와 방법 결정
+       - [x] Legacy Instance `SUSPENDED`, 자동 백업 비활성 및 보존 Backup 0건 확인
+       - [x] 유료 재기동 없이 GCS Report 기반 복원 선택
+       - [x] Area 3개·Visit 3개·`areaKeys`·`counters` 복원 및 필드값 검증
+       - [x] LINE 처리 상태는 신규 생성하고 복원 가능한 기존 Report Metadata 9개는 후속 복원
+       - [x] GCS Markdown 9개의 generation·Hash·크기·수정 시각 불변 검증
+       - [x] 기존 Report ID 2~10, 대상 Area, 생성 시각, 모델·Prompt Version과 Counter 복원
+     - [x] Firestore Backend Revision 배포 및 Web·LINE 주요 흐름 회귀 검증
+     - [x] 최소 Instance 0 설정과 새 Revision Cold Start·Health 검증
+     - [x] Legacy Cloud SQL `town-ai-api` Instance 삭제
+     - [x] 새 Revision에서 Cloud SQL 연결·환경변수·Secret 참조 제거
+     - [x] 회귀 검증 후 Legacy DB Secret·기본 Compute 계정 권한 정리
+     - [x] V1은 Delete Protection을 사용하고 PITR·예약 Backup은 필수로 운영하지 않음
+     - 설계·검증 문서: `014-firestore-migration-design.md`, `015-firestore-production-cutover-validation.md`
+5. [x] Frontend 구현 및 Production 배포
+   - [x] React·TypeScript·Vite 프로젝트와 공통 반응형 Layout 구성
+   - [x] Backend API Client와 Loading·Error·Empty 공통 상태 구성
+   - [x] Dashboard, Area·Visit·Report 목록과 Markdown Report 조회 구현
+   - [x] Local Vite Proxy와 Firebase Hosting Cloud Run Rewrite 설정
+   - [x] Frontend Lint·Test·Production Build를 기존 GitHub Actions CI에 연결
+   - [x] Area 등록·수정·Soft Delete UI와 API Validation 오류 표시
+   - [x] Visit 등록·수정·삭제 UI
+     - [x] 자연어 Draft 기반 Visit 등록
+     - [x] 기존 Visit 수정·삭제
+   - [x] 자연어 Visit Draft 입력·점수 선택·확인 UI
+   - [x] Report 유형·대상 선택, 생성·삭제 및 목록 필터 UI
+     - [x] 유형별 대상 검증, 동기 생성 상태와 생성 완료 후 상세 화면 이동
+     - [x] 활성 Visit 0건 차단과 방문 기록 없는 Area 선택 방지
+     - [x] GFM 점수 표 렌더링과 ALL Structured Output 생성 안정화
+     - [x] 기존 Report 삭제와 목록 유형 필터
+   - [x] Statistics 상세·Top 5 화면과 Area별 통계 연결
+   - [x] 접근성·반응형 실제 브라우저 검증 및 주요 사용자 흐름 테스트 보강
+     - Desktop Chrome·Pixel 7에서 주요 6개 Route의 WCAG 심각 위반과 가로 넘침 검사
+     - Visit 수정·삭제, Report 필터·삭제, Top 5 Area 통계 조회 E2E 검증
+     - GitHub Actions에서 Chromium 설치 후 E2E 자동 실행
+   - [x] Firebase Hosting 설정과 Production Cloud Build 구성
+     - 정적 Asset Cache, SPA 및 `/api/**` Cloud Run Rewrite
+     - 수동 Preview 설정 파일과 main Live Channel 자동 배포
+     - 개인용 V1에서는 PR Preview Trigger를 생성하지 않음
+   - [x] 공개 Web 관리 API 인증과 단일 사용자 권한 제한
+     - Firebase Hosting과 Preview URL은 공개되므로 쓰기·삭제 API를 인증 없이 노출하지 않음
+     - [x] Firebase Google 로그인 UI와 모든 관리 API의 ID Token 전달
+     - [x] Firebase Admin SDK Token 검증과 `FIREBASE_ALLOWED_UID` 단일 사용자 제한
+     - [x] LINE Webhook, Cloud Tasks OIDC, Health Check와 Web 관리 API의 접근 정책 분리
+     - [x] Cloud Run 허용 UID 일반 환경변수 설정
+     - [x] 새 Backend Revision에서 미인증·잘못된 Token의 `401` 검증
+     - [x] 허용 UID 정상 접근과 다른 Firebase UID의 `403` 검증
+     - [x] Web Report Firebase 인증과 LINE Report 30일 만료 서명 URL 분리
+     - [x] Cloud Run `LINE_EVENT_DISPATCHER=cloud-tasks` 설정 및 미인증 내부 요청 `401` 검증
+     - [x] malformed JWT 예외 처리 수정본 배포 후 `401` 재검증
+       - [x] Cloud Tasks API 활성화와 `asia-northeast1/line-events` Queue 생성
+       - [x] Cloud Run Runtime Service Account에 `roles/cloudtasks.enqueuer` 부여
+       - [x] LINE 메시지 전송부터 OIDC 내부 처리와 Push 응답까지 재검증
+     - 반영 문서: `004-api-design.md`, `006-deployment-operations.md`, `012-frontend-design.md`
+   - [x] Firebase 활성화, Hosting Preview와 Production 배포 검증
+     - [x] 수동 Preview Channel 배포, SPA·Cloud Run Rewrite·Cache Header와 로그인 UI 검증
+     - [x] 허용 UID 정상 접근과 다른 UID 권한 거부 검증
+     - [x] `main` Push용 `town-ai-web-production` Developer Connect Trigger 생성
+     - [x] Live Channel 최초 배포와 Production 주요 화면 검증
+     - 설계 문서: `013-firebase-hosting-web-auth.md`
+   - 반영 문서: `012-frontend-design.md`, `013-firebase-hosting-web-auth.md`
+6. [x] 현재 구조와 혼동되는 관계형 ERD 산출물을 Repository Tree에서 제거
+
+- 현행 데이터 모델 기준은 `003-firestore-data-model.md`의 Firestore Collection 구조이다.
+- 기존 SQL·PNG·XLSX가 필요하면 Git 이력에서 확인한다.
+
+## V1 설계 결정
+
+- [x] Area는 `(prefecture, city, name)` UNIQUE Key 사용
+  - Firestore `areaKeys/{sha256(prefecture + NUL + city + NUL + name)}` 문서로 유일성 보장
+  - 반영 문서: `003-firestore-data-model.md`, `004-api-design.md`
+- [x] Report Type은 Enum 사용
+  - 반영 문서: `004-api-design.md`
+- [x] Prompt Version은 기능별 독립 증가 형식 사용
+  - 현재 값: `summary-v1`, `all-v1`, `area-v1`, `compare-v1`, `visit-parser-v1`
+  - `visit-parser-v1`은 기존 Area 매칭, 미등록 Area 후보와 위치 확인 및 Draft 부분 수정을 지원
+  - Firestore Report 문서의 `promptVersion` 문자열 Field에 사용한 Version을 저장
+  - 반영 문서: `003-firestore-data-model.md`, `004-api-design.md`, `005-ai-prompt-design.md`
+- [x] ID 및 Timestamp 생성 정책 확정
+  - 기존 API 호환용 숫자 ID는 Firestore `counters` 문서와 Transaction으로 생성
+  - `createdAt`, `updatedAt`은 Backend UTC Clock과 Firestore Timestamp를 사용
+  - Firestore와 애플리케이션은 UTC를 사용하고 API는 ISO8601로 직렬화
+  - Visit 점수는 DB와 Backend에서 0 이상 10 이하로 검증
+  - 반영 문서: `003-firestore-data-model.md`, `004-api-design.md`
+- [x] Report ID 선점 및 실패 보상 순서 확정
+  - Firestore에 임시 Metadata를 저장해 ID를 얻은 후 Storage 경로 생성
+  - Storage 저장 후 Metadata 확정 실패 시 Storage 객체와 임시 Metadata를 Best-effort로 삭제
+  - 반영 문서: `003-firestore-data-model.md`, `004-api-design.md`
+- [x] LINE Bot Backend V1 범위 확정
+  - Webhook 서명 검증, 텍스트 Visit Draft 처리 및 Push Message 결과 회신
+  - 유효한 Draft에 저장·부분 수정·취소 Postback을 제공하고 확인된 Draft만 Visit으로 저장
+  - `LINE_ALLOWED_USER_ID`로 개인 사용자만 허용
+  - 반영 문서: `001-requirements.md`, `002-system-architecture.md`, `003-firestore-data-model.md`, `004-api-design.md`, `006-deployment-operations.md`
+- [x] LINE Webhook 비동기 처리 및 중복 방지 방식 확정
+  - Production은 Cloud Tasks HTTP Target과 OIDC 인증 사용
+  - Local은 `LocalLineEventDispatcher` 사용
+  - `webhookEventId`를 Firestore 문서 ID 및 결정적 Task 이름으로 사용
+  - 이벤트 처리와 Draft 확인은 Firestore 상태 전환으로 멱등성 보장
+  - 기존 Draft는 `sourceWebhookEventId`로 조회해 재사용
+  - Push Message는 `webhookEventId`와 메시지 용도 기반 UUIDv5 Retry Key 사용
+  - 다섯 번째 애플리케이션 처리 실패는 이벤트를 `FAILED`로 종료
+  - 반영 문서: `002-system-architecture.md`, `003-firestore-data-model.md`, `004-api-design.md`, `006-deployment-operations.md`
+- [x] Backend 주요 Version 확정
+  - Java 25 LTS
+  - Spring Boot 4.1.x, 초기 고정 Version `4.1.0`
+  - Gradle `9.6.1`
+  - Local은 Firestore Emulator, Production은 Firestore Standard Native mode
+  - 반영 파일: `backend/app/build.gradle`, `backend/gradle/wrapper/gradle-wrapper.properties`
+  - 반영 문서: `001-requirements.md`, `006-deployment-operations.md`
+- [x] 날짜 및 Timestamp 정책 확정
+  - `visitDate`는 시각 없는 `yyyy-MM-dd` 문자열로 Firestore에 저장하고 Backend에서는 `LocalDate` 사용
+  - 시스템 감사·처리·만료 시각은 Backend UTC Clock 기반 Firestore Timestamp 사용
+  - API는 UTC ISO 8601로 반환하고 Frontend에서 사용자 시간대로 변환
+  - 반영 문서: `003-firestore-data-model.md`, `004-api-design.md`, `006-deployment-operations.md`
+- [x] Area는 `deletedAt` Timestamp/null Field를 사용해 Soft Delete
+  - 기존 Visit 문서는 보존하되 삭제된 Area의 Visit은 일반 목록·통계·Report에서 제외
+  - Local Seed 상태는 전용 복원 Script로 Area·Visit·Report·Counter 전체를 기준 상태로 복원
+  - 반영 문서: `003-firestore-data-model.md`, `004-api-design.md`, `007-local-firestore-emulator.md`
+- [x] Report와 생성 대상 Area 관계 관리
+  - Firestore Report 문서의 `targetAreaIds` 배열로 ID와 표시 순서를 함께 보존
+  - 반영 문서: `003-firestore-data-model.md`, `004-api-design.md`
+- [x] Statistics 집계 및 정렬 정책 확정
+  - 반영 문서: `004-api-design.md`
+- [x] SUMMARY는 Firestore 원본에서 Backend가 계산한 통계에 짧은 AI Comment를 추가
+  - 반영 문서: `004-api-design.md`
+- [x] ALL은 모든 Area와 Visit을 기반으로 AI 상세 분석 리포트 생성
+  - 반영 문서: `004-api-design.md`
+- [x] V1에서는 주관 평가와 객관 평가의 70:30 점수화를 적용하지 않음
+  - 객관 데이터가 없는 상태에서 임의의 점수를 생성하지 않음
+  - AREA, COMPARE, ALL Report에 객관적으로 추가 확인할 체크리스트를 제공
+  - 반영 문서: `005-ai-prompt-design.md`
+- [x] 공통 오류 코드 목록 정리
+  - 반영 문서: `004-api-design.md`
+- [x] Prompt System 지시문, Structured Outputs Schema, 재시도 정책 및 테스트 기준 확정
+  - 실행 파일: `backend/app/src/main/resources/prompts/`
+  - 반영 문서: `005-ai-prompt-design.md`
+
+## V1 마감 확인 사항
+
+- [x] Local Firestore Emulator 환경 전환
+  - `demo-town-ai`, Firestore Port 8081, Emulator UI Port 4000 사용
+  - Area 3개·Visit 5개 Seed와 전체 초기화 후 ID Reset 검증 완료
+  - Unit Test와 실제 Emulator Repository 통합 Test 검증
+  - 실행 절차 및 결과 문서: `007-local-firestore-emulator.md`
+- [x] Cloud Storage 디렉터리 및 파일명 정책 확정
+  - 객체 경로: `reports/v1/{reportType-lowercase}/{filename}_{yyyy-MM-dd}_{reportId}.md`
+  - 파일명 날짜는 `USER_TIME_ZONE`의 사용자 생활권 날짜 사용
+  - AREA와 COMPARE의 `filename`에는 대상 지역명을 사용
+  - SUMMARY와 ALL은 별도 파일명 없이 날짜와 Report ID를 사용
+  - Production Bucket은 `gs://town_ai`, `GCS_BUCKET_NAME=town_ai`로 사용
+  - 반영 문서: `003-firestore-data-model.md`, `006-deployment-operations.md`
+- [x] Production용 `GcsReportStorage` 구현
+  - `ReportStorage`를 구현해 Markdown 객체 저장, UTF-8 조회 및 멱등 삭제를 지원
+  - `REPORT_STORAGE_TYPE=gcs`일 때만 활성화하고 `GCS_BUCKET_NAME`을 필수로 검증
+  - Google Cloud Storage Client 의존성과 `Storage` Bean 구성 추가
+  - Cloud Run에서는 Service Account와 Application Default Credentials를 사용하고 JSON Key를 저장하지 않음
+  - Bucket은 애플리케이션이 생성하지 않고 배포 단계에서 `asia-northeast1`에 비공개로 생성
+  - 저장 시 `Content-Type: text/markdown; charset=UTF-8` 적용
+  - 객체가 이미 없으면 삭제 성공으로 처리하고 그 외 GCS 오류는 `ReportStorageException`으로 변환
+  - Mock 기반 저장·조회·삭제 및 Local·GCS 조건 전환 Test 추가
+  - 구현 파일: `backend/app/build.gradle`, `backend/app/src/main/java/com/townai/report/storage/GcsReportStorage.java`, GCP Storage 설정 Class 및 Test
+  - 확인 및 반영 문서: `006-deployment-operations.md`
+- [x] 실제 GCP Bucket을 사용한 `GcsReportStorage` 통합 검증
+  - `gs://town_ai`와 Cloud Run Runtime Service Account의 ADC 사용
+  - 실제 OpenAI AREA Report 저장, UTF-8 조회·다운로드 및 삭제 성공
+  - 테스트 Report·Visit 삭제와 Area Soft Delete 완료
+  - 검증 결과: `legacy/010-legacy-cloud-sql-production-validation.md`
+- [x] Production GCP Region은 `asia-northeast1`(Tokyo)로 통일
+  - 적용 대상: Cloud Run, Firestore, Cloud Storage, Cloud Tasks, Artifact Registry
+  - 반영 문서: `006-deployment-operations.md`
+- [x] Firestore Production 전환 및 Cloud SQL 종료
+  - [x] `town-ai` Database를 Standard·Native·Tokyo로 생성
+  - [x] `town-ai` Rules와 Index 배포
+  - [x] `town-ai` Delete Protection 활성화
+  - [x] Runtime Service Account에 `roles/datastore.user` 부여
+    - [x] `town-ai-runtime` 전용 계정과 최소 권한 사전 구성
+    - [x] 새 Revision에 전용 계정 연결
+  - [x] GCS Report 기반 Area 3개·Visit 3개 복원과 GCS Markdown 9개 불변 검증
+  - [x] GCS의 기존 Report Metadata 9개와 Report Counter 복원
+  - [x] Legacy Cloud SQL `town-ai-api` Instance 삭제
+  - [x] Firestore 새 Revision 배포와 Web·LINE 주요 흐름 회귀 검증
+  - [x] 최소 Instance 0 설정과 새 Revision Cold Start·Health 검증
+  - [x] Cloud SQL 연결·환경변수·Secret 참조와 Legacy 권한 정리
+  - 반영 문서: `006-deployment-operations.md`, `014-firestore-migration-design.md`, `015-firestore-production-cutover-validation.md`
+- [x] Report 생성 중 장애로 남은 고아 Storage 객체 수동 정리 절차 구현
+  - [x] Firestore `reports.storagePath`와 `gs://town_ai/reports/v1/` 객체 비교
+  - [x] 기본 Dry Run, 24시간 최소 보존 및 명시적 이중 삭제 확인 적용
+  - [x] GCS Generation 일치 조건과 이미 없는 객체의 멱등 삭제 적용
+  - [x] Production Dry Run에서 Firestore 참조 10개·GCS 객체 10개·고아 객체 0개 확인
+  - 구현: `backend/scripts/production-cleanup-orphan-reports.ps1`
+  - 반영 문서: `004-api-design.md`, `006-deployment-operations.md`, `backend/README.md`
+- [x] 실제 사용 기반 Report Prompt 품질 수용
+  - 기본 모델 `gpt-5.6-luna`의 SUMMARY, AREA, COMPARE, ALL 결과를 Web·LINE에서 사용
+  - 실제 사용에서 사실성, 균형성, 실용성 및 가독성에 문제가 없음을 확인
+  - Model·Prompt 변경 시 `backend`의 `:app:promptEval`로 반복 평가
+  - 실행 및 평가 기준 문서: `008-ai-report-prompt-quality-evaluation.md`
+- [x] 초기 GCP 월 Budget과 알림 기준 확정
+  - 월 Budget: `¥1,000`
+  - 알림: 실제 사용액 `50%`, `80%`, `100%`, 예상 월말 사용액 `80%`
+  - Firestore·Cloud Run·GCS 실제 사용액 추이를 기준으로 필요 시 재산정
+  - 반영 문서: `006-deployment-operations.md`
+- [x] Firebase Hosting과 GCP 서비스를 하나의 Production GCP Project에서 운영
+  - 기존 Town-AI GCP Project에 Firebase를 활성화
+  - 반영 문서: `006-deployment-operations.md`
+- [x] Cloud Run Health Check Endpoint 및 Probe 정책 확정
+  - Liveness: `/actuator/health/liveness`
+  - Readiness: `/actuator/health/readiness`
+  - Startup Probe는 Readiness, Liveness Probe는 Liveness Endpoint 사용
+  - 반영 문서: `004-api-design.md`, `006-deployment-operations.md`
+
+## V2 검토 사항
+
+- [ ] 출처가 있는 객관 데이터 수집 및 주관 70%·객관 30% 평가 모델
+  - 후보 지표: 주거비, 통근, 안전, 재해 위험, 생활 편의
+  - 검토 사항: 데이터 출처, 갱신 주기, 정규화, 누락 데이터, 위험 경고
+  - 결정 후 수정할 문서: `001-requirements.md`, `003-firestore-data-model.md`, `004-api-design.md`, `005-ai-prompt-design.md`
+- [ ] Area 복구 API 및 Hard Delete 보존 기간
+  - 결정 후 수정할 문서: `003-firestore-data-model.md`, `004-api-design.md`
+- [ ] Area, Visit, Report 목록 페이지네이션
+  - 결정 후 수정할 문서: `004-api-design.md`
+- [ ] 지도 기반 Area 시각화
+  - 검토 사항: 지도 Provider, 위치 좌표 저장 방식, API 비용과 이용 약관
+- [ ] Visit 사진 첨부
+  - 검토 사항: Storage 경로, 용량 제한, EXIF·개인정보 제거, 보존·삭제 정책
+- [ ] Area 비교 Chart
+  - 검토 사항: 다섯 평가 항목, 방문 수 차이와 작은 표본 표시 방식
+- [ ] Area 검색과 행정구역 자동 완성 강화
+  - 검토 사항: 일본 행정구역 Source, 동음이의 지역과 Station 매칭
+- [ ] 다중 사용자 지원
+  - 검토 사항: User별 데이터 소유권, Firestore 경로·Index, 공유·격리 정책
+- [ ] AI 분석 고도화
+  - 검토 사항: Model·Prompt Version 비교, 객관 데이터 결합과 품질 평가 기준
+
+## 최종 동기화
+
+- [x] Firestore 데이터 모델 문서 갱신
+  - Collection, Counter, Area Key, 참조·삭제·시간 정책 반영
+  - 관계형 ERD 산출물은 현재 Tree에서 제거하고 Git 이력에만 보존
+  - 기준 문서: `003-firestore-data-model.md`

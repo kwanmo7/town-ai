@@ -2,7 +2,7 @@
 
 이 디렉터리는 LINE Bot 메시지와 Rich Menu의 화면 기준본을 관리한다.
 JSON은 실제 데이터 대신 예시 값을 사용한 디자인 샘플이며, Backend에서는
-동일한 구조에 DB 및 처리 결과를 동적으로 넣어 LINE Messaging API로 전송한다.
+동일한 구조에 Firestore 및 처리 결과를 동적으로 넣어 LINE Messaging API로 전송한다.
 
 ## 파일 구성
 
@@ -128,5 +128,10 @@ Rich Menu는 LINE 모바일 앱에서 표시되며 LINE PC에서는 표시되지
 
 이 디렉터리는 화면 설계 기준본이다. 현재 Backend는 자연어 Text Message, Draft
 Flex 화면, Follow와 메뉴·Report Postback을 처리한다. 화면의 Area·Visit·Report
-값은 Backend Factory가 DB 결과로 동적 생성한다. Rich Menu 등록과 안전한 Report
-URL은 후속 Production 작업으로 남아 있다.
+값은 Backend Factory가 Firestore 결과로 동적 생성한다. Rich Menu 생성·이미지 업로드와
+기본 메뉴 설정, Cloud Tasks 비동기 처리, 만료 서명 Report 보기·다운로드 URL까지
+Production에 반영하고 실제 LINE 모바일에서 검증했다.
+
+JSON과 이미지는 현재 UX의 기준본이며, 버튼 Label이나 Postback Data를 변경할 때는
+Backend Command Parser·Message Factory, `docs/004-api-design.md`, `docs/011-line-bot-ux-design.md`와
+함께 수정한다.

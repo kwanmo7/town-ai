@@ -7,9 +7,9 @@
 - Production Database ID: `town-ai`
 - Production Location: `asia-northeast1`
 
-Town AI V1의 현행 Source of Truth는 Firestore이다. 기존 MySQL ERD와
-`town-ai-v1.sql`, PNG, XLSX는 Cloud SQL 운영 당시의 구조를 확인하기 위한
-Legacy 산출물로만 보존하며 신규 변경의 기준으로 사용하지 않는다.
+Town AI V1의 현행 Source of Truth는 Firestore이다. Cloud SQL 운영 당시의 MySQL
+SQL·PNG·XLSX 산출물은 현재 Tree에서 제거했으며 필요한 경우 Git 이력에서 확인한다.
+신규 데이터 구조 변경은 이 문서와 Firestore Repository를 기준으로 한다.
 
 ## 컬렉션 구조
 
@@ -77,10 +77,49 @@ LINE Webhook 이벤트 ID를 문서 ID로 사용한다. 이벤트 유형·사용
 처리 상태, 시도 횟수, Lease 시각, 실패 정보, 수정 대상 Draft ID 및 생성·수정 시각을
 저장한다. 같은 이벤트 ID 저장은 문서 ID와 트랜잭션으로 멱등 처리한다.
 
+| 필드 | 형식 | 설명 |
+| --- | --- | --- |
+| `webhookEventId` | string | LINE Event ID이자 Document ID |
+| `lineUserId` | string | 허용 사용자 확인용 LINE User ID |
+| `eventType` | string | `TEXT_MESSAGE`, `POSTBACK`, `FOLLOW` |
+| `messageText` | string/null | Text Event의 입력 내용 |
+| `postbackData` | string/null | Postback Event의 Command Data |
+| `status` | string | `RECEIVED`, `PROCESSING`, `COMPLETED`, `FAILED` |
+| `attemptCount` | number | Application 처리 시도 횟수 |
+| `lastErrorCode` | string/null | 마지막 실패의 내부 분류 Code |
+| `revisionSourceDraftId` | number/null | 부분 수정 입력이 참조하는 원본 Draft ID |
+| `occurredAt` | timestamp | LINE Event 발생 시각 |
+| `processingStartedAt` | timestamp/null | 현재 처리 Lease 시작 시각 |
+| `processedAt` | timestamp/null | 완료·실패 확정 시각 |
+| `createdAt` | timestamp | 문서 생성 시각 |
+| `updatedAt` | timestamp | 마지막 상태 변경 시각 |
+
 ### `lineVisitDrafts`
 
 LINE 자연어 Parser 결과와 Area 후보 Snapshot, 다섯 점수, 방문일, 메모, 경고,
 상태, 만료 시각, 수정 이벤트 ID와 확정 Visit ID를 저장한다.
+
+| 필드 | 형식 | 설명 |
+| --- | --- | --- |
+| `id` | number | 숫자 Draft ID이자 Document ID |
+| `sourceWebhookEventId` | string | Draft를 생성한 원본 Event ID |
+| `lineUserId` | string | Draft 소유자 |
+| `areaId` | number/null | 기존 Area ID |
+| `areaRegistrationRequired` | boolean | 저장 시 신규 Area 생성 필요 여부 |
+| `areaName` | string/null | 확인 화면용 Area 이름 Snapshot |
+| `areaPrefecture` | string/null | 확인 화면용 도도부현 Snapshot |
+| `areaCity` | string/null | 확인 화면용 시구정촌 Snapshot |
+| `areaStation` | string/null | 확인 화면용 대표 역 Snapshot |
+| `visitDate` | string/null | `yyyy-MM-dd` 방문일 |
+| `atmosphereScore` 외 4개 | number/null | 파싱된 다섯 평가 점수 |
+| `memo` | string/null | 파싱된 메모 |
+| `warnings` | array<string> | 누락·확인 필요 내용 |
+| `status` | string | `NEEDS_INPUT`, `AWAITING_CONFIRMATION`, `AWAITING_REVISION`, `REVISION_PROCESSING`, `SUPERSEDED`, `CONFIRMED`, `CANCELLED`, `EXPIRED` |
+| `expiresAt` | timestamp | 확인 가능 만료 시각 |
+| `revisionWebhookEventId` | string/null | Draft를 만든 마지막 수정 Event ID |
+| `confirmedVisitId` | number/null | 확정 저장된 Visit ID |
+| `createdAt` | timestamp | 생성 시각 |
+| `updatedAt` | timestamp | 마지막 상태 변경 시각 |
 
 ### `counters`
 
@@ -95,11 +134,16 @@ LINE 자연어 Parser 결과와 Area 후보 Snapshot, 다섯 점수, 방문일, 
 ID는 Firestore 트랜잭션으로 예약한다. 다건 생성은 모든 읽기가 쓰기보다 먼저
 실행되도록 필요한 연속 범위를 한 번에 예약한다.
 
+각 Counter 문서에는 마지막으로 발급한 숫자 `lastId`만 저장한다. 복원 작업은 현재
+문서의 최대 ID보다 Counter를 낮추지 않는다.
+
 ### `areaKeys`
 
 Firestore에는 관계형 DB의 복합 UNIQUE 제약이 없으므로 정규화된
 `(prefecture, city, name)`을 SHA-256으로 계산한 문서 ID를 사용한다. Area 저장
 트랜잭션이 Key 문서와 Area 문서를 함께 처리해 동시 중복 생성을 막는다.
+문서에는 예약 대상 숫자 `areaId`만 저장하며 Area 이름이나 위치가 바뀌면 이전 Key를
+삭제하고 새 Key를 같은 트랜잭션에서 예약한다.
 
 ## 관계와 삭제 정책
 
@@ -139,6 +183,6 @@ Index, Pagination 도입을 다시 검토한다.
 
 ## 관련 문서
 
-- 로컬 실행: `007-local-database.md`
-- 배포 구성: `006-deployment.md`
-- 전환 설계: `014-firestore-migration.md`
+- 로컬 실행: `007-local-firestore-emulator.md`
+- 배포 구성: `006-deployment-operations.md`
+- 전환 설계: `014-firestore-migration-design.md`

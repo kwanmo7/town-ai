@@ -8,7 +8,7 @@
 - [기능 요구사항](#기능-요구사항)
 - [비기능 요구사항](#비기능-요구사항)
 - [기술 스택](#기술-스택)
-- [V1 완료 기준](#v1완료-기준)
+- [V1 완료 기준](#v1-완료-기준)
 - [향후 개선 사항](#향후-개선-사항v2)
 - [설계 원칙](#설계-원칙design-principles)
 
@@ -24,23 +24,25 @@ Town AI는 직접 방문한 지역에 대한 평가를 기록하고, 저장된 �
 - 지역별 장단점을 객관적으로 비교
 - AI를 활용한 분석 리포트 생성
 - 거주지 선택 과정에서 의사결정을 지원
-- AI기반 개인 프로젝트 설계 및 개발 경험 확보
+- AI 기반 개인 프로젝트 설계 및 개발 경험 확보
 
-## 프로젝트 범위(V1)
+## 프로젝트 범위 (V1)
 ### 포함 기능
-- 지역(Area)관리
-- 방문 기록(Visit) 등록
-- 방문 기록 조회
-- 방문 기록 수정
-- AI Parser를 이용한 자연어 입력 처리
+- Firebase Google 로그인과 단일 허용 사용자 기반 Web 접근 제어
+- 지역(Area) 등록·조회·수정·Soft Delete
+- 방문 기록(Visit) 등록·조회·수정·Hard Delete
+- AI Parser를 이용한 자연어 입력과 Web 선택 점수 처리
 - LINE Bot을 이용한 자연어 방문 평가 입력, 신규 Area 후보 확인 및 Visit 확정 저장
 - LINE Bot 메뉴를 이용한 Report Type·대상 Area 선택 및 Report 결과 수신
-- AI Report 생성
-- 생성된 Report 조회 및 다운로드
+- 전체·Area별 통계와 평가 항목별 Top 5 조회
+- AREA·COMPARE·SUMMARY·ALL AI Report 생성과 LINE 조회의 동일 입력 Report 재사용
+- 생성된 Report 필터·조회·Markdown 다운로드·삭제
+- Firestore Standard 기반 Metadata 관리와 GCS Report 본문 저장
+- Firebase Hosting Web 배포와 Cloud Run·Cloud Tasks 기반 Backend 운영
 
 ### 제외 기능
-다음 기능은 V1범위에 포함하지 않는다.
-- 회원가입 및 로그인
+다음 기능은 V1 범위에 포함하지 않는다.
+- 공개 회원가입과 사용자 관리 화면
 - 다중 사용자 지원
 - 실시간 기능
 - 지도 연동
@@ -48,21 +50,43 @@ Town AI는 직접 방문한 지역에 대한 평가를 기록하고, 저장된 �
 - AI가 비즈니스 로직을 수행하는 기능
 
 ## 기능 요구사항
-지역 관리
+### Web 인증
+
+- Google 로그인 전에는 관리 화면과 관리 API를 사용할 수 없다.
+- Backend는 Firebase ID Token을 검증하고 설정된 단일 UID만 허용한다.
+- 인증되지 않은 요청은 `401`, 허용되지 않은 UID는 `403`으로 차단한다.
+- Health Check, LINE Webhook·Task와 서명된 Public Report Endpoint에는 각 용도에 맞는 별도 정책을 적용한다.
+
+### 지역 관리
+
 - 지역 정보를 등록할 수 있다.
 - 등록된 지역 정보를 조회할 수 있다.
+- 지역 정보를 수정할 수 있다.
+- Area는 Soft Delete하며 연결된 Visit 이력은 보존하되 일반 조회·통계·Report에서 제외한다.
 
-방문기록 관리
+### 방문기록 관리
+
 - 방문 평가를 등록할 수 있다.
 - 방문 평가를 수정할 수 있다.
 - 방문 평가를 조회할 수 있다.
+- 방문 기록을 Hard Delete할 수 있다.
+- Web에서는 자연어와 선택한 점수를 함께 전송하고 선택 점수가 AI 파싱 결과보다 우선한다.
 
-AI기능
+### 통계
+
+- 전체 및 Area별 방문 횟수와 다섯 평가 항목의 평균을 조회할 수 있다.
+- 분위기·생활 인프라·청결도·넓은 집 가능성·접근성별 Area Top 5를 조회할 수 있다.
+
+### AI 기능
+
 - 자연어 입력을 구조화된 데이터로 변환한다.
 - 저장된 방문 기록을 기반으로 AI분석 리포트를 생성한다.
 - 생성된 리포트를 다시 조회할 수 있다.
+- LINE 조회는 Report Type, Prompt Version, Model, 대상과 원본 입력이 같으면 기존 Report를 재사용한다.
+- Web의 명시적인 생성 요청은 사용자가 새 분석을 요청한 것으로 보고 매번 새 Report를 생성한다.
+- Markdown Report를 다운로드하거나 Metadata와 GCS 본문을 함께 삭제할 수 있다.
 
-LINE Bot
+### LINE Bot
 - 최초 친구 추가 시 Welcome Message를 제공하고 모바일 채팅방에 등록·조회 Rich Menu를 표시한다.
 - 사용자는 Rich Menu 또는 기능 선택 메시지에서 방문 기록 등록과 리포트 조회를 선택할 수 있다.
 - Backend는 LINE Messaging API Webhook을 수신하고 요청 서명을 검증한다.
@@ -93,41 +117,50 @@ AI는 다음 역할만 수행한다.
 ### 데이터 관리
 - 방문 기록(Visit)은 원본 데이터(Source of Truth)로 관리한다.
 - AI는 저장된 데이터를 변경하지 않는다.
-- 생성된 리포트는 Cloud Storage에 저장하고, 데이터베이스에는 저장 경로만 관리한다.
+- Area·Visit·Report Metadata와 LINE 처리 상태는 Firestore에 저장한다.
+- 생성된 리포트 본문은 Cloud Storage에 저장하고 Firestore에는 경로와 생성 조건을 관리한다.
+- 숫자 ID는 Firestore Counter와 Transaction으로 중복 없이 생성한다.
 
 ### 시스템 구조
 - Frontend와 Backend를 분리한다.
-- REST API기반으로 통신한다.
+- REST API 기반으로 통신한다.
 - AI는 API를 통해서만 호출한다.
 
 ## 기술 스택
 | 구분 | 기술 |
 |-----|-----|
-| Client | React |
+| Client | React 19, TypeScript 5, Vite 6 |
 | Messaging | LINE Messaging API(LINE Bot) |
 | Backend | Spring Boot 4.1.x |
 | Language | Java 25 LTS |
 | Database | Cloud Firestore Standard (Native mode) |
-| AI | OpenAIAPI |
+| AI | OpenAI Responses API |
 | Cloud Storage | Google Cloud Storage |
+| Authentication | Firebase Authentication |
+| Async Task | Google Cloud Tasks |
+| Hosting | Firebase Hosting, Cloud Run |
 | Infrastructure | Google Cloud Platform(GCP) |
 | Container | Docker |
 
-## V1완료 기준
+## V1 완료 기준
 다음 기능이 모두 정상 동작하면 V1을 완료한 것으로 판단한다.
-- 지역 등록
-- 방문 기록 등록
-- 방문 기록 조회
-- 방문 기록 수정
+- 허용된 Google 계정 로그인과 미인증·미허용 사용자 차단
+- 지역 등록·조회·수정·Soft Delete
+- 방문 기록 등록·조회·수정·Hard Delete
+- 전체·Area별 통계와 Top 5 조회
 - AI Parser 동작
 - LINE Webhook 서명 검증, Visit Draft 응답 및 확인 후 Visit 저장
+- Cloud Tasks OIDC 검증과 LINE 이벤트 중복 처리 방지
 - LINE Rich Menu와 기능 선택 메시지를 통한 Report 생성·결과 수신
-- AI Report 생성
-- 생성된 Report 조회
-- Report 다운로드
+- 네 유형의 AI Report 생성과 LINE에서 변경되지 않은 Report 재사용
+- 생성된 Report 필터·조회·다운로드·삭제
+- 만료 서명 LINE Report 보기·다운로드
+- Firestore·GCS Production 데이터 저장과 복원·정리 절차 확인
+- Firebase Hosting과 Cloud Run Production 자동 배포 및 주요 화면 검증
 
 ## 향후 개선 사항(V2)
-다음 기능은 V2 이후 검토한다.
+다음 기능은 V2 이후 검토한다. 우선순위와 최종 결정은
+`999-v1-completion-v2-backlog.md`를 기준으로 관리한다.
 - 지도 기반 시각화
 - 사진 첨부
 - 비교 차트 제공
@@ -140,4 +173,4 @@ AI는 다음 역할만 수행한다.
 - Backend가 데이터의 최종 책임을 가진다.
 - 모든 AI결과는 참고 정보이며 원본 데이터는 항상 Firestore를 기준으로 한다.
 - 기능보다 유지보수성과 확장성을 우선한다.
-- 즉시 결정하지 않는 사항은 TODO로 기록하고 추후 검토한다.
+- 즉시 결정하지 않는 사항은 `999-v1-completion-v2-backlog.md`에 기록하고 추후 검토한다.

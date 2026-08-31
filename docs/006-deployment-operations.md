@@ -1,4 +1,4 @@
-# 배포 설계
+# 배포 및 운영 설계
 
 ## 목적
 
@@ -35,7 +35,7 @@ Local Spring Boot
 | Report | Local File System |
 | Secret | Process 환경변수 또는 `.env.local` |
 
-실행 방법은 `007-local-database.md`를 따른다.
+실행 방법은 `007-local-firestore-emulator.md`를 따른다.
 
 ### Production
 
@@ -183,7 +183,7 @@ Location    : asia-northeast1
 - 기본 Compute Service Account의 기존 Project 역할은 전부 제거했다.
 - Backend는 ADC로 인증한다.
 - 복합 Index가 필요한 Query를 사용하지 않으므로 V1 Index 파일은 비어 있다.
-- 자세한 데이터 모델은 `003-erd.md`, 전환 원칙은 `014-firestore-migration.md`를 따른다.
+- 자세한 데이터 모델은 `003-firestore-data-model.md`, 전환 원칙은 `014-firestore-migration-design.md`를 따른다.
 
 Rules와 Index 배포:
 
@@ -201,7 +201,7 @@ npx.cmd --yes firebase-tools@15.26.0 deploy `
 - `FIREBASE_ALLOWED_UID`와 일치하는 단일 사용자만 관리 API를 사용할 수 있다.
 - Health, LINE Webhook, Cloud Tasks 내부 Endpoint, 서명된 LINE Report Endpoint는 각각
   별도 인증 정책을 사용한다.
-- Hosting 상세 절차는 `013-firebase-hosting-deployment.md`를 따른다.
+- Hosting 상세 절차는 `013-firebase-hosting-web-auth.md`를 따른다.
 
 ## LINE 비동기 처리
 
@@ -254,7 +254,33 @@ GCS_BUCKET_NAME=town_ai
 - 객체 경로는 `reports/v1/{type}/{filename}_{date}_{reportId}.md` 형식이다.
 - Web 조회는 Firebase 인증, LINE 조회는 만료 HMAC URL을 사용한다.
 - Firestore Metadata 저장 실패 시 새 GCS 객체를 Best-effort 삭제한다.
-- Process가 객체 저장 직후 종료되는 고아 객체는 운영 점검에서 확인한다.
+- Process가 객체 저장 직후 종료되는 고아 객체는 운영 Script로 Firestore 참조와 비교한다.
+
+### Production 고아 객체 점검
+
+기본 실행은 Dry Run이며 GCS를 변경하지 않는다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\backend\scripts\production-cleanup-orphan-reports.ps1
+```
+
+실제 삭제는 출력된 대상을 먼저 검토한 뒤 두 Option을 함께 지정한다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\backend\scripts\production-cleanup-orphan-reports.ps1 `
+  -DeleteOrphans `
+  -ConfirmProductionCleanup
+```
+
+- 허용 범위는 `town-ai/town-ai`와
+  `gs://town_ai/reports/v1/{area|compare|summary|all}/*.md`로 고정한다.
+- 기본 24시간 이내의 미참조 객체는 생성 중일 수 있으므로 삭제 후보에서 제외한다.
+- 삭제 시 Scan한 GCS Generation 일치 조건을 사용해 조회 이후 변경된 객체를 보호한다.
+- 이미 없는 객체 삭제는 성공으로 처리하므로 같은 명령을 다시 실행할 수 있다.
+- 운영 계정은 Firestore·GCS 조회 권한이 필요하며 삭제 모드에는 GCS 객체 삭제 권한이 필요하다.
+- 삭제 후 Dry Run을 다시 실행해 `Eligible orphans: 0`을 확인한다.
 
 ## Docker
 
@@ -354,21 +380,22 @@ Readiness : /actuator/health/readiness
 - [x] GCS Report 기반 Area·Visit 복원과 Markdown 9개 불변 검증
 - [x] 기존 GCS Report 9개의 Firestore Metadata 복원과 Report Counter 검증
 - [x] Backend CI와 Docker Build 통과
-- [x] Cloud Run Revision `town-ai-api-00028-pfz` 배포와 인증 API Smoke Test
+- [x] Firestore 기반 Cloud Run Revision 배포와 인증 API Smoke Test
 - [x] Web 로그인과 Area·Visit·Statistics·Report 조회 회귀 검증
 - [x] LINE Webhook·Cloud Tasks·OIDC·Draft·Report 회귀 검증
 - [x] 최소 Instance 0 설정과 새 Revision Cold Start·Health 검증
 - [x] Legacy Cloud SQL `town-ai-api` Instance 삭제
 - [x] Legacy DB Secret·기본 Compute 계정 권한 정리
+- [x] Firestore Report 참조와 GCS 객체 10개의 고아 객체 Dry Run 검증
 
 ## 참고 문서
 
-- `003-erd.md`
-- `007-local-database.md`
-- `010-production-gcp-integration.md`
-- `013-firebase-hosting-deployment.md`
-- `014-firestore-migration.md`
-- `015-firestore-production-cutover.md`
+- `003-firestore-data-model.md`
+- `007-local-firestore-emulator.md`
+- `legacy/010-legacy-cloud-sql-production-validation.md`
+- `013-firebase-hosting-web-auth.md`
+- `014-firestore-migration-design.md`
+- `015-firestore-production-cutover-validation.md`
 - <https://firebase.google.com/docs/firestore/pricing>
 - <https://cloud.google.com/firestore/docs/security/iam>
 - <https://cloud.google.com/run/docs/configuring/services/service-identity>

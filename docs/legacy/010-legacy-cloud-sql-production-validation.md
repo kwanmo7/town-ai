@@ -1,8 +1,9 @@
-# Production GCP 통합 검증
+# Legacy Cloud SQL Production 통합 검증
 
 > Legacy 검증 기록: 이 문서는 Cloud SQL을 사용하던 Production Revision의 당시 결과를
 > 보존한다. Firestore 전환 후 결과는 이 문서에 덮어쓰지 않는다. 전환 설계는
-> `014-firestore-migration.md`, 실제 진행 상태와 완료 조건은 `999-TODO.md`에 기록한다.
+> `../014-firestore-migration-design.md`, 실제 전환 결과는 `../015-firestore-production-cutover-validation.md`,
+> 완료 이력은 `../999-v1-completion-v2-backlog.md`에 기록한다.
 
 ## 목적
 
@@ -109,7 +110,12 @@ GCS 저장 및 Cloud Run 공개 Report Endpoint로 이어지는 Production 핵�
 실제 모바일 사용 기준으로 검증 완료했다. Report 재사용은 Report Type, Prompt
 Version, Model, 대상 Area와 Prompt 입력을 기반으로 만든 SHA-256 지문을 사용한다.
 
-## 남은 Production 검증
+## 당시 남아 있던 Production 검증
+
+아래 항목은 Cloud SQL Revision을 검증하던 당시의 미완료 목록이다. 현재 상태를 나타내는
+체크리스트가 아니며, Firestore 전환·Firebase 인증·서명 URL·고아 GCS 정리까지 V1에서
+완료했다. 최종 결과는 `../015-firestore-production-cutover-validation.md`와
+`../999-v1-completion-v2-backlog.md`를 따른다.
 
 - SUMMARY, COMPARE, ALL을 포함한 반복 Prompt 품질 평가
 - 무료 Cloud SQL 평가 종료 전 장기 운영 사양과 비용 확정
