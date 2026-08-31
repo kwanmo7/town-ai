@@ -17,6 +17,7 @@ const pageNames: Record<string, string> = {
   '/reports': 'AI 리포트',
 }
 
+/** Desktop Sidebar와 Mobile Navigation을 공유하는 인증 후 관리 화면 Layout이다. */
 export function AppShell() {
   const auth = useAuth()
   const location = useLocation()

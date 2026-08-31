@@ -16,6 +16,7 @@ async function loadDashboard() {
   return { statistics, visits, reports }
 }
 
+/** 전체 통계와 최근 방문 기록을 한 번에 요약하는 첫 화면이다. */
 export function DashboardPage() {
   const { data, error, isLoading, reload } = useAsyncData(loadDashboard)
 

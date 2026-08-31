@@ -12,12 +12,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Calculates the small personal dataset in memory from Firestore documents. */
+/** 개인용 소규모 Visit 문서를 메모리에서 집계하는 Statistics 구현이다. */
 @Repository
 public class FirestoreStatisticsRepository implements StatisticsRepository {
 
     private final VisitRepository visitRepository;
 
+    /**
+     * Visit 조회 결과를 사용하는 통계 Repository를 생성한다.
+     *
+     * @param visitRepository 활성 Area Visit 조회 경계
+     */
     public FirestoreStatisticsRepository(VisitRepository visitRepository) {
         this.visitRepository = visitRepository;
     }
@@ -36,6 +41,7 @@ public class FirestoreStatisticsRepository implements StatisticsRepository {
 
     @Override
     public List<AreaScoreStatistics> summarizeScoresByActiveArea() {
+        // 수십 건 규모의 V1에서는 추가 집계 문서를 운영하는 것보다 한 번 읽어 계산하는 편이 단순하다.
         Map<Long, List<VisitEntity>> byArea = new LinkedHashMap<>();
         for (VisitEntity visit : visitRepository.findAllForActiveAreas()) {
             byArea.computeIfAbsent(

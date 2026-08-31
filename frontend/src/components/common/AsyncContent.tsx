@@ -2,6 +2,7 @@ interface LoadingPanelProps {
   label?: string
 }
 
+/** 데이터 조회 중임을 화면과 보조 기술에 함께 알리는 공통 Panel이다. */
 export function LoadingPanel({ label = '데이터를 불러오는 중입니다.' }: LoadingPanelProps) {
   return (
     <div className="state-panel" role="status">
@@ -16,6 +17,7 @@ interface ErrorPanelProps {
   onRetry: () => void
 }
 
+/** 조회 실패 메시지와 선택적 재시도 동작을 제공하는 공통 Panel이다. */
 export function ErrorPanel({ error, onRetry }: ErrorPanelProps) {
   return (
     <div className="state-panel state-panel--error" role="alert">
@@ -36,6 +38,7 @@ interface EmptyStateProps {
   description: string
 }
 
+/** 조회는 성공했지만 표시할 데이터가 없을 때 사용하는 공통 안내 영역이다. */
 export function EmptyState({ title, description }: EmptyStateProps) {
   return (
     <div className="empty-state">

@@ -61,6 +61,7 @@ const emptyScores: ScoreSelections = {
 
 const scoreOptions = Array.from({ length: 11 }, (_, score) => score)
 
+/** 자연어와 선택 점수를 AI Draft로 변환하고 사용자 검토 후 Area·Visit을 저장하는 Dialog이다. */
 export function VisitDraftDialog({
   areas,
   onClose,
@@ -114,6 +115,7 @@ export function VisitDraftDialog({
       return
     }
 
+    // Web에서 명시적으로 고른 점수는 자연어에서 추론한 값보다 우선하도록 함께 전달한다.
     const selectedScores = toVisitScores(scoreSelections)
     setIsBusy(true)
     setSubmitError(null)
@@ -151,6 +153,7 @@ export function VisitDraftDialog({
 
     try {
       if (review.selectedAreaId === 'new') {
+        // AI가 신규 후보를 제안해도 사용자가 확정한 Area를 먼저 저장해 실제 ID를 얻는다.
         const areaInput = toAreaInput(review)
         const savedArea = await api.createArea(areaInput)
         areaId = savedArea.id
@@ -567,6 +570,7 @@ function toVisitScores(scores: ScoreSelections): VisitScores {
 }
 
 function toReviewState(draft: VisitDraft, scores: VisitScores): ReviewState {
+  // AI 응답을 직접 저장하지 않고 수정 가능한 상태로 복사해 최종 확인 단계를 보장한다.
   return {
     selectedAreaId: draft.area?.id ? String(draft.area.id) : 'new',
     newArea: {

@@ -21,12 +21,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class WebSecurityConfiguration {
 
     /**
-     * Web 관리 API Security 구성을 생성한다.
-     */
-    public WebSecurityConfiguration() {
-    }
-
-    /**
      * Stateless Bearer 인증과 공개 예외 경로를 구성한다.
      *
      * <p>LINE에서 직접 여는 공개 Report Endpoint는 별도의 만료 HMAC 서명을 검증한다.

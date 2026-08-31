@@ -23,6 +23,7 @@ async function loadStatisticsPage() {
   return { statistics, areas }
 }
 
+/** 전체·Area별 평균과 평가 항목별 Top 5를 함께 조회하는 통계 화면이다. */
 export function StatisticsPage() {
   const { data, error, isLoading, reload } = useAsyncData(loadStatisticsPage)
   const [selectedAreaId, setSelectedAreaId] = useState('')
@@ -240,6 +241,7 @@ export function StatisticsPage() {
 }
 
 function calculateOverallAverage(averages: ScoreAverages): number | null {
+  // 방문이 없는 통계는 null을 유지하고 일부 값만 존재하면 존재하는 항목만 평균낸다.
   const values = scoreKeys
     .map((key) => averages[key])
     .filter((value): value is number => value !== null)

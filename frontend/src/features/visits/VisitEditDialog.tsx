@@ -32,6 +32,7 @@ const scoreDefinitions: Array<{
 
 const scoreOptions = Array.from({ length: 11 }, (_, score) => score)
 
+/** 저장된 Visit 상세를 불러와 날짜·점수·메모를 전체 수정하는 Dialog이다. */
 export function VisitEditDialog({
   visitId,
   areas,
@@ -245,6 +246,7 @@ function toFormValues(visit: VisitDetail): VisitFormValues {
 }
 
 function toVisitInput(values: VisitFormValues): VisitInput | null {
+  // Area와 방문일이 유효할 때만 Form 상태를 API 요청 계약으로 변환한다.
   const areaId = Number(values.areaId)
   if (!Number.isSafeInteger(areaId) || !values.visitDate) return null
   return {

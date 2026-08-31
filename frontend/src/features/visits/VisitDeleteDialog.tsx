@@ -9,6 +9,7 @@ interface VisitDeleteDialogProps {
   onConfirm: () => void
 }
 
+/** 되돌릴 수 없는 Visit 물리 삭제를 최종 확인하는 Dialog이다. */
 export function VisitDeleteDialog({
   visit,
   isDeleting,

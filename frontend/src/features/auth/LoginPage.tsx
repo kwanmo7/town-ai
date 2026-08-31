@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from './AuthContext'
 
+/** Google 로그인과 Backend 권한 오류를 안내하는 관리 화면 진입점이다. */
 export function LoginPage() {
   const auth = useAuth()
   const [submitting, setSubmitting] = useState(false)

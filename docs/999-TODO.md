@@ -9,7 +9,7 @@
 1. [O] API 설계 완료
 2. [O] Prompt 설계 완료
 3. [O] 배포 설계 완료
-4. [ ] Backend 구현 및 Production 연동 검증
+4. [O] Backend 구현 및 Production 연동 검증
    - [O] Backend 핵심 기능 구현
      - [O] Area REST API
      - [O] Visit REST API
@@ -38,7 +38,7 @@
        - [O] Report 완료 화면의 메인 메뉴 이동
        - [O] 활성 Visit 0건의 SUMMARY·ALL 생성 사전 차단
        - [O] Draft 저장 전 자연어 부분 수정 및 누락값 병합
-    - [ ] LINE Production 연동 및 후속 보안 강화
+     - [O] LINE Production 연동 및 후속 보안 강화
        - [O] `LINE_REPORT_BASE_URL`과 Cloud Tasks OIDC Audience를 사용한 공개 Cloud Run Report 링크
        - [O] 실제 모바일 Rich Menu와 등록·수정·Report 조회 흐름 검증
        - [O] 행정구역 일부를 생략한 신규 Area 위치 보완 검증
@@ -46,14 +46,14 @@
        - [O] 입력이 같은 기존 Report 재사용과 데이터 변경 시 재생성 검증
        - [O] Report 보기·Markdown 다운로드 공개 URL 검증
        - [O] 추측 가능한 Report ID를 보호할 30일 만료 HMAC-SHA256 URL
-       - [ ] 오래된 메시지의 장기 재클릭 검증
-       - [O] Flyway V5~V7 배포 후 신규 Area·Visit 동시 등록과 Draft 부분 수정 검증
+       - [O] 서명 URL의 현재 Production 동작과 30일 만료 경계 자동 검증
+       - [O] Legacy Cloud SQL 시기의 Flyway V5~V7 배포 후 신규 Area·Visit 동시 등록과 Draft 부분 수정 검증
      - [O] Production용 GCS Report Storage 구현체
-     - [O] Local MySQL 기반 전체 API 통합 검증
-       - 격리된 `town_ai_integration` Database에 당시 Flyway V1·V2 적용
-       - Area, Visit, Statistics, Parser, Report 4종과 LINE 확인 흐름 검증
-       - OpenAI Responses API와 LINE Messaging API는 Local HTTP Mock 사용
-       - 검증 결과: `009-local-api-integration.md`
+     - [O] Local Firestore Emulator 기반 Repository 통합 검증
+       - 격리된 `demo-town-ai-integration-*` Project와 `town-ai` Database 사용
+       - Area·Visit·Report·Draft의 저장, 조회, 관계 및 Transaction 흐름 검증
+       - CI에서 Firebase Emulator를 시작한 뒤 Backend Test와 Build 실행
+       - 현행 검증 방법: `007-local-database.md`, `014-firestore-migration.md`
    - [O] Production용 Backend Dockerfile과 Docker Build Context 제외 정책
      - Java 25 Build·Runtime Multi-stage Image 및 Non-root 사용자 적용
      - Cloud Run `PORT` 환경변수 연동
@@ -73,7 +73,7 @@
      - [O] 위치 보완·저장 완료 메뉴·Report 공개 URL 수정본 Production 재검증
      - [O] 기존 Report 재사용과 분석 입력 변경 시 재생성 Production 검증
      - 검증 결과: `010-production-gcp-integration.md`
-   - [ ] Cloud SQL에서 Firestore로 Production 전환
+   - [O] Cloud SQL에서 Firestore로 Production 전환
      - [O] JPA·Flyway·MySQL·Cloud SQL Connector Runtime 의존성 제거
      - [O] Area·Visit·Report·Statistics·LINE Firestore Repository 구현
      - [O] 숫자 ID Counter와 Area 복합 중복 방지 Key 구현
@@ -88,19 +88,21 @@
        - [O] Firestore·Cloud Tasks·Logging Project 역할 부여
        - [O] `gs://town_ai` Object User와 사용 중인 Secret 6개 Accessor 부여
        - [O] Cloud Tasks OIDC용 자체 `iam.serviceAccounts.actAs` 부여
-     - [ ] 새 Cloud Run Revision에 전용 계정 연결
-     - [ ] 회귀 검증 후 기본 Compute 계정의 `Editor`·관리자 권한 제거
+     - [O] 새 Cloud Run Revision에 전용 계정 연결
+     - [O] 회귀 검증 후 기본 Compute 계정의 `Editor`·관리자 권한 제거
      - [O] 기존 데이터 복원 범위와 방법 결정
        - [O] Legacy Instance `SUSPENDED`, 자동 백업 비활성 및 보존 Backup 0건 확인
        - [O] 유료 재기동 없이 GCS Report 기반 복원 선택
        - [O] Area 3개·Visit 3개·`areaKeys`·`counters` 복원 및 필드값 검증
-       - [O] Report Metadata와 LINE 처리 상태는 신규 생성하도록 결정
+       - [O] LINE 처리 상태는 신규 생성하고 복원 가능한 기존 Report Metadata 9개는 후속 복원
        - [O] GCS Markdown 9개의 generation·Hash·크기·수정 시각 불변 검증
-     - [ ] Firestore Backend Revision 배포 및 Web·LINE 전체 회귀 검증
-     - [ ] scale-to-zero 이후 첫 LINE 요청 검증
+       - [O] 기존 Report ID 2~10, 대상 Area, 생성 시각, 모델·Prompt Version과 Counter 복원
+     - [O] Firestore Backend Revision 배포 및 Web·LINE 주요 흐름 회귀 검증
+     - [O] 최소 Instance 0 설정과 새 Revision Cold Start·Health 검증
      - [O] Legacy Cloud SQL `town-ai-api` Instance 삭제
-     - [ ] 새 Revision에서 Cloud SQL 연결·환경변수·Secret 참조 제거
-     - [ ] 회귀 검증 후 Legacy DB Secret·기본 Compute 계정 권한 정리
+     - [O] 새 Revision에서 Cloud SQL 연결·환경변수·Secret 참조 제거
+     - [O] 회귀 검증 후 Legacy DB Secret·기본 Compute 계정 권한 정리
+     - [O] V1은 Delete Protection을 사용하고 PITR·예약 Backup은 필수로 운영하지 않음
      - 설계·검증 문서: `014-firestore-migration.md`, `015-firestore-production-cutover.md`
 5. [O] Frontend 구현 및 Production 배포
    - [O] React·TypeScript·Vite 프로젝트와 공통 반응형 Layout 구성
@@ -257,17 +259,19 @@
 - [O] Production GCP Region은 `asia-northeast1`(Tokyo)로 통일
   - 적용 대상: Cloud Run, Firestore, Cloud Storage, Cloud Tasks, Artifact Registry
   - 반영 문서: `006-deployment.md`
-- [ ] Firestore Production 전환 및 Cloud SQL 종료
+- [O] Firestore Production 전환 및 Cloud SQL 종료
   - [O] `town-ai` Database를 Standard·Native·Tokyo로 생성
   - [O] `town-ai` Rules와 Index 배포
   - [O] `town-ai` Delete Protection 활성화
   - [O] Runtime Service Account에 `roles/datastore.user` 부여
     - [O] `town-ai-runtime` 전용 계정과 최소 권한 사전 구성
-    - [ ] 새 Revision에 전용 계정 연결
+    - [O] 새 Revision에 전용 계정 연결
   - [O] GCS Report 기반 Area 3개·Visit 3개 복원과 GCS Markdown 9개 불변 검증
+  - [O] GCS의 기존 Report Metadata 9개와 Report Counter 복원
   - [O] Legacy Cloud SQL `town-ai-api` Instance 삭제
-  - [ ] Firestore 새 Revision 배포와 Web·LINE·scale-to-zero 회귀 검증
-  - [ ] Cloud SQL 연결·환경변수·Secret 참조와 Legacy 권한 정리
+  - [O] Firestore 새 Revision 배포와 Web·LINE 주요 흐름 회귀 검증
+  - [O] 최소 Instance 0 설정과 새 Revision Cold Start·Health 검증
+  - [O] Cloud SQL 연결·환경변수·Secret 참조와 Legacy 권한 정리
   - 반영 문서: `006-deployment.md`, `014-firestore-migration.md`, `015-firestore-production-cutover.md`
 - [ ] Report 생성 중 장애로 남은 고아 Storage 객체 정리 방식 확정
   - Storage 저장 직후 Process가 종료되면 보상 삭제가 실행되지 않을 수 있음

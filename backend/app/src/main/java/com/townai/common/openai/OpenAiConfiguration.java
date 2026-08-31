@@ -10,9 +10,4 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(OpenAiProperties.class)
 public class OpenAiConfiguration {
 
-    /**
-     * OpenAI 설정 등록 구성을 생성한다.
-     */
-    public OpenAiConfiguration() {
-    }
 }

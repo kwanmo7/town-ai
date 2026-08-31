@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/** Firestore implementation of LINE Webhook Event idempotency state. */
+/** LINE Webhook Event ID를 문서 ID로 사용해 중복 처리를 막는 Firestore 구현이다. */
 @Repository
 public class FirestoreLineWebhookEventRepository
         implements LineWebhookEventRepository {
@@ -33,6 +33,13 @@ public class FirestoreLineWebhookEventRepository
     private final FirestoreTransactionRunner transactions;
     private final Clock clock;
 
+    /**
+     * LINE Webhook Event Firestore Repository를 생성한다.
+     *
+     * @param firestore Firestore Client
+     * @param transactions Transaction 실행기
+     * @param clock 저장 시각 기준 Clock
+     */
     public FirestoreLineWebhookEventRepository(
             Firestore firestore,
             FirestoreTransactionRunner transactions,
@@ -142,6 +149,7 @@ public class FirestoreLineWebhookEventRepository
     @Override
     public int deleteTerminalCreatedBeforeWithoutDraft(Instant cutoff) {
         return transactions.execute(() -> {
+            // Draft 수정 흐름은 원본 Event를 참조하므로 Draft보다 먼저 Event를 지우면 안 된다.
             Set<String> sourceEventIds = new HashSet<>();
             for (DocumentSnapshot draft : transactions.get(
                     firestore.collection(FirestoreCollections.LINE_VISIT_DRAFTS)

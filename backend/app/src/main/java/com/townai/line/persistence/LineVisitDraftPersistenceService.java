@@ -43,6 +43,7 @@ public class LineVisitDraftPersistenceService {
      * @param draftRepository LINE Visit Draft Repository
      * @param eventRepository 수정 의도를 보존할 LINE Event Repository
      * @param areaRepository Parser 선택 Area 재검증 Repository
+     * @param transactions Event·Draft를 함께 저장할 Transaction 실행기
      * @param clock Draft 만료 시각을 계산할 UTC Clock
      */
     public LineVisitDraftPersistenceService(

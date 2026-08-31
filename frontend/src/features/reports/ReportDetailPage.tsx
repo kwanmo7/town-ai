@@ -7,6 +7,7 @@ import { useAsyncData } from '../../hooks/useAsyncData'
 import { api } from '../../lib/api'
 import { formatDateTime, reportTypeLabels } from '../../lib/format'
 
+/** Report Metadata와 Markdown 본문을 조회하고 파일 다운로드를 제공한다. */
 export function ReportDetailPage() {
   const { reportId: rawReportId } = useParams()
   const reportId = Number(rawReportId)
@@ -35,6 +36,7 @@ export function ReportDetailPage() {
     setIsDownloading(true)
     try {
       const blob = await api.downloadReport(reportId)
+      // Browser 임시 URL은 클릭 직후 해제해 장시간 Session의 메모리 점유를 남기지 않는다.
       const objectUrl = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
       anchor.href = objectUrl

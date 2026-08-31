@@ -112,7 +112,6 @@ class FirestoreRepositoryIntegrationTest {
                             drafts,
                             areas,
                             areaService,
-                            visits,
                             visitService,
                             transactions,
                             clock,

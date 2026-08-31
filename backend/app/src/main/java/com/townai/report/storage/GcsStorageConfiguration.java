@@ -23,12 +23,6 @@ import org.springframework.context.annotation.Configuration;
 public class GcsStorageConfiguration {
 
     /**
-     * GCS Client 설정을 생성한다.
-     */
-    public GcsStorageConfiguration() {
-    }
-
-    /**
      * Application Default Credentials를 사용하는 Storage Client를 생성한다.
      *
      * @return 환경에서 Project와 인증정보를 찾는 Google Cloud Storage Client

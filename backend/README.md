@@ -82,6 +82,30 @@ Markdown 9개의 메타데이터를 검사한다. 최초 실행은 모든 문서
 동일한 복원 데이터가 이미 있으면 덮어쓰지 않고 필드값과 GCS 불변 여부만 재검증한다.
 실제 복원·Cloud SQL 종료 결과는 `../docs/015-firestore-production-cutover.md`에 기록한다.
 
+Area·Visit 복원 후 GCS에 보존된 기존 Report 9개의 Firestore Metadata를 복원할 때는
+다음 Script를 사용한다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\backend\scripts\production-restore-gcs-report-metadata.ps1 `
+  -ConfirmProductionRestore
+```
+
+Report Metadata 복원 Script는 GCS 파일명에 포함된 기존 ID `2~10`, 생성 당시 모델과
+Prompt Version, 대상 Area를 복원한다. 이미 같은 Metadata가 있으면 값을 검증만 하고,
+`counters/report`가 더 큰 경우 Counter를 낮추지 않는다. 실행 전후 GCS 객체의 generation,
+Hash, 크기와 수정 시각을 비교하므로 Markdown 본문은 변경하지 않는다.
+
+## 코드 주석 기준
+
+- 공개 Class·Interface에는 책임과 계층 경계를 설명하는 한국어 Javadoc을 작성한다.
+- Repository 계약, Transaction 제약, 보안·멱등성, 외부 API와 Storage 경계에는 단순 동작보다
+  설계 이유와 보장 조건을 기록한다.
+- Override 구현은 Interface 계약을 그대로 반복하지 않고 Firestore·GCS 등 구현체만의 차이가
+  있을 때 주석을 추가한다.
+- Getter, 단순 DTO 변환, 메서드 이름으로 충분히 설명되는 분기에는 중복 주석을 작성하지 않는다.
+- 코드 식별자와 제품명은 원문을 유지하되 설명 문장은 한국어로 통일한다.
+
 ## 테스트
 
 Unit Test:

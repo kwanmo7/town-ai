@@ -11,6 +11,7 @@ import { firebaseAuth, isWebAuthEnabled } from '../../lib/firebase'
 import type { AuthenticatedUser } from '../../types/api'
 import { AuthContext } from './AuthContext'
 
+/** Firebase 로그인 상태와 Backend의 단일 UID 권한 확인 결과를 하나의 Context로 제공한다. */
 export function AuthProvider({ children }: PropsWithChildren) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null)
   const [user, setUser] = useState<AuthenticatedUser | null>(null)
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       setLoading(true)
       try {
+        // Google 로그인 성공만으로 관리 권한을 부여하지 않고 Backend에서 UID를 다시 확인한다.
         setUser(await api.getAuthenticatedUser())
       } catch (caught) {
         setError(toAuthMessage(caught))
@@ -52,6 +54,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     signIn: async () => {
       setError(null)
       const provider = new GoogleAuthProvider()
+      // 이전 Google Session이 있어도 개인 관리 계정을 명시적으로 선택할 수 있게 한다.
       provider.setCustomParameters({ prompt: 'select_account' })
       try {
         await signInWithPopup(firebaseAuth, provider)

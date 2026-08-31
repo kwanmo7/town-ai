@@ -19,6 +19,7 @@ import type {
 } from '../types/api'
 import { getFirebaseIdToken } from './firebase'
 
+/** HTTP 상태와 Backend 오류 본문을 보존해 화면별 오류 처리를 가능하게 한다. */
 export class ApiError extends Error {
   readonly status: number
   readonly code: string
@@ -39,6 +40,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // Token은 만료·갱신될 수 있으므로 Client 생성 시점이 아니라 요청 직전에 가져온다.
   const headers = await createHeaders('application/json', init?.headers)
   const response = await fetch(path, {
     ...init,
@@ -74,6 +76,7 @@ async function parseError(response: Response): Promise<ApiErrorResponse | null> 
   try {
     return (await response.json()) as ApiErrorResponse
   } catch {
+    // Proxy나 플랫폼 오류처럼 JSON 계약을 따르지 않는 응답도 원래 HTTP 상태로 처리한다.
     return null
   }
 }
@@ -127,6 +130,7 @@ async function createHeaders(
   return headers
 }
 
+/** Town AI REST API의 인증·직렬화·오류 처리를 공유하는 단일 Client이다. */
 export const api = {
   getAuthenticatedUser: () =>
     request<AuthenticatedUser>('/api/auth/me'),

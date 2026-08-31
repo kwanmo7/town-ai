@@ -86,6 +86,7 @@ public class LineWebhookEventEntity {
             Instant createdAt,
             Instant updatedAt
     ) {
+        // 재시도 판단에 필요한 처리 상태와 Lease 시각을 Firestore 문서에서 모두 복원한다.
         LineWebhookEventEntity event = LineWebhookEventEntity.builder()
                 .webhookEventId(webhookEventId)
                 .lineUserId(lineUserId)
@@ -105,7 +106,13 @@ public class LineWebhookEventEntity {
         return event;
     }
 
+    /**
+     * Webhook Event 상태 저장 결과의 Audit 시각을 반영한다.
+     *
+     * @param persistedAt 저장이 완료된 UTC 시각
+     */
     public void markPersisted(Instant persistedAt) {
+        // 동일 Event 상태 전환에서는 최초 생성 시각을 유지한다.
         if (createdAt == null) {
             createdAt = persistedAt;
         }

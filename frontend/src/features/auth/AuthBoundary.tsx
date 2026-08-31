@@ -2,10 +2,12 @@ import type { PropsWithChildren } from 'react'
 import { LoginPage } from './LoginPage'
 import { useAuth } from './AuthContext'
 
+/** 인증 설정과 권한 확인 상태에 따라 관리 화면 또는 로그인 화면을 선택한다. */
 export function AuthBoundary({ children }: PropsWithChildren) {
   const auth = useAuth()
 
   if (!auth.enabled) {
+    // Local Backend 개발에서는 Firebase 없이 동일한 관리 화면을 검증한다.
     return children
   }
   if (auth.loading) {

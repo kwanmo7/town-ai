@@ -17,12 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     /**
-     * 현재 사용자 조회 Controller를 생성한다.
-     */
-    public AuthController() {
-    }
-
-    /**
      * 현재 인증된 단일 관리자를 반환한다.
      *
      * @param user Firebase 인증 필터가 설정한 사용자 Principal

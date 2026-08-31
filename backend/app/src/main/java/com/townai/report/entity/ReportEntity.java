@@ -67,6 +67,7 @@ public class ReportEntity {
             Instant createdAt,
             Instant updatedAt
     ) {
+        // GCS 경로와 재사용 정보를 포함한 저장 당시 Metadata를 그대로 복원한다.
         ReportEntity report = ReportEntity.builder()
                 .reportType(reportType)
                 .model(model)
@@ -81,7 +82,14 @@ public class ReportEntity {
         return report;
     }
 
+    /**
+     * Repository 저장 결과의 ID와 Audit 시각을 Entity에 반영한다.
+     *
+     * @param persistedId 저장된 Report ID
+     * @param persistedAt 저장이 완료된 UTC 시각
+     */
     public void markPersisted(Long persistedId, Instant persistedAt) {
+        // 최초 저장에서만 ID·생성 시각을 확정하고 재저장에서는 수정 시각만 갱신한다.
         if (id == null) {
             id = persistedId;
             createdAt = persistedAt;

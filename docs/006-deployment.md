@@ -114,7 +114,6 @@ LINE_EVENT_DISPATCHER
 LINE_MESSAGING_API_BASE_URL
 LINE_MESSAGING_API_CONNECT_TIMEOUT
 LINE_MESSAGING_API_READ_TIMEOUT
-LINE_REPORT_BASE_URL
 LINE_LOCAL_TASK_TARGET_URL
 LINE_CLOUD_TASKS_QUEUE
 LINE_CLOUD_TASKS_TARGET_URL
@@ -142,7 +141,7 @@ LINE_CLOUD_TASKS_QUEUE=line-events
 LINE_REPORT_BASE_URL=https://town-ai-api-574086886148.asia-northeast1.run.app
 LINE_CLOUD_TASKS_TARGET_URL=https://town-ai-api-574086886148.asia-northeast1.run.app/internal/tasks/line-events
 LINE_CLOUD_TASKS_OIDC_AUDIENCE=https://town-ai-api-574086886148.asia-northeast1.run.app
-LINE_CLOUD_TASKS_SERVICE_ACCOUNT={Cloud Tasks 호출 전용 Service Account Email}
+LINE_CLOUD_TASKS_SERVICE_ACCOUNT=town-ai-runtime@town-ai.iam.gserviceaccount.com
 ```
 
 `FIRESTORE_EMULATOR_HOST`는 Local 전용이며 Production Cloud Run에 설정하지 않는다.
@@ -154,6 +153,7 @@ OPENAI_API_KEY
 LINE_CHANNEL_SECRET
 LINE_CHANNEL_ACCESS_TOKEN
 LINE_ALLOWED_USER_ID
+LINE_REPORT_BASE_URL
 REPORT_LINK_SIGNING_SECRET
 ```
 
@@ -163,8 +163,8 @@ REPORT_LINK_SIGNING_SECRET
 - Firebase Web Config는 공개 식별자이며 비공개 Service Account Key가 아니다.
 - Service Account JSON Key는 생성하거나 저장하지 않는다.
 
-Firestore 전환이 완료되면 `DB_*` 환경변수, DB Password Secret과 Cloud SQL 연결은
-모두 제거한다.
+Firestore 전환 후 `DB_*` 환경변수, `DB_PASSWORD` Secret과 Cloud SQL 연결은 모두
+제거했다. 현재 Production에는 위 6개 Runtime Secret만 존재한다.
 
 ## Firestore
 
@@ -178,9 +178,9 @@ Location    : asia-northeast1
 
 - Browser와 LINE Client는 Firestore에 직접 접근하지 않는다.
 - `backend/firestore.rules`는 모든 Client read/write를 거부한다.
-- Firestore 접근에는 Cloud Run Runtime Service Account의 `roles/datastore.user`를
-  사용한다. 현재 기본 Compute 계정의 광범위한 권한은 기능 전환 검증 후 전용 Runtime
-  Service Account로 분리한다.
+- Firestore 접근에는 전용 Cloud Run Runtime Service Account
+  `town-ai-runtime@town-ai.iam.gserviceaccount.com`의 `roles/datastore.user`를 사용한다.
+- 기본 Compute Service Account의 기존 Project 역할은 전부 제거했다.
 - Backend는 ADC로 인증한다.
 - 복합 Index가 필요한 Query를 사용하지 않으므로 V1 Index 파일은 비어 있다.
 - 자세한 데이터 모델은 `003-erd.md`, 전환 원칙은 `014-firestore-migration.md`를 따른다.
@@ -225,7 +225,7 @@ LINE Webhook
 - 잘못되거나 형식이 깨진 JWT는 `401`로 처리한다.
 - LINE Push는 Event ID와 Message Purpose 기반 결정적 Retry Key를 사용한다.
 - 최대 처리 횟수를 넘으면 Event를 `FAILED`로 종료하고 Best-effort 안내를 보낸다.
-- Cloud Run scale-to-zero 이후 첫 요청을 포함해 정기적으로 실제 LINE 흐름을 검증한다.
+- 장시간 유휴 후 첫 LINE 요청은 별도 완료 조건으로 두지 않고 실제 운영 중 관찰한다.
 
 ### Local
 
@@ -285,7 +285,10 @@ Required Check 누락을 막기 위해 경로 필터를 사용하지 않는다.
 ### Backend CD
 
 Developer Connect Cloud Build Trigger가 `main` Push를 감지해 Backend Image를 Build하고
-Cloud Run `town-ai-api`에 배포한다.
+Cloud Run `town-ai-api`에 배포한다. Build·배포는 전용 계정
+`town-ai-backend-deployer@town-ai.iam.gserviceaccount.com`, Runtime은 `town-ai-runtime`을
+사용한다. 새 Revision을 Console에서 수동 생성할 때도 Runtime Service Account가 기본
+Compute 계정으로 바뀌지 않았는지 확인한다.
 
 ### Frontend CD
 
@@ -334,24 +337,29 @@ Readiness : /actuator/health/readiness
 - Firebase Hosting과 GCS 사용량을 함께 Monitoring한다.
 - 월 Budget은 `¥1,000`, 알림은 실제 사용액 50%·80%·100%와 예상 80%로 유지한다.
 - Document Read가 증가하면 Collection 전체 조회를 Query·Index·Pagination으로 바꾼다.
-- GCS 기반 Firestore 복원 검증 후 Legacy Cloud SQL Instance를 삭제했으며, 새 Revision에서
-  남은 DB 환경변수·Secret 참조와 연결 설정을 제거한다.
+- 현재 Database의 `freeTier=true`를 확인했다. PITR과 예약 Backup은 필수 기능이 아니며
+  별도 과금되므로 개인 V1에서는 비활성 상태를 유지한다.
+- 대량 수정·삭제나 데이터 이전 전에는 수동 Export 여부를 결정한다. 자동 Backup이 필요할
+  정도로 데이터 중요도나 규모가 커지면 주기와 보존 기간을 별도로 정한다.
+- GCS 기반 Firestore 복원 검증 후 Legacy Cloud SQL Instance, DB 환경변수·Secret 참조와
+  연결 설정을 모두 제거했다.
 
 ## Production 배포 체크리스트
 
 - [x] Firestore `town-ai`, Standard, Native, Tokyo 생성 확인
 - [x] `town-ai` Database Rules와 Index 배포
 - [x] Runtime Service Account에 `roles/datastore.user` 부여
-- [ ] `FIRESTORE_PROJECT_ID=town-ai`, `FIRESTORE_DATABASE_ID=town-ai` 적용
-- [ ] Cloud SQL 관련 환경변수·Secret·연결이 새 Revision에서 제거됨
+- [x] `FIRESTORE_PROJECT_ID=town-ai`, `FIRESTORE_DATABASE_ID=town-ai` 적용
+- [x] Cloud SQL 관련 환경변수·Secret·연결이 새 Revision에서 제거됨
 - [x] GCS Report 기반 Area·Visit 복원과 Markdown 9개 불변 검증
-- [ ] Backend CI와 Docker Build 통과
-- [ ] Cloud Run 새 Revision 배포와 인증 API Smoke Test
-- [ ] Web Area·Visit·Statistics·Report 회귀 검증
-- [ ] LINE Webhook·Cloud Tasks·OIDC·Draft·Report 회귀 검증
-- [ ] scale-to-zero 이후 첫 요청 검증
+- [x] 기존 GCS Report 9개의 Firestore Metadata 복원과 Report Counter 검증
+- [x] Backend CI와 Docker Build 통과
+- [x] Cloud Run Revision `town-ai-api-00028-pfz` 배포와 인증 API Smoke Test
+- [x] Web 로그인과 Area·Visit·Statistics·Report 조회 회귀 검증
+- [x] LINE Webhook·Cloud Tasks·OIDC·Draft·Report 회귀 검증
+- [x] 최소 Instance 0 설정과 새 Revision Cold Start·Health 검증
 - [x] Legacy Cloud SQL `town-ai-api` Instance 삭제
-- [ ] Legacy DB Secret·기본 Compute 계정 권한 정리
+- [x] Legacy DB Secret·기본 Compute 계정 권한 정리
 
 ## 참고 문서
 

@@ -9,6 +9,7 @@ interface AreaDeleteDialogProps {
   onConfirm: () => void
 }
 
+/** Area 논리 삭제의 영향과 대상을 다시 확인하는 Dialog이다. */
 export function AreaDeleteDialog({
   area,
   isDeleting,

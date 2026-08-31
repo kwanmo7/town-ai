@@ -139,6 +139,7 @@ public class LineVisitDraftEntity {
             Instant createdAt,
             Instant updatedAt
     ) {
+        // 수정·저장 흐름을 이어갈 수 있도록 Draft의 모든 상태와 연결 Reference를 복원한다.
         LineVisitDraftEntity draft = LineVisitDraftEntity.builder()
                 .sourceWebhookEventId(sourceWebhookEventId)
                 .lineUserId(lineUserId)
@@ -167,7 +168,14 @@ public class LineVisitDraftEntity {
         return draft;
     }
 
+    /**
+     * Draft 저장 결과의 ID와 Audit 시각을 Entity에 반영한다.
+     *
+     * @param persistedId 저장된 Draft ID
+     * @param persistedAt 저장이 완료된 UTC 시각
+     */
     public void markPersisted(Long persistedId, Instant persistedAt) {
+        // 최초 저장에서만 ID·생성 시각을 확정하고 Revision 저장은 수정 시각만 갱신한다.
         if (id == null) {
             id = persistedId;
             createdAt = persistedAt;

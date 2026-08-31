@@ -10,6 +10,7 @@ interface ReportDeleteDialogProps {
   onConfirm: () => void
 }
 
+/** Report Metadata와 연결된 Markdown 삭제를 최종 확인하는 Dialog이다. */
 export function ReportDeleteDialog({
   report,
   isDeleting,
