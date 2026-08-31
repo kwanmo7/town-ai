@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/** Firestore implementation of Report metadata persistence. */
+/** GCS 객체 경로와 재사용 Fingerprint를 보존하는 Report Metadata의 Firestore 구현이다. */
 @Repository
 public class FirestoreReportRepository implements ReportRepository {
 
@@ -34,6 +34,14 @@ public class FirestoreReportRepository implements ReportRepository {
     private final FirestoreIdGenerator ids;
     private final Clock clock;
 
+    /**
+     * Report Metadata Firestore Repository를 생성한다.
+     *
+     * @param firestore Firestore Client
+     * @param transactions Transaction 실행기
+     * @param ids 숫자 ID 발급기
+     * @param clock 저장 시각 기준 Clock
+     */
     public FirestoreReportRepository(
             Firestore firestore,
             FirestoreTransactionRunner transactions,
@@ -52,6 +60,7 @@ public class FirestoreReportRepository implements ReportRepository {
             List<? extends DocumentSnapshot> existingReports = transactions
                     .get(reports())
                     .getDocuments();
+            // 같은 LINE Event 재시도로 Report가 두 번 생성되는 것을 Transaction 안에서 차단한다.
             assertWebhookEventUnique(report, existingReports);
 
             DocumentSnapshot previous = report.getId() == null
@@ -72,6 +81,7 @@ public class FirestoreReportRepository implements ReportRepository {
             List<Long> targetAreaIds = previous == null
                     ? List.of()
                     : FirestoreDocumentValues.longs(previous, "targetAreaIds");
+            // Metadata 수정 시 별도 Repository가 관리하는 분석 대상 순서를 덮어쓰지 않는다.
             transactions.set(
                     document(id),
                     toDocument(report, id, createdAt, now, targetAreaIds)

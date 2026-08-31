@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/** Firestore implementation of the Area persistence boundary. */
+/** Area 문서와 복합 고유 키 문서를 하나의 Transaction으로 관리하는 Firestore 구현이다. */
 @Repository
 public class FirestoreAreaRepository implements AreaRepository {
 
@@ -37,6 +37,14 @@ public class FirestoreAreaRepository implements AreaRepository {
     private final FirestoreIdGenerator ids;
     private final Clock clock;
 
+    /**
+     * Area Firestore Repository를 생성한다.
+     *
+     * @param firestore Firestore Client
+     * @param transactions Transaction 실행기
+     * @param ids 숫자 ID 발급기
+     * @param clock 저장 시각 기준 Clock
+     */
     public FirestoreAreaRepository(
             Firestore firestore,
             FirestoreTransactionRunner transactions,
@@ -60,6 +68,7 @@ public class FirestoreAreaRepository implements AreaRepository {
         Instant now = clock.instant().truncatedTo(ChronoUnit.MILLIS);
         String newKey = areaKey(area.getPrefecture(), area.getCity(), area.getName());
         DocumentReference newKeyReference = keyDocument(newKey);
+        // Firestore에는 Unique Constraint가 없으므로 Hash 문서를 먼저 읽어 중복을 판정한다.
         DocumentSnapshot reservedKey = transactions.get(newKeyReference);
 
         Long id = area.getId();
@@ -93,6 +102,7 @@ public class FirestoreAreaRepository implements AreaRepository {
                 toDocument(area, persistedId, createdAt, now)
         );
         transactions.set(newKeyReference, Map.of("areaId", persistedId));
+        // 위치나 이름이 바뀐 수정에서는 예전 예약 Key를 함께 제거해야 재등록이 가능하다.
         if (oldKey != null && !oldKey.equals(newKey)) {
             transactions.delete(keyDocument(oldKey));
         }
@@ -235,6 +245,7 @@ public class FirestoreAreaRepository implements AreaRepository {
     }
 
     private String areaKey(String prefecture, String city, String name) {
+        // 구분자가 포함된 원문 대신 고정 길이 Hash를 문서 ID로 사용해 경로 제약을 피한다.
         String value = prefecture + '\u0000' + city + '\u0000' + name;
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")

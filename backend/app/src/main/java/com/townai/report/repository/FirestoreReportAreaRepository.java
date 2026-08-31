@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/** Embeds ordered Report target IDs instead of maintaining a join collection. */
+/** Join Collection 대신 Report 문서에 정렬된 분석 대상 Area ID를 포함하는 구현이다. */
 @Repository
 public class FirestoreReportAreaRepository implements ReportAreaRepository {
 
@@ -25,6 +25,14 @@ public class FirestoreReportAreaRepository implements ReportAreaRepository {
     private final ReportRepository reportRepository;
     private final AreaRepository areaRepository;
 
+    /**
+     * Report 분석 대상 Area Repository를 생성한다.
+     *
+     * @param firestore Firestore Client
+     * @param transactions Transaction 실행기
+     * @param reportRepository Report Metadata 조회 경계
+     * @param areaRepository Area 조회 경계
+     */
     public FirestoreReportAreaRepository(
             Firestore firestore,
             FirestoreTransactionRunner transactions,
@@ -49,6 +57,7 @@ public class FirestoreReportAreaRepository implements ReportAreaRepository {
                 ))
                 .map(reportArea -> reportArea.getArea().getId())
                 .toList();
+        // Report와 Area의 관계 수가 작으므로 별도 Join 문서보다 배열 하나가 읽기 비용이 낮다.
         transactions.merge(
                 document(reportId),
                 Map.of("targetAreaIds", areaIds)
@@ -70,6 +79,7 @@ public class FirestoreReportAreaRepository implements ReportAreaRepository {
                 "targetAreaIds"
         )) {
             AreaEntity area = areaRepository.findById(areaId).orElse(null);
+            // 논리 삭제된 Area도 과거 Report 문맥에는 남아 있으므로 전체 ID 조회를 사용한다.
             if (area != null) {
                 result.add(new ReportAreaEntity(report, area, displayOrder));
             }

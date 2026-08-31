@@ -22,10 +22,12 @@ const reportFilterOptions: ReportFilterOption[] = [
   { type: 'ALL', label: reportTypeLabels.ALL },
 ]
 
+/** Report 목록을 Client-side 유형 필터로 보여주고 생성·삭제 흐름을 관리한다. */
 export function ReportsPage() {
   const navigate = useNavigate()
   const [selectedType, setSelectedType] = useState<ReportType | null>(null)
   const { data: reports, error, isLoading, reload } = useAsyncData(api.getReports)
+  // 개인용 수십 건 규모에서는 유형 변경 때 서버를 다시 호출하지 않고 메모리에서 즉시 거른다.
   const filteredReports = useMemo(
     () => reports?.filter((report) => (
       selectedType === null || report.reportType === selectedType

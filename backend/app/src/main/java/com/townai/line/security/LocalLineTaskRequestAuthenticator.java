@@ -20,12 +20,6 @@ public class LocalLineTaskRequestAuthenticator
         implements LineTaskRequestAuthenticator {
 
     /**
-     * Local Task 요청 인증기를 생성한다.
-     */
-    public LocalLineTaskRequestAuthenticator() {
-    }
-
-    /**
      * Local 요청은 별도 Token 없이 허용한다.
      *
      * @param authorizationHeader 사용하지 않는 Authorization Header

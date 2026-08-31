@@ -51,12 +51,6 @@ public class LineDraftMessageFactory {
             );
 
     /**
-     * LINE Visit Draft 메시지 Factory를 생성한다.
-     */
-    public LineDraftMessageFactory() {
-    }
-
-    /**
      * Draft 값과 경고를 하나의 Flex Bubble로 구성한다.
      *
      * @param draft DB에 저장된 LINE Visit Draft

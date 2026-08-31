@@ -6,11 +6,17 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/** Configures the server-side Firestore client for Cloud Run and local emulation. */
+/** Cloud Run과 Local Emulator에서 사용할 Server-side Firestore Client를 구성한다. */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(FirestoreProperties.class)
 public class FirestoreConfiguration {
 
+    /**
+     * Production ADC 또는 Local Emulator Credential을 사용하는 Firestore Client를 만든다.
+     *
+     * @param properties Firestore 연결 설정
+     * @return 애플리케이션에서 공유할 Firestore Client
+     */
     @Bean(destroyMethod = "close")
     Firestore firestore(FirestoreProperties properties) {
         if (properties.projectId().isBlank()) {

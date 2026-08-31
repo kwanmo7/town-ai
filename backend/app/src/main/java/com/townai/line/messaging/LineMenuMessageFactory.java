@@ -26,12 +26,6 @@ public class LineMenuMessageFactory {
     private static final String REPORT_LIGHT_COLOR = "#DCE9F7";
 
     /**
-     * LINE 메뉴 Message Factory를 생성한다.
-     */
-    public LineMenuMessageFactory() {
-    }
-
-    /**
      * 방문 기록 등록과 리포트 조회를 선택하는 메인 메뉴를 생성한다.
      *
      * @param lineUserId 메시지를 받을 허용 사용자 ID

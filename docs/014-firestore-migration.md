@@ -51,7 +51,7 @@ Report와 Firebase·LINE 인증 정책은 변경하지 않는다.
 | Local 환경 | Firestore Emulator |
 | Report 본문 | 기존과 동일하게 GCS |
 | 외부 API ID | `counters` Transaction으로 숫자 ID 유지 |
-| Cloud SQL 제거 | 기본 정책은 검증·관찰 이후, 실제 V1 적용은 9.3 참조 |
+| Cloud SQL 제거 | Production 복원·배포 검증 후 완료, 실제 V1 적용은 9.3 참조 |
 
 Database Location과 Edition은 생성 단계에서 확정한다. Application은 명명된 Database
 `town-ai`를 명시적으로 선택하며 `(default)` Database에 의존하지 않는다.
@@ -217,12 +217,13 @@ Cloud Run은 전용 계정 `town-ai-runtime@town-ai.iam.gserviceaccount.com`을 
 계정 자체에 `roles/iam.serviceAccountUser`를 부여한다.
 
 Firestore 전환 후 사용하지 않는 `DB_PASSWORD` Secret 접근 권한은 새 Runtime 계정에
-부여하지 않는다.
+부여하지 않았으며, Cloud Run 참조 제거 후 Secret 자체도 삭제했다.
 
 Build·배포 계정과 Runtime 계정을 분리하고 Owner, Editor, Firebase Admin 같은 광범위한
-Project 역할을 Runtime 계정에 유지하지 않는다. Service Account JSON Key는 사용하지 않는다.
-기존 기본 Compute 계정에서 전용 Runtime 계정으로 옮길 때는 필요한 서비스별 역할을 먼저
-부여하고 회귀 검증 후 광범위한 역할을 제거한다.
+Project 역할을 Runtime 계정에 유지하지 않는다. Backend Build·배포는
+`town-ai-backend-deployer`, Runtime은 `town-ai-runtime`을 사용하며 Service Account JSON
+Key는 사용하지 않는다. 기존 기본 Compute 계정의 Project 역할은 회귀 검증 후 모두
+제거했다.
 
 ## 9. 데이터 전환 정책
 
@@ -254,8 +255,14 @@ Metadata와 LINE 처리 문서는 이전하지 않고 새로 생성한다. GCS�
 
 Production의 Legacy Cloud SQL은 무료 평가 종료로 `SUSPENDED` 상태였고 보존 Backup이
 없었다. 유료 전환 없이 GCS Markdown Report 9개를 기준으로 Area 3개와 Visit 3개를
-복원하는 방식을 선택했다. `areaKeys`와 `counters`는 복원 데이터에서 재구성했고 Report
-Metadata와 LINE 처리 상태는 새로 시작한다.
+복원하는 방식을 선택했다. `areaKeys`와 Area·Visit Counter는 복원 데이터에서 재구성했고
+LINE 처리 상태는 새로 시작했다.
+
+초기 Cutover에서는 Report Metadata를 제외했지만, GCS 파일명과 본문에서 기존 ID `2~10`,
+유형, 생성 시각과 대상 Area를 정확히 확인할 수 있어 후속 복원했다. 생성 당시 모델
+`gpt-5.4-mini`, 유형별 V1 Prompt Version과 `sourceFingerprint=null`을 기록하고 Report
+Counter를 10으로 맞췄다. 이미 생성된 신규 Report ID 1과 충돌하지 않았으며 GCS 객체는
+변경하지 않았다.
 
 Firestore 필드값과 GCS 객체의 generation·Hash·크기·수정 시각을 검증한 후 Legacy Cloud
 SQL Instance를 삭제했다. 실제 입력, 변환 규칙과 검증 결과는
@@ -284,9 +291,9 @@ Firestore Database·Rules·Index 준비
 Startup, Liveness와 Readiness를 확인하고, 전환 후 Area·Visit·Statistics·Report 4종,
 Firebase Web 인증, LINE Draft, Cloud Tasks OIDC와 서명 Report 링크를 검증한다.
 
-문제가 생기면 Cloud SQL이 남아 있는 동안 이전 Cloud Run Revision으로 Traffic을 되돌린다.
-Cutover 후 Firestore에 새로 저장된 데이터는 자동으로 MySQL에 반영되지 않으므로 Rollback
-전에 별도 Export하거나 입력을 중지한다.
+Cloud SQL 삭제 후에는 이전 SQL Revision으로 Rollback하지 않는다. 배포 장애는 동일한
+Firestore·GCS를 사용하는 직전 정상 Revision으로 Traffic을 되돌리고, 데이터 변경 작업
+전에는 필요에 따라 Firestore Export를 수행한다.
 
 ## 11. 비용과 운영
 
@@ -303,6 +310,10 @@ Firestore는 저장량과 Document read/write/delete, Index 저장량 및 네트
 
 운영 중에는 Permission 오류, Transaction 충돌, 처리 중 상태로 남은 LINE Event, Report
 Metadata와 GCS 객체 불일치, Document Read 추이를 확인한다.
+
+PITR과 예약 Backup은 별도 과금 기능이며 V1 운영의 필수 조건이 아니다. 현재는 Delete
+Protection을 활성화하고 PITR·예약 Backup은 사용하지 않는다. 대량 수정·삭제나 재이전 전에
+수동 Export를 검토하며, 데이터 중요도나 규모가 커질 때 예약 Backup을 다시 결정한다.
 
 ## 12. 제약 사항
 
@@ -324,6 +335,7 @@ Metadata와 GCS 객체 불일치, Document Read 추이를 확인한다.
 | `backend/scripts/local-firestore-start.ps1` | Local Emulator 실행 |
 | `backend/scripts/local-restore-seed.ps1` | Emulator 초기화와 Seed 복원 |
 | `backend/scripts/production-restore-gcs-report-data.ps1` | GCS 기반 Production 데이터 복원·검증 |
+| `backend/scripts/production-restore-gcs-report-metadata.ps1` | 기존 GCS Report Metadata 복원·검증 |
 | `backend/app/src/main/resources/application.yml` | Local·Production Firestore 설정 |
 | `docs/003-erd.md` | Collection과 문서 필드의 기준 모델 |
 | `docs/015-firestore-production-cutover.md` | 실제 Production 전환 검증 기록 |

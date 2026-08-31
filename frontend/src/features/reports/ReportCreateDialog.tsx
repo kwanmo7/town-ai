@@ -62,6 +62,7 @@ async function loadReportTargets(): Promise<ReportTargetData> {
   return { areas, visits }
 }
 
+/** Report 유형별 대상 Area를 검증하고 동기 AI 생성을 실행하는 Dialog이다. */
 export function ReportCreateDialog({ onClose, onCreated }: ReportCreateDialogProps) {
   const { data, error, isLoading, reload } = useAsyncData(loadReportTargets)
   const [reportType, setReportType] = useState<ReportType>('AREA')
@@ -112,6 +113,7 @@ export function ReportCreateDialog({ onClose, onCreated }: ReportCreateDialogPro
     setSubmitError(null)
 
     if (reportType === 'AREA') {
+      // 한 지역 분석은 마지막 선택 하나만 유지하고 비교 분석은 선택 순서를 보존한다.
       setSelectedAreaIds([areaId])
       return
     }
@@ -146,6 +148,7 @@ export function ReportCreateDialog({ onClose, onCreated }: ReportCreateDialogPro
     setSubmitError(null)
 
     try {
+      // 생성 API는 AI 처리가 끝날 때까지 대기하므로 진행 중에는 중복 제출과 닫기를 막는다.
       const report = await api.createReport(input)
       onCreated(report)
     } catch (requestError) {

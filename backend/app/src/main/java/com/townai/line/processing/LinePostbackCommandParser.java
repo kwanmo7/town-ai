@@ -22,12 +22,6 @@ import java.util.Map;
 public class LinePostbackCommandParser {
 
     /**
-     * LINE Postback 명령 Parser를 생성한다.
-     */
-    public LinePostbackCommandParser() {
-    }
-
-    /**
      * 지원하는 Postback Data를 파싱한다.
      *
      * @param postbackData LINE Webhook Postback Data

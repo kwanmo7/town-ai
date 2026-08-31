@@ -21,12 +21,6 @@ public class ReportCreateRequest {
     private boolean areaIdsProvided;
 
     /**
-     * Jackson이 JSON 요청을 역직렬화할 때 사용할 빈 요청 객체를 생성한다.
-     */
-    public ReportCreateRequest() {
-    }
-
-    /**
      * 요청한 Report 유형을 반환한다.
      *
      * @return 요청한 Report 유형 문자열

@@ -18,12 +18,6 @@ import java.util.HexFormat;
 public class LineTaskIdFactory {
 
     /**
-     * 결정적 LINE Task ID Factory를 생성한다.
-     */
-    public LineTaskIdFactory() {
-    }
-
-    /**
      * Webhook Event ID를 Cloud Tasks Task ID로 변환한다.
      *
      * @param webhookEventId LINE Webhook Event ID

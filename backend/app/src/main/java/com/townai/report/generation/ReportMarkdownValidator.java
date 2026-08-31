@@ -32,12 +32,6 @@ public final class ReportMarkdownValidator {
                     + "|기록[^\\r\\n]{0,20}(?:피로(?:도|감)?)"
     );
 
-    /**
-     * 상태를 갖지 않는 Report Markdown Validator를 생성한다.
-     */
-    public ReportMarkdownValidator() {
-    }
-
     String validateArea(AreaInput input, String output) {
         String markdown = output.strip();
         String areaName = input.area().name();

@@ -17,6 +17,7 @@ async function loadVisitPage() {
   return { visits, areas }
 }
 
+/** Visit 목록과 AI Draft 등록·수정·물리 삭제 흐름을 조율하는 관리 화면이다. */
 export function VisitsPage() {
   const { data, error, isLoading, reload } = useAsyncData(loadVisitPage)
   const [isDraftOpen, setIsDraftOpen] = useState(false)

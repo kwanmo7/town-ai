@@ -36,6 +36,7 @@ public class LineWebhookEventStateService {
      * 이벤트 상태 관리 Service를 생성한다.
      *
      * @param eventRepository Lock 조회와 상태 저장에 사용할 Repository
+     * @param transactions Event 상태 전환 Transaction 실행기
      * @param clock Lease 및 처리 시각의 UTC 기준
      */
     public LineWebhookEventStateService(

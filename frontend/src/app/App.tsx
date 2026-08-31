@@ -7,6 +7,7 @@ import { ReportsPage } from '../features/reports/ReportsPage'
 import { StatisticsPage } from '../features/statistics/StatisticsPage'
 import { VisitsPage } from '../features/visits/VisitsPage'
 
+/** 공통 AppShell 아래에서 관리 기능의 Client-side Route를 구성한다. */
 export function App() {
   return (
     <Routes>

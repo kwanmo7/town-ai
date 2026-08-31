@@ -32,6 +32,7 @@ const maxLengths: Record<AreaField, number> = {
   station: 50,
 }
 
+/** Area 등록과 전체 수정을 같은 검증 규칙으로 처리하는 Dialog이다. */
 export function AreaFormDialog({ area, onClose, onSaved }: AreaFormDialogProps) {
   const isEditing = area !== null
   const [values, setValues] = useState<AreaFormValues>(() => toFormValues(area))
@@ -283,6 +284,7 @@ function validate(values: AreaFormValues): AreaFormErrors {
 }
 
 function toFieldErrors(error: ApiError): AreaFormErrors {
+  // Backend Validation 필드명을 Form 상태에 연결해 Client·Server 오류를 같은 위치에 표시한다.
   const fieldErrors: AreaFormErrors = {}
   for (const validationError of error.details?.errors ?? []) {
     if (validationError.field in emptyValues) {

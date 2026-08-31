@@ -53,6 +53,7 @@ public class AreaEntity {
             Instant updatedAt,
             Instant deletedAt
     ) {
+        // Firestore 문서의 영속 상태를 Builder의 신규 Entity와 구분해 그대로 복원한다.
         AreaEntity area = new AreaEntity(name, prefecture, city, station);
         area.id = id;
         area.createdAt = createdAt;
@@ -61,7 +62,14 @@ public class AreaEntity {
         return area;
     }
 
+    /**
+     * Repository 저장 결과의 ID와 Audit 시각을 Entity에 반영한다.
+     *
+     * @param persistedId 저장된 Area ID
+     * @param persistedAt 저장이 완료된 UTC 시각
+     */
     public void markPersisted(Long persistedId, Instant persistedAt) {
+        // 최초 저장에서만 ID·생성 시각을 확정하고 이후 저장은 수정 시각만 갱신한다.
         if (id == null) {
             id = persistedId;
             createdAt = persistedAt;

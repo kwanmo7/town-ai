@@ -10,9 +10,4 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(ReportLinkProperties.class)
 public class ReportLinkConfiguration {
 
-    /**
-     * Spring이 Report 링크 구성을 생성할 때 사용하는 기본 생성자다.
-     */
-    public ReportLinkConfiguration() {
-    }
 }

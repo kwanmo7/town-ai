@@ -10,7 +10,8 @@
 6. GCS Report 보존 검증
 7. Cloud SQL 종료
 8. 운영 전환 경계
-9. 관련 파일
+9. 백업 정책
+10. 관련 파일
 
 ## 1. 목적
 
@@ -47,9 +48,10 @@ Legacy Cloud SQL은 30일 무료 평가 인스턴스였고 `SUSPENDED` 상태였
 - GCS Report에서 확인 가능한 Area 3개와 Visit 3개만 Firestore에 복원한다.
 - 기존 숫자 ID를 유지하고 `counters`를 최대 ID 3으로 맞춘다.
 - Area 복합 중복 방지용 `areaKeys`를 다시 계산한다.
-- Report Metadata, LINE Draft와 Webhook Event 상태는 이전하지 않는다.
+- 초기 복원에서는 Report Metadata, LINE Draft와 Webhook Event 상태를 이전하지 않는다.
 - 기존 GCS Markdown 객체는 수정하거나 이동하지 않는다.
-- 이후 Report Metadata와 LINE 처리 문서는 실제 사용 시 Firestore에 새로 생성한다.
+- 복원 가능한 기존 Report Metadata는 GCS 객체 분석 후 별도 단계에서 복원한다.
+- LINE 처리 문서는 실제 사용 시 Firestore에 새로 생성한다.
 
 이 결정은 사용자가 관리하는 핵심 방문 데이터는 보존하면서, 복원이 불완전할 수 있는
 처리 상태와 Metadata를 억지로 추정하지 않기 위한 것이다.
@@ -99,14 +101,31 @@ Report와 각 AREA Report를 교차 확인했다. Report 내용에서 확인되�
 | `areaKeys` | 3 | 복합 Key SHA-256과 Area ID |
 | `counters` | 2 | `area.lastId=3`, `visit.lastId=3` |
 
-`reports`, `lineVisitDrafts`, `lineWebhookEvents`는 복원 대상에서 제외했으며 문서를 생성하지
-않았다. Firestore에는 빈 Collection을 미리 만드는 DDL이 없으므로 `reports`와
-`lineVisitDrafts` Collection 및 각 Counter는 첫 저장 Transaction에서 자동 생성된다.
-`lineWebhookEvents`도 첫 LINE Webhook을 처리할 때 Event ID 문서로 생성된다.
+초기 복원에서는 `reports`, `lineVisitDrafts`, `lineWebhookEvents`를 제외했다. Firestore에는
+빈 Collection을 미리 만드는 DDL이 없으므로 실제 Backend 요청과 후속 복원 Script가 첫
+문서를 생성했다.
 
 새 Runtime 데이터가 생성되기 전 복원 Script를 다시 실행하면 기존 값을 덮어쓰지 않고
 동일한 복원 상태와 GCS 객체를 재검증한다. 이후 예상하지 않은 Collection이 존재하면
 운영 데이터를 보호하기 위해 Script가 중단된다.
+
+Cutover 후 LINE에서 Area·Visit과 Report를 새로 등록하고 Web에서 조회한 결과는 다음과
+같다.
+
+| Collection | 현재 문서 수 | 검증 내용 |
+| --- | ---: | --- |
+| `areas` | 4 | 기존 3개와 신규 Area ID 4 |
+| `visits` | 4 | 기존 3개와 신규 Visit ID 4 |
+| `reports` | 10 | 신규 ID 1과 복원된 기존 ID 2~10 |
+| `lineVisitDrafts` | 1 | 저장 완료 Draft |
+| `lineWebhookEvents` | 11 | 모두 `COMPLETED` |
+| `areaKeys` | 4 | Area별 복합 Key |
+| `counters` | 4 | Area 4, Visit 4, Report 10, LINE Draft 1 |
+
+기존 Report Metadata는 `production-restore-gcs-report-metadata.ps1`로 복원했다. 파일명과
+본문을 기준으로 ID, 유형, 대상 Area, 생성 시각, 생성 당시 모델 `gpt-5.4-mini`와 Prompt
+Version을 기록했다. 기존 문서가 있으면 덮어쓰지 않고 검증하며, 더 큰 Counter가 있으면
+낮추지 않는다. 두 번째 실행은 Firestore 쓰기 0건으로 완료되어 멱등성도 확인했다.
 
 ## 6. GCS Report 보존 검증
 
@@ -117,10 +136,14 @@ Report와 각 AREA Report를 교차 확인했다. Report 내용에서 확인되�
 | AREA | 5 |
 | COMPARE | 1 |
 | ALL | 3 |
-| 합계 | 9 |
+| Legacy 합계 | 9 |
 
 9개 객체의 모든 비교 값이 전후 동일했다. 따라서 Firestore 복원 과정에서 기존 Markdown
 Report는 생성·수정·이동·삭제되지 않았다.
+
+Cutover 후 새 AREA Report 1개가 추가되어 현재 GCS Report는 총 10개다. 신규 객체는
+Firestore Report ID 1의 `storagePath`와 연결되며, 기존 9개 객체는 Report ID `2~10`의
+Metadata와 다시 연결했다.
 
 ## 7. Cloud SQL 종료
 
@@ -144,25 +167,43 @@ Rollback은 더 이상 지원하지 않으며, 복원된 Firestore와 보존된 
 
 ## 8. 운영 전환 경계
 
-데이터 복원과 Legacy Instance 제거는 완료됐지만 새 Backend Revision의 Traffic 전환은
-별도 단계다. 다음 배포에서는 반드시 아래 항목을 함께 적용하고 검증한다.
+Firestore Backend는 Cloud Run Revision `town-ai-api-00028-pfz`에서 100% Traffic을 받고
+있다. 적용·검증한 운영 설정은 다음과 같다.
 
-- Cloud Run에 `FIRESTORE_PROJECT_ID=town-ai`, `FIRESTORE_DATABASE_ID=town-ai` 설정
-- `town-ai-runtime@town-ai.iam.gserviceaccount.com`을 Runtime Service Account로 연결
-- Cloud SQL 연결, `DB_*` 환경변수와 DB Password Secret 참조 제거
-- Web Area·Visit·Statistics·Report 회귀 검증
-- LINE Webhook·Cloud Tasks OIDC·Draft·Report 회귀 검증
-- scale-to-zero 이후 첫 Web·LINE 요청 검증
-- 검증 후 기본 Compute Service Account의 광범위한 권한 정리
+- `FIRESTORE_PROJECT_ID=town-ai`, `FIRESTORE_DATABASE_ID=town-ai`
+- Runtime Service Account `town-ai-runtime@town-ai.iam.gserviceaccount.com`
+- Backend Build·배포 Service Account `town-ai-backend-deployer@town-ai.iam.gserviceaccount.com`
+- Cloud SQL 연결, `DB_*` 환경변수와 `DB_PASSWORD` Secret 제거
+- 기본 Compute Service Account의 기존 Project 역할 전부 제거
+- Liveness·Readiness `200 UP`, 최신 Revision 오류 로그 없음
+- Firebase Web 로그인, 주요 목록·통계·Report 조회와 비인증 API `401` 확인
+- LINE Area·Visit 등록, Report 생성·조회, Cloud Tasks OIDC와 Push 응답 확인
 
-Cloud SQL이 삭제됐으므로 기존 Revision은 데이터 Rollback 경로가 아니다. 새 Revision 배포
-전까지 Production Backend의 Database 기능은 정상 운영 상태로 간주하지 않는다.
+LINE 동일 Event의 Production 강제 재전달은 별도 장애 유도 없이 진행하지 않았다.
+Local·Emulator 자동 Test의 멱등성 검증을 V1 기준으로 수용하고 실제 재시도 발생 시
+`lineWebhookEvents` 상태와 중복 Visit을 확인한다. Cloud Run은 최소 Instance 0으로
+운영하며 새 Revision의 Cold Start와 Health를 검증했다. 장시간 유휴 후 첫 요청은 별도 완료
+조건으로 두지 않고 실제 사용 중 관찰한다.
 
-## 9. 관련 파일
+Cloud SQL이 삭제됐으므로 기존 SQL Revision은 Rollback 경로가 아니다. Application 배포
+장애는 동일한 Firestore·GCS를 사용하는 직전 정상 Revision으로 Traffic을 되돌린다.
+
+## 9. 백업 정책
+
+Firestore Database Delete Protection은 활성화했다. PITR과 예약 Backup은 별도 과금 기능이며
+개인용 V1의 필수 조건으로 두지 않는다. 현재는 둘 다 비활성 상태를 유지하고, 대량 수정·삭제,
+데이터 재이전 또는 구조 변경 전에는 수동 Export 필요 여부를 검토한다.
+
+Database의 `freeTier=true` 상태를 확인했다. 운영 중에는 Billing Report와 Budget 알림으로
+실제 사용액을 확인하며, 데이터 중요도나 규모가 커지면 주 1회 Backup과 보존 기간을 별도로
+결정한다.
+
+## 10. 관련 파일
 
 | 파일 | 역할 |
 | --- | --- |
 | `backend/scripts/production-restore-gcs-report-data.ps1` | Production 복원과 불변 검증 |
+| `backend/scripts/production-restore-gcs-report-metadata.ps1` | 기존 GCS Report Metadata 복원과 불변 검증 |
 | `docs/003-erd.md` | Firestore Collection 기준 모델 |
 | `docs/006-deployment.md` | Production 배포·운영 기준 |
 | `docs/010-production-gcp-integration.md` | Legacy Cloud SQL 통합 검증 기록 |

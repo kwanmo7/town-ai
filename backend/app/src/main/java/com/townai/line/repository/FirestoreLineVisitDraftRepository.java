@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/** Firestore implementation of LINE Visit Draft persistence. */
+/** LINE Visit Draft의 수정 Revision과 상태 전환을 보존하는 Firestore 구현이다. */
 @Repository
 public class FirestoreLineVisitDraftRepository
         implements LineVisitDraftRepository {
@@ -43,6 +43,16 @@ public class FirestoreLineVisitDraftRepository
     private final VisitRepository visitRepository;
     private final Clock clock;
 
+    /**
+     * LINE Visit Draft Firestore Repository를 생성한다.
+     *
+     * @param firestore Firestore Client
+     * @param transactions Transaction 실행기
+     * @param ids 숫자 ID 발급기
+     * @param areaRepository Area 참조 조회 경계
+     * @param visitRepository 저장된 Visit 참조 조회 경계
+     * @param clock 저장 시각 기준 Clock
+     */
     public FirestoreLineVisitDraftRepository(
             Firestore firestore,
             FirestoreTransactionRunner transactions,

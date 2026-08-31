@@ -20,12 +20,6 @@ import java.io.IOException;
 public class LineConfiguration {
 
     /**
-     * LINE 설정 등록 구성을 생성한다.
-     */
-    public LineConfiguration() {
-    }
-
-    /**
      * Production에서 Cloud Tasks Task를 생성할 Client를 등록한다.
      *
      * <p>Local 실행에서는 Google Cloud 인증을 요구하지 않도록

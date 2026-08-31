@@ -15,8 +15,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
 /**
- * Runs repository work in one Firestore transaction and shares the transaction
- * with every repository participating on the current thread.
+ * 하나의 요청 흐름에 참여하는 Repository가 동일한 Firestore Transaction을 공유하도록 한다.
+ *
+ * <p>Service가 Transaction 안에서 여러 Repository를 호출해도 중첩 Transaction을 만들지 않고,
+ * 현재 Thread에 연결된 Transaction을 재사용한다. Transaction 밖에서 호출된 단순 조회·저장은
+ * Firestore API를 직접 실행한다.</p>
  */
 @Component
 public class FirestoreTransactionRunner {
@@ -24,11 +27,24 @@ public class FirestoreTransactionRunner {
     private final Firestore firestore;
     private final ThreadLocal<Transaction> current = new ThreadLocal<>();
 
+    /**
+     * Transaction 실행기를 생성한다.
+     *
+     * @param firestore Server-side Firestore Client
+     */
     public FirestoreTransactionRunner(Firestore firestore) {
         this.firestore = firestore;
     }
 
+    /**
+     * 작업을 현재 Transaction에 참여시키거나 새 Transaction으로 실행한다.
+     *
+     * @param work 실행할 작업
+     * @param <T> 작업 결과 타입
+     * @return 작업 결과
+     */
     public <T> T execute(Supplier<T> work) {
+        // 이미 Transaction 안이라면 바깥 Transaction의 read-before-write 순서를 그대로 유지한다.
         if (current.get() != null) {
             return work.get();
         }
@@ -44,6 +60,11 @@ public class FirestoreTransactionRunner {
         }));
     }
 
+    /**
+     * 반환값이 없는 작업을 현재 Transaction에 참여시키거나 새 Transaction으로 실행한다.
+     *
+     * @param work 실행할 작업
+     */
     public void execute(Runnable work) {
         execute(() -> {
             work.run();
@@ -51,6 +72,12 @@ public class FirestoreTransactionRunner {
         });
     }
 
+    /**
+     * 현재 Transaction 유무에 맞춰 문서 한 건을 읽는다.
+     *
+     * @param reference 읽을 문서 참조
+     * @return 문서 Snapshot
+     */
     public DocumentSnapshot get(DocumentReference reference) {
         Transaction transaction = current.get();
         return await(transaction == null
@@ -58,11 +85,23 @@ public class FirestoreTransactionRunner {
                 : transaction.get(reference));
     }
 
+    /**
+     * 현재 Transaction 유무에 맞춰 Query 결과를 읽는다.
+     *
+     * @param query 실행할 Firestore Query
+     * @return Query Snapshot
+     */
     public QuerySnapshot get(Query query) {
         Transaction transaction = current.get();
         return await(transaction == null ? query.get() : transaction.get(query));
     }
 
+    /**
+     * 문서 전체를 현재 Transaction에 쓰거나 즉시 저장한다.
+     *
+     * @param reference 저장할 문서 참조
+     * @param data 문서 전체 필드
+     */
     public void set(DocumentReference reference, Map<String, Object> data) {
         Transaction transaction = current.get();
         if (transaction == null) {
@@ -72,6 +111,12 @@ public class FirestoreTransactionRunner {
         }
     }
 
+    /**
+     * 기존 문서의 다른 필드는 유지하고 전달된 필드만 병합한다.
+     *
+     * @param reference 저장할 문서 참조
+     * @param data 병합할 필드
+     */
     public void merge(DocumentReference reference, Map<String, Object> data) {
         Transaction transaction = current.get();
         if (transaction == null) {
@@ -81,6 +126,11 @@ public class FirestoreTransactionRunner {
         }
     }
 
+    /**
+     * 문서를 현재 Transaction에서 삭제하거나 즉시 삭제한다.
+     *
+     * @param reference 삭제할 문서 참조
+     */
     public void delete(DocumentReference reference) {
         Transaction transaction = current.get();
         if (transaction == null) {
@@ -90,6 +140,11 @@ public class FirestoreTransactionRunner {
         }
     }
 
+    /**
+     * 현재 Thread가 Firestore Transaction을 수행 중인지 반환한다.
+     *
+     * @return Transaction 안이면 {@code true}
+     */
     public boolean isActive() {
         return current.get() != null;
     }
@@ -108,6 +163,7 @@ public class FirestoreTransactionRunner {
                     ? exception
                     : exception.getCause();
             RuntimeException workFailure = findWorkFailure(cause);
+            // Firestore SDK가 감싼 Domain 예외를 원래 타입으로 복원해야 상위 오류 처리가 유지된다.
             if (workFailure != null) {
                 throw workFailure;
             }

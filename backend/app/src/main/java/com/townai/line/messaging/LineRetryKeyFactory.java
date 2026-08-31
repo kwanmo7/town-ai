@@ -19,12 +19,6 @@ public class LineRetryKeyFactory {
     );
 
     /**
-     * LINE Retry Key Factory를 생성한다.
-     */
-    public LineRetryKeyFactory() {
-    }
-
-    /**
      * LINE Push API 최초 요청부터 사용할 결정적 Retry Key를 만든다.
      *
      * @param webhookEventId 메시지를 발생시킨 Webhook Event ID

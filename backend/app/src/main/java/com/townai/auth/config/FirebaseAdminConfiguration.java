@@ -18,12 +18,6 @@ import java.io.IOException;
 public class FirebaseAdminConfiguration {
 
     /**
-     * Firebase Admin SDK 구성을 생성한다.
-     */
-    public FirebaseAdminConfiguration() {
-    }
-
-    /**
      * 인증이 활성화된 환경에서 사용할 Firebase App을 생성한다.
      *
      * @param properties Firebase Project 설정

@@ -91,6 +91,7 @@ public class VisitEntity {
             Instant createdAt,
             Instant updatedAt
     ) {
+        // Firestore 문서의 ID와 Audit 시각까지 포함해 Domain Entity를 재구성한다.
         VisitEntity visit = VisitEntity.builder()
                 .area(area)
                 .visitDate(visitDate)
@@ -110,6 +111,9 @@ public class VisitEntity {
     /**
      * 다른 문서가 새로 저장된 Visit ID만 참조할 때 사용하는 경량 Reference이다.
      * Firestore Transaction에서 쓰기 이후 문서를 다시 읽지 않도록 한다.
+     *
+     * @param id 참조할 Visit ID
+     * @return ID만 설정된 Visit Reference
      */
     public static VisitEntity reference(Long id) {
         VisitEntity visit = new VisitEntity();
@@ -117,7 +121,14 @@ public class VisitEntity {
         return visit;
     }
 
+    /**
+     * Repository 저장 결과의 ID와 Audit 시각을 Entity에 반영한다.
+     *
+     * @param persistedId 저장된 Visit ID
+     * @param persistedAt 저장이 완료된 UTC 시각
+     */
     public void markPersisted(Long persistedId, Instant persistedAt) {
+        // 최초 저장과 수정에서 Audit 필드를 같은 규칙으로 반영한다.
         if (id == null) {
             id = persistedId;
             createdAt = persistedAt;

@@ -3,6 +3,7 @@ interface ScoreBarProps {
   value: number | null
 }
 
+/** 10점 기준 평가값을 숫자와 시각적 Bar로 함께 표시한다. */
 export function ScoreBar({ label, value }: ScoreBarProps) {
   const width = value === null ? 0 : Math.min(100, Math.max(0, value * 10))
 

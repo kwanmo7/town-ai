@@ -17,7 +17,6 @@ import com.townai.persistence.firestore.FirestoreTransactionRunner;
 import com.townai.visit.dto.VisitMutationResponse;
 import com.townai.visit.dto.VisitRequest;
 import com.townai.visit.entity.VisitEntity;
-import com.townai.visit.repository.VisitRepository;
 import com.townai.visit.service.VisitService;
 import org.springframework.stereotype.Service;
 
@@ -42,7 +41,6 @@ public class LineVisitDraftActionService {
     private final LineVisitDraftRepository draftRepository;
     private final AreaRepository areaRepository;
     private final AreaService areaService;
-    private final VisitRepository visitRepository;
     private final VisitService visitService;
     private final FirestoreTransactionRunner transactions;
     private final Clock clock;
@@ -54,8 +52,8 @@ public class LineVisitDraftActionService {
      * @param draftRepository Draft Lock 및 상태 저장 Repository
      * @param areaRepository 활성 Area 재검증 Repository
      * @param areaService 신규 Area 등록 규칙을 재사용할 Service
-     * @param visitRepository 확정된 Visit 관계 Reference 조회 Repository
      * @param visitService 기존 Visit 생성 규칙을 재사용할 Service
+     * @param transactions Area·Visit·Draft 상태를 함께 저장할 Transaction 실행기
      * @param clock Draft 만료 판단 기준
      * @param userTimeZone 미래 방문일 검증에 사용할 생활권 시간대
      */
@@ -63,7 +61,6 @@ public class LineVisitDraftActionService {
             LineVisitDraftRepository draftRepository,
             AreaRepository areaRepository,
             AreaService areaService,
-            VisitRepository visitRepository,
             VisitService visitService,
             FirestoreTransactionRunner transactions,
             Clock clock,
@@ -72,7 +69,6 @@ public class LineVisitDraftActionService {
         this.draftRepository = draftRepository;
         this.areaRepository = areaRepository;
         this.areaService = areaService;
-        this.visitRepository = visitRepository;
         this.visitService = visitService;
         this.transactions = transactions;
         this.clock = clock;

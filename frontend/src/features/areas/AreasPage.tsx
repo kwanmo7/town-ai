@@ -7,6 +7,7 @@ import type { AreaSummary } from '../../types/api'
 import { AreaDeleteDialog } from './AreaDeleteDialog'
 import { AreaFormDialog } from './AreaFormDialog'
 
+/** Area 목록 조회와 등록·수정·논리 삭제 Dialog를 조율하는 관리 화면이다. */
 export function AreasPage() {
   const { data: areas, error, isLoading, reload } = useAsyncData(api.getAreas)
   const [isFormOpen, setIsFormOpen] = useState(false)

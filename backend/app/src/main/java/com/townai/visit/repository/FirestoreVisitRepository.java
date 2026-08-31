@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/** Firestore implementation of Visit persistence and low-volume report queries. */
+/** Visit 영속성과 개인용 저사용량 Report 조회를 담당하는 Firestore 구현이다. */
 @Repository
 public class FirestoreVisitRepository implements VisitRepository {
 
@@ -38,6 +38,15 @@ public class FirestoreVisitRepository implements VisitRepository {
     private final AreaRepository areaRepository;
     private final Clock clock;
 
+    /**
+     * Visit Firestore Repository를 생성한다.
+     *
+     * @param firestore Firestore Client
+     * @param transactions Transaction 실행기
+     * @param ids 숫자 ID 발급기
+     * @param areaRepository Area 참조 조회 경계
+     * @param clock 저장 시각 기준 Clock
+     */
     public FirestoreVisitRepository(
             Firestore firestore,
             FirestoreTransactionRunner transactions,

@@ -17,7 +17,6 @@ import com.townai.visit.dto.VisitDraftAreaResponse;
 import com.townai.visit.dto.VisitDraftResponse;
 import com.townai.visit.dto.VisitMutationResponse;
 import com.townai.visit.entity.VisitEntity;
-import com.townai.visit.repository.VisitRepository;
 import com.townai.visit.service.VisitService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,8 +50,6 @@ class LineVisitDraftActionServiceTest {
     private final AreaRepository areaRepository =
             mock(AreaRepository.class);
     private final AreaService areaService = mock(AreaService.class);
-    private final VisitRepository visitRepository =
-            mock(VisitRepository.class);
     private final VisitService visitService = mock(VisitService.class);
     private final FirestoreTransactionRunner transactions =
             mock(FirestoreTransactionRunner.class);
@@ -61,7 +58,6 @@ class LineVisitDraftActionServiceTest {
                     draftRepository,
                     areaRepository,
                     areaService,
-                    visitRepository,
                     visitService,
                     transactions,
                     Clock.fixed(NOW, ZoneOffset.UTC),
